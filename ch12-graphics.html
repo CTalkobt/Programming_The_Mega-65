@@ -190,9 +190,14 @@ Sanderson</a>, <a
 href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).</p>
 <p>SCRNPTR can point anywhere with byte precision, which makes coarse
 scrolling trivial: adding one to SCRNPTR scrolls the screen one
-character left. COLPTR is only 16 bits, an offset into colour RAM, so
-colour data is always somewhere in the first 64KB of colour RAM (<a
-href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).</p>
+character left. COLPTR is an offset into colour RAM rather than a full
+address (<a
+href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).
+It is 16 bits wide, but colour RAM is 32KB, so the VIC-IV uses only its
+low 15 bits: an offset of <code>$8000</code> or more wraps round to the
+start of colour RAM (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, September 2026).</p>
 <p>LINESTEP and CHRCOUNT are separate because they answer different
 questions. CHRCOUNT says how many characters to draw; LINESTEP says how
 far apart rows are in memory. Setting LINESTEP larger than CHRCOUNT
