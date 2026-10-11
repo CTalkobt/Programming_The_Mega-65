@@ -66,49 +66,80 @@ described. Because it is an ordinary file, the installed version is
 simply whichever image the SD card holds, and different machines may run
 different versions.</p>
 <h3 id="where-things-are">Where things are</h3>
-<p>The MEGA65 ROM inherits its overall arrangement from the C65's. The
-C65 brings its system ROM into the CPU's window using both banking
-mechanisms: <code>$D030</code> for the editor at <code>$C000</code>, and
-MAP for the rest (<a
+<p>The ROM is a 128KB image that the MEGA65 holds at
+<code>$20000-$3FFFF</code>, in banks 2 and 3. Its arrangement comes from
+the C65's. The C65 brings its system ROM into the CPU's window using
+both banking mechanisms: <code>$D030</code> for some regions, and MAP
+for the rest (<a
 href="https://github.com/MEGA65/mega65-rom-public/issues/62">MEGA65 ROM
-issue #62</a>). The original C65 ROM boots with a mapping that implies
-this layout:</p>
+issue #62</a>). ROM 920422 is laid out as follows, according to the
+ROM's build files:</p>
 <table>
 <thead>
 <tr class="header">
 <th>ROM address</th>
-<th>Seen by the CPU at</th>
 <th>Contents</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td><code>$2C000-$2CFFF</code></td>
-<td><code>$C000-$CFFF</code>, through <code>$D030</code></td>
-<td>Interface and screen editor</td>
+<td><code>$20000-$23FFF</code></td>
+<td>DOS</td>
 </tr>
 <tr class="even">
-<td><code>$32000-$37FFF</code></td>
-<td><code>$2000-$7FFF</code>, through MAP</td>
-<td>Further system and BASIC code</td>
+<td><code>$24000-$28FFF</code></td>
+<td>BASIC 65 (first part)</td>
 </tr>
 <tr class="odd">
-<td><code>$38000-$3BFFF</code></td>
-<td><code>$8000-$BFFF</code>, through MAP</td>
-<td>BASIC</td>
+<td><code>$29000-$29FFF</code></td>
+<td>Character set A</td>
 </tr>
 <tr class="even">
-<td><code>$3E000-$3FFFF</code></td>
-<td><code>$E000-$FFFF</code>, through MAP</td>
+<td><code>$2A000-$2BFFF</code></td>
+<td>C64-mode BASIC</td>
+</tr>
+<tr class="odd">
+<td><code>$2C000-$2CFFF</code></td>
+<td>DOS and KERNAL code</td>
+</tr>
+<tr class="even">
+<td><code>$2D000-$2DFFF</code></td>
+<td>Character set C</td>
+</tr>
+<tr class="odd">
+<td><code>$2E000-$2FFFF</code></td>
+<td>End of C64-mode BASIC, then the C64-mode KERNAL</td>
+</tr>
+<tr class="even">
+<td><code>$30000-$31FFF</code></td>
+<td>Machine-language monitor</td>
+</tr>
+<tr class="odd">
+<td><code>$32000-$3BFFF</code></td>
+<td>BASIC 65</td>
+</tr>
+<tr class="even">
+<td><code>$3C000-$3CFFF</code></td>
+<td>Unused</td>
+</tr>
+<tr class="odd">
+<td><code>$3D000-$3DFFF</code></td>
+<td>Character set B</td>
+</tr>
+<tr class="even">
+<td><code>$3E000-$3EFFF</code></td>
+<td>Screen editor</td>
+</tr>
+<tr class="odd">
+<td><code>$3F000-$3FFFF</code></td>
 <td>KERNAL, including the jump table and hardware vectors</td>
 </tr>
 </tbody>
 </table>
-<p>The rest of the image holds the DOS, the monitor, the character sets
-and the C64-mode BASIC and KERNAL. Treat this table as orientation only.
-The ROM's internal arrangement is not an interface, MEGA65 releases have
-reorganised it, and code should reach the ROM only through the jump
-table and vectors described in the following sections.</p>
+<p>Treat this table as orientation only. The ROM's internal arrangement
+is not an interface, MEGA65 releases have reorganised it, and code
+should reach the ROM only through the jump table and vectors described
+in the following sections.</p>
 <h3 id="identifying-the-version">Identifying the version</h3>
 <p>MEGA65 ROM versions are six-digit numbers such as 920379, shown in
 the start-up banner. They fall into two series. The 92xxxx releases were
@@ -126,25 +157,25 @@ all.</p>
 href="https://www.pagetable.com/?p=926">pagetable.com</a>). It
 distinguishes KERNAL revisions, but it is not the six-digit ROM version
 shown in the banner.</p>
-<p>The six-digit version is also stored as text. The ROM image, which
-the MEGA65 holds at <code>$20000</code>, has the letter V followed by
-the six ASCII digits at <code>$20016</code>-<code>$2001C</code>, for
-example <code>V920422</code>. Reading this string is discouraged: its
-address is not part of the ROM's supported interface, and it may not
-work with future ROM versions.</p>
 <p>From ROM 920417, the KERNAL's VERSIONQ routine at <code>$FF2F</code>
-returns the same number (see <a href="#extended-entries">Extended
-entries</a>). It loads the version into Q, the 32-bit register made up
-of A, X, Y and Z, as a little-endian binary integer: 920422 is
-<code>$000E0B66</code>. A single STQ stores it in four bytes:</p>
+returns the six-digit ROM version shown in the banner (see <a
+href="#extended-entries">Extended entries</a>). It loads the version
+into Q, the 32-bit register made up of A, X, Y and Z, as a little-endian
+binary integer: 920422 is <code>$000E0B66</code>. A single STQ stores it
+in four bytes:</p>
 <pre><code>        jsr $ff2f       ; VERSIONQ
         stq version     ; four bytes, low byte first</code></pre>
 <p>On a ROM older than 920417, <code>$FF2F</code> is not VERSIONQ, and
 calling it is likely to crash the program. At the time of writing,
 920417 and later are beta releases; the latest stable ROM is 920413
-(<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). A program that must also run on older ROMs
-can fall back on the version string, accepting that it may break on a
-future ROM.</p>
+(<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
+<p>The version is also stored as text. The ROM image, which the MEGA65
+holds at <code>$20000</code>, has the letter V followed by the six ASCII
+digits at <code>$20016</code>-<code>$2001C</code>, for example
+<code>V920422</code>. Reading this string is discouraged: its address is
+not part of the ROM's supported interface, and it may not work with
+future ROM versions. A program that must also run on ROMs older than
+920417 can fall back on it, accepting that risk.</p>
 <h2 id="the-kernal-jump-table">The KERNAL Jump Table</h2>
 <p>The jump table is a list of JMP instructions at the top of the
 KERNAL, each at a fixed address. Programs call the fixed address, and
@@ -166,7 +197,9 @@ work in BCD hours, minutes, seconds and tenths. PLOT keeps the C64's
 registers, with the line in X and the column in Y, but measures them
 from the top-left corner of the current window rather than of the
 screen. The inputs and outputs in the table come
-from the MEGA65 Book's KERNAL Jump Table appendix.</p>
+from the MEGA65 Book's KERNAL Jump Table appendix, checked against the
+ROM source. Where they disagree, as for PLOT, the table follows the
+ROM.</p>
 <p>X/Y means a 16-bit value with the low byte in X and the high byte
 in Y. C is the carry flag: routines that can fail return with C=1 and an
 error code in A. A dash means the routine takes no input or returns no
@@ -216,7 +249,7 @@ map, with the base page register B set to <code>$00</code>.</p>
 <td><code>$FF8D</code></td>
 <td>VECTOR</td>
 <td>Read or set the KERNAL vectors</td>
-<td>C=1 to read, with X/Y = destination; C=0 to set, with X/Y = source</td>
+<td>C=1 to read, with X/Y = destination; C=0 to set, with X/Y = source. The table is 56 bytes (32 before ROM 920400)</td>
 <td>—</td>
 </tr>
 <tr class="even">
@@ -795,14 +828,22 @@ The MEGA65 KERNAL inherits it from the C65.</p>
 </tr>
 </tbody>
 </table>
-<p>The VECTOR call at <code>$FF8D</code> copies this whole table to or
-from memory, and RESTOR at <code>$FF8A</code> resets it to the defaults.
-Using VECTOR to save the table before changing it, and to put it back
-afterwards, is safer than editing individual entries.</p>
-<p>The C65 also added vectors for the low-level serial bus routines,
-from <code>$0335</code> upward: TALK, LISTEN, TKSA, SECOND, ACPTR,
-CIOUT, UNTLK and UNLSN. They are spaced three bytes apart rather than
-two, and they are not part of the table VECTOR copies.</p>
+<p>The C65 followed this table with two more groups of two-byte
+vectors. From <code>$0334</code> to <code>$0343</code> are the low-level
+serial bus routines, in the order TALK, LISTEN, TKSA, SECOND, ACPTR,
+CIOUT, UNTLK and UNLSN. From <code>$0344</code> to <code>$034B</code>
+are four screen editor vectors: CTLVEC, SHFVEC and ESCVEC, through which
+the editor handles control, shifted and escape characters, and KEYSCAN,
+which is called after a key is read and before it is buffered.</p>
+<p>The VECTOR call at <code>$FF8D</code> copies the vectors to or from
+memory, and RESTOR at <code>$FF8A</code> resets the KERNAL's own vectors
+to the defaults. From ROM 920400, VECTOR copies all three groups, a
+56-byte table from <code>$0314</code> to <code>$034B</code>; earlier
+ROMs copied only the first 32 bytes. Give VECTOR room for 56 bytes
+(<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>). Using VECTOR to save the table before changing it,
+and to put it back afterwards, is safer than editing individual
+entries.</p>
 <h3 id="chaining-into-the-irq">Chaining into the IRQ</h3>
 <p>A cooperative program that wants code to run on every system
 interrupt, such as a background music player, points CINV at its own
@@ -824,9 +865,10 @@ myirq   inc $d020       ; the routine&#39;s own work
         jmp (oldirq)    ; continue with the KERNAL handler
 
 oldirq  .word 0</code></pre>
-<p>The KERNAL saves A, X and Y before jumping through CINV, as on the
-C64. Do not assume it also saves Z or B: a routine that changes them
-must restore them itself. Changing the vector inside SEI and CLI
+<p>Before jumping through CINV, the KERNAL saves A, X, Y and Z and the
+base page register B, then sets B to <code>$00</code>. A handler that
+ends by jumping on to the KERNAL's handler, as above, can therefore use
+all of them freely: the KERNAL restores them before its RTI. Changing the vector inside SEI and CLI
 prevents an interrupt from arriving when only one byte has been
 written.</p>
 <h3 id="hardware-vectors">Hardware vectors</h3>

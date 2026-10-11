@@ -34,6 +34,26 @@ the extended KERNAL table.</li>
 <li>Chapter 15: replaced the advice to check SETBNK's argument order
 with the order itself.</li>
 <li>Fixed the em dash in every chapter's page title.</li>
+<li>Chapter 5: corrected <code>$D030</code> bits 1, 2 and 6 (EXTSYNC,
+PAL and the unimplemented CROM9), the MULBUSY status bit, which is never
+set, and the description of the ROM in bank 2.</li>
+<li>Chapter 8: corrected which <code>$D030</code> bits need the VIC-III
+personality, the cycle cost of flat <code>[zp],Z</code> access, and the
+location of EXTIRQS and FNRSTCMP in <code>$D07A</code>; noted that DMA
+options carry over between chained jobs.</li>
+<li>Chapter 11: replaced the ROM layout with the layout of ROM 920422;
+corrected the serial-bus and editor vectors (<code>$0334-$034B</code>,
+two bytes apart), VECTOR's 56-byte table from ROM 920400, and the
+registers the KERNAL saves before jumping through CINV.</li>
+<li>Chapter 8: noted when the <code>$00</code> speed shortcut has no
+effect.</li>
+<li>Chapter 16: added machine-language examples for paddles, using the
+MEGA65's <code>$D620-$D623</code>, and for the keyboard matrix; gave the
+light pen registers and noted that the current core latches only touch
+input.</li>
+<li>Appendices: <code>$D640-$D67F</code> as the Hypervisor trap range,
+<code>$D05E</code> as the low byte of CHRCOUNT, and the RTN/RTS #$nn
+naming.</li>
 <li>Contents page: listed Appendices A–G, each linking to its section.</li>
 <li>Added the version and this changelog to the contents page.</li>
 <li>First publication of Chapters 1–17 and the appendices.</li>

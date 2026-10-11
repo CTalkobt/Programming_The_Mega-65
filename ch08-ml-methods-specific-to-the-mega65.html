@@ -104,9 +104,10 @@ leaving all of bank 0 visible as RAM with I/O at <code>$D000</code>:</p>
 because the KERNAL's interrupt handler assumes the KERNAL's map. An
 interrupt arriving halfway through would run with the ROM switched
 out.</li>
-<li><strong>Knock before <code>$D030</code>.</strong> <code>$D030</code>
-exists only in the VIC-III and VIC-IV personalities, so the knock must
-come first. MAP takes precedence over every other banking mechanism, but
+<li><strong>Knock before <code>$D030</code>.</strong> The ROM-banking
+bits of <code>$D030</code> exist only in the VIC-III and VIC-IV
+personalities; in the VIC-II personality the address holds only the
+C128 2 MHz bit. So the knock must come first. MAP takes precedence over every other banking mechanism, but
 only for the 8KB blocks it maps (MEGA65 Book, p. K-7). The skeleton maps
 no blocks, so any ROM bits left set in <code>$D030</code> would still
 bring ROM into those areas; clearing <code>$D030</code> removes
@@ -192,6 +193,12 @@ changes the port's direction bits. This is the simplest method and works
 in every personality:</p>
 <pre><code>        lda #$41
         sta $00         ; force 40.5 MHz</code></pre>
+<p>The CPU catches these values only when the write reaches address
+<code>$0000</code> with the normal mapping there. If MAP covers
+<code>$0000-$1FFF</code>, or the base page register B is not
+<code>$00</code> so that <code>sta $00</code> lands elsewhere, the
+shortcut does nothing, and a takeover program that maps the lowest
+block must use the bits below instead.</p>
 <h3 id="changing-the-bits-directly">Changing the bits directly</h3>
 <p>To select a particular speed, release the force and set the bits. The
 45GS02's TSB and TRB instructions set and clear bits in memory without
@@ -247,7 +254,7 @@ MAP, flat addressing and DMA</h3>
 <tr class="odd">
 <td>Flat <code>[zp],Z</code></td>
 <td>Scattered reads and writes</td>
-<td>Pointer setup; one extra cycle or two per access</td>
+<td>Pointer setup; two extra cycles per load and three per store</td>
 </tr>
 <tr class="even">
 <td>DMA</td>
@@ -380,7 +387,9 @@ reaches a job without the chain bit. A single trigger can then perform a
 whole sequence of operations, such as clearing the screen, clearing
 colour RAM and copying in a new character set. In enhanced mode each job
 in the chain begins with its own option bytes, so each can use different
-megabytes and steps.</p>
+megabytes and steps. Options carry over from one job to the next until
+the chain ends, though: a job that needs an option back at its default
+must set it again, because leaving it out does not reset it.</p>
 <pre><code>clear   .byte $0a, $00  ; job 1 options: F018A, end
         .byte $07       ; fill, chained (bit 2 set)
         .word 2000
@@ -560,7 +569,7 @@ Book, pp. Q-43, Q-44):</p>
 physical</td>
 </tr>
 <tr class="even">
-<td><code>$D07A</code></td>
+<td><code>$D07A</code> bit 6</td>
 <td>EXTIRQS</td>
 <td>Enable extra interrupt sources, such as raster X position</td>
 </tr>
@@ -571,8 +580,9 @@ physical</td>
 </tr>
 </tbody>
 </table>
-<p>The compare mode is selected by the FNRSTCMP setting, which FNRST
-reads back; the Book's register appendix gives its location. There are
+<p>The compare mode is selected by FNRSTCMP, bit 7 of
+<code>$D07A</code>: clear for physical lines, set for VIC-II lines. FNRST
+reads back the same bit. There are
 roughly twice as many physical lines as VIC-II lines in the standard
 display, so a physical compare can split the screen between two VIC-II
 lines.</p>

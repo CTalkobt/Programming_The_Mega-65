@@ -498,7 +498,9 @@ page, <code>(bp),Z</code> indirect indexed by Z, rel16 a 16-bit branch,
 and <code>(d,SP),Y</code> stack-relative. The 45GS02's flat and quad
 instructions are prefixed forms of these opcodes, as Chapter 10
 describes. This map follows the cc65 CPU reference and the Book's
-4510/45GS02 opcode table (MEGA65 Book, Appendix L).</p>
+4510/45GS02 opcode table (MEGA65 Book, Appendix L). Opcode
+<code>$62</code> uses the cc65 name RTN; the Book writes the same
+instruction as <code>RTS #$nn</code>.</p>
 <h3 id="columns-0-to-7">Columns 0 to 7</h3>
 <table>
 <thead>
@@ -996,7 +998,7 @@ it</td>
 <tr class="even">
 <td><code>$D05E</code></td>
 <td>CHRCOUNT</td>
-<td>Characters per row</td>
+<td>Characters per row (low byte)</td>
 <td>12</td>
 </tr>
 <tr class="odd">
@@ -1066,8 +1068,8 @@ it</td>
 <td>13</td>
 </tr>
 <tr class="even">
-<td><code>$D640</code></td>
-<td>Hypervisor trap</td>
+<td><code>$D640-$D67F</code></td>
+<td>Hypervisor traps</td>
 <td>Hypervisor services</td>
 <td>8, 11</td>
 </tr>

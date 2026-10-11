@@ -351,9 +351,45 @@ above 255 means the button is pressed (MEGA65 Book, p. B-197):</p>
 <pre><code>10 X = POT(1)
 20 B = X &gt; 255 : REM -1 WHILE THE BUTTON IS PRESSED
 30 V = X AND 255 : REM POSITION, 0 TO 255</code></pre>
-<p>Machine language reads the two values from SID registers
+<p>C64 software reads the two values from SID registers
 <code>$D419</code> and <code>$D41A</code>, after selecting a port
-through the upper bits of CIA 1's port A, as on the C64.</p>
+through bits 6 and 7 of CIA 1's port A. The MEGA65 adds four registers
+that read all four paddles directly, with no SID or CIA setup; they need
+the MEGA65 I/O personality:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Paddle</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D620</code></td>
+<td>Port 1, X</td>
+</tr>
+<tr class="even">
+<td><code>$D621</code></td>
+<td>Port 1, Y</td>
+</tr>
+<tr class="odd">
+<td><code>$D622</code></td>
+<td>Port 2, X</td>
+</tr>
+<tr class="even">
+<td><code>$D623</code></td>
+<td>Port 2, Y</td>
+</tr>
+</tbody>
+</table>
+<pre><code>paddle  lda $d620       ; port 1, paddle X: 0-255
+        sta pos
+        lda $dc01       ; CIA 1 port B holds port 1's switches
+        and #%00000100  ; paddle X's button is the joystick left line
+        rts             ; Z set while the button is pressed</code></pre>
+<p>As with a joystick, a button reads 0 while pressed. Paddle Y's button
+is on the right line, bit 3, and port 2's buttons are on
+<code>$DC00</code>.</p>
 <h2 id="mice">Mice</h2>
 <p>The MEGA65 accepts the Commodore 1351 mouse, Amiga mice, and modern
 USB mice through adapters such as the mouSTer. The configuration
@@ -375,8 +411,16 @@ while the program does other work.</p>
 <h2 id="light-pens">Light Pens</h2>
 <p>A light pen detects the moment the display's beam passes under its
 tip, and the video chip latches the position. LPEN(0) and LPEN(1) return
-the X and Y positions (MEGA65 Book, p. B-163). Light pens only work with
-CRT displays, so they are rarely used on the MEGA65 today.</p>
+the X and Y positions, and the Book describes a light pen on port 1 with
+a CRT display (MEGA65 Book, p. B-163). In machine language the latched
+position is in <code>$D013</code> (X) and <code>$D014</code> (Y), and
+bit 3 of <code>$D019</code> flags a new reading, as on the C64.</p>
+<p>In the current core, however, the latch is set only by the touch
+input of the on-screen keyboard, not by a pen on the control port (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, September 2026). A program should not count on
+a light pen working, and few MEGA65 owners have the CRT one would
+need.</p>
 <h2 id="the-keyboard-as-an-input-device">The Keyboard as an Input
 Device</h2>
 <p>The C64 read its keyboard by scanning a matrix through CIA 1, which
@@ -460,7 +504,15 @@ eight rows (MEGA65 Book, p. F-14):</p>
 </table>
 <p>Unlike CIA scanning, these registers report any combination of keys
 without ghosting, and they do not disturb the joystick ports. The Book's
-keyboard appendix gives the key at each row and column.</p>
+keyboard appendix gives the key at each row and column. The space bar,
+for example, is in column 7, row 4:</p>
+<pre><code>space   lda #7          ; select column 7
+        sta $d614
+        lda $d613       ; read its eight rows
+        and #%00010000  ; row 4: the space bar
+        rts             ; Z set while space is held</code></pre>
+<p>A game can poll several columns this way every frame, and react to
+any combination of keys held at once.</p>
 <h3 id="from-basic-1">From BASIC</h3>
 <p>GET and GETKEY read the typing queue. For held keys, a BASIC program
 can read the matrix registers with POKE and PEEK, though the keyboard is
@@ -473,10 +525,12 @@ bits 0-4. Three-button and five-button controllers add buttons 2 to 5,
 which JOY reports as 256, 512, 1024 and 2048; machine language reads
 buttons 2 and 3 from the paddle registers <code>$D620-$D623</code>.</li>
 <li><strong>Paddles.</strong> POT returns position and button; machine
-language reads SID <code>$D419</code> and <code>$D41A</code>.</li>
+language reads <code>$D620-$D623</code>, or SID <code>$D419</code> and
+<code>$D41A</code> as on the C64.</li>
 <li><strong>Mice.</strong> Set the mouse type in the configuration
 utility; MOUSE ON, RMOUSE and MOUSE OFF provide a complete driver.</li>
-<li><strong>Light pens.</strong> LPEN, with a CRT display.</li>
+<li><strong>Light pens.</strong> LPEN and <code>$D013</code>/<code>$D014</code>,
+though the current core latches only touch input.</li>
 <li><strong>Keyboard.</strong> The typing queue at <code>$D610</code>,
 <code>$D619</code> and <code>$D60A</code> gives characters; the matrix
 registers at <code>$D614</code>, <code>$D613</code> and

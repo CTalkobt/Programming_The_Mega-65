@@ -423,9 +423,10 @@ mechanism matters most in C64 mode, but it remains active underneath
 MEGA65 mode too.</p>
 <h3 id="the-d030-rom-bits">The <code>$D030</code> ROM bits</h3>
 <p>The C65 added a register in the VIC-III, at <code>$D030</code>, that
-switches pieces of ROM into fixed places in the window. They are the
-C64-mode ROMs in bank 2; the MEGA65's own ROM is reached through MAP
-instead. These regions are read-only, and MAP overrides them for any
+switches pieces of ROM into fixed places in the window. They show
+parts of ROM bank 2, which holds the C64-mode BASIC and KERNAL along
+with other ROM code; the MEGA65's main KERNAL, in bank 3, is reached
+through MAP instead. These regions are read-only, and MAP overrides them for any
 block it maps (MEGA65 Book, pp. K-6, K-7).</p>
 <table>
 <thead>
@@ -461,7 +462,8 @@ block it maps (MEGA65 Book, pp. K-6, K-7).</p>
 <tr class="odd">
 <td>6</td>
 <td>CROM9</td>
-<td>Selects which character set the video chip uses</td>
+<td>Meant to select between the C64 and C65 character sets; not
+implemented on the MEGA65</td>
 </tr>
 <tr class="even">
 <td>7</td>
@@ -471,7 +473,9 @@ block it maps (MEGA65 Book, pp. K-6, K-7).</p>
 </tr>
 </tbody>
 </table>
-<p>Bits 1 and 2 control video timing rather than banking.
+<p>Bits 1 and 2 are not banking bits: bit 1 enables external video
+sync (genlock), and bit 2 chooses whether colours 0-15 come from the
+palette ROM or palette RAM.
 <code>$D030</code> exists only when the VIC-III or VIC-IV personality is
 active, as described in the next section. CRAM2K deserves a warning:
 while it is set, the CIAs at <code>$DC00</code> and <code>$DD00</code>
@@ -656,7 +660,9 @@ Hypervisor, often known by the name of its implementation, Hyppo. It is
 the first code to run at power-on, and it remains resident afterwards in
 its own 16KB of memory, which the CPU maps in at
 <code>$8000-$BFFF</code> only while in hypervisor mode and which
-ordinary programs cannot reach by any means (MEGA65 Book, p. K-3).</p>
+ordinary programs cannot reach (MEGA65 Book, p. K-3). Only the serial
+monitor and debugger interface can still read it, through its 28-bit
+address.</p>
 <p>The idea comes from virtual machines on larger computers. The
 Hypervisor runs in a special CPU mode with access to everything, while
 the KERNAL, BASIC and user programs run in a normal mode that cannot see
@@ -859,7 +865,9 @@ quotient.</p>
 <tr class="even">
 <td><code>$D70F</code></td>
 <td>8 bits</td>
-<td>Status: bit 7 set while dividing, bit 6 set while multiplying</td>
+<td>Status: bit 7 set while the divider is busy. Bit 6 (MULBUSY) is
+defined but never set, because the multiplier finishes in one
+cycle</td>
 </tr>
 </tbody>
 </table>
