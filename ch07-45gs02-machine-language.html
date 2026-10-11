@@ -30,7 +30,7 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-7-45gs02-machine-language">Programming
 the MEGA65 — Chapter 7: 45GS02 Machine Language</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Machine language is the processor's own language: the bytes the
 45GS02 fetches and executes. Every BASIC statement eventually becomes
@@ -573,7 +573,9 @@ skip</code></pre>
 bit 15 and Z if the whole word becomes zero (MEGA65 Book, pp. L-82,
 L-86). ASW and ROW shift a 16-bit value in memory left. PHW pushes a
 16-bit value, either an immediate constant or the contents of a memory
-word, which is useful for passing parameters on the stack.</p>
+word. It pushes the low byte first, so the word lies on the stack high
+byte first, the reverse of a return address; the stack-parameter example
+later in this chapter shows the consequence.</p>
 <h3 id="bit-instructions">Bit instructions</h3>
 <p>RMB and SMB clear or set one bit of a base page byte, and BBR and BBS
 branch on whether one bit is clear or set. The bit number is part of the
@@ -645,8 +647,8 @@ STQ at <code>$10</code> places A at <code>$10</code>, X at
 </table>
 <p>The usual addressing modes are base page, absolute, base page
 indirect and flat indirect. Not every instruction supports every mode;
-Chapter 10 has the details. Assembler mnemonics vary slightly, so some
-assemblers write ADDQ or ADQ, or LDQ as LDR Q.</p>
+Chapter 10 has the details. Assembler mnemonics vary slightly: 64tass,
+for example, writes ADQ for ADCQ.</p>
 <h3 id="how-the-prefix-works">How the prefix works</h3>
 <p>The quad instructions are ordinary 8-bit instructions preceded by two
 NEG opcodes, <code>$42 $42</code>. The prefix tells the CPU to apply the
@@ -710,10 +712,12 @@ by number.</li>
 bytes from the stack. A routine that takes parameters on the stack can
 clean them up as it returns.</li>
 </ul>
-<p>Together with PHW and stack-relative addressing, these make it
-practical to pass parameters on the stack, as compilers for larger
-processors do:</p>
-<pre><code>        phw #message    ; push the address of the text
+<p>Together with stack-relative addressing, these make it practical to
+pass parameters on the stack, as compilers for larger processors do:</p>
+<pre><code>        lda #&gt;message   ; push the address of the text,
+        pha             ; high byte first, so it lies on
+        lda #&lt;message   ; the stack low byte first, like
+        pha             ; the return address JSR pushes
         jsr print
         rts
 
@@ -726,8 +730,10 @@ loop    lda ($03,sp),y  ; SP+1/SP+2 hold the return address,
 done    rtn #2          ; return and drop the 2-byte parameter
 
 message .text &quot;HELLO&quot;, 0</code></pre>
-<p>PHW pushes the high byte first, so the word lies on the stack low
-byte first and can be used directly as a pointer.</p>
+<p>PHW would push the address in a single instruction, but it pushes
+the low byte first, leaving the word on the stack high byte first. That
+is the wrong way round for a pointer, so the example pushes the two
+bytes itself (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026; <a href="https://github.com/lgblgblgb/xemu">Xemu</a>, <code>cpu65.c</code>).</p>
 <h3 id="interrupts">Interrupts</h3>
 <p>An interrupt makes the CPU stop what it is doing, push the program
 counter and status, and run a handler. RTI returns to the interrupted
@@ -901,8 +907,9 @@ parameter-dropping returns. STZ stores the Z register, not zero.</li>
 <li><strong>Q register.</strong> A, X, Y and Z form a 32-bit register
 for loads, stores, arithmetic, logic and shifts, using the
 <code>$42 $42</code> prefix.</li>
-<li><strong>Stack and interrupts.</strong> PHW, stack-relative
-addressing and RTN make stack parameters practical. Interrupt handlers
+<li><strong>Stack and interrupts.</strong> Stack-relative addressing
+and RTN make stack parameters practical; PHW leaves its word high byte
+first. Interrupt handlers
 must also preserve Z and B.</li>
 <li><strong>Tools.</strong> The built-in MONITOR assembles, disassembles
 and examines memory anywhere in the 28-bit space.</li>

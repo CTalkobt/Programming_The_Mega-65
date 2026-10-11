@@ -41,8 +41,11 @@ which documents the 6502, 65C02, 65CE02, 4510 and 45GS02 instruction
 sets side by side.</p>
 <p>The 65CE02 defines all 256 opcodes, and the 45GS02 builds its
 extensions from prefixes rather than new opcodes, so every byte value is
-a valid instruction or prefix. There are no undocumented opcodes of the
-kind C64 programmers know.</p>
+a valid instruction or prefix. In its native mode there are no
+undocumented opcodes of the kind C64 programmers know; a separate 6502
+compatibility mode, which the Book describes as incomplete and
+untested, emulates some of them (MEGA65 Book, 45GS02 and 6502
+instruction sets appendix).</p>
 <p>Cycle counts are not given here. The 45GS02's native timings differ
 from the 6502's, and at 40.5 MHz they also depend on memory type and
 wait states; Chapter 7 discusses timing, and the MEGA65 Book's CPU
@@ -191,7 +194,8 @@ register.</p>
 <p>Assemblers do not all use the same mnemonics for the newer
 instructions. Long branches may be written <code>LBNE</code> or chosen
 automatically from <code>BNE</code>; quad instructions may be written
-<code>ADCQ</code>, <code>ADQ</code> or <code>ADDQ</code>; and bit
+<code>ADCQ</code> (cc65 and the MEGA65 Book) or <code>ADQ</code>
+(64tass); and bit
 instructions may be written <code>RMB3 $10</code> or
 <code>RMB 3,$10</code>. This chapter uses the forms most common in
 MEGA65 documentation.</p>
@@ -315,7 +319,7 @@ MEGA65 documentation.</p>
 <tr class="even">
 <td>BRK</td>
 <td>Software interrupt through <code>$FFFE</code></td>
-<td>B I</td>
+<td>I</td>
 <td><code>impl $00</code></td>
 <td>6502</td>
 </tr>
@@ -349,8 +353,16 @@ any program that does not set it deliberately.</p>
 <p><strong>BBR and BBS</strong> take two operands: the base page address
 to test and an 8-bit relative branch target, as in
 <code>BBS3 $10,done</code>. They are three-byte instructions.</p>
-<p><strong>BIT immediate</strong> sets only Z. The N and V flags are
-copied from bits 7 and 6 of the operand only in the memory modes.</p>
+<p><strong>BIT immediate</strong> sets Z from A AND the operand, and,
+unlike the 65C02, also copies bits 7 and 6 of the operand into N and V,
+just as the memory modes do (MEGA65 Book, BIT instruction entry;
+<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
+<p><strong>BSR</strong> is written <code>LBSR</code> in cc65 (<a
+href="https://cc65.github.io/doc/cpus.html">cc65 CPU reference</a>); the
+MEGA65 Book writes BSR.</p>
+<p><strong>BRK</strong> sets I. The CPU has no stored B flag: bit 4 is
+set only in the copy of P that BRK pushes, so a handler tells BRK from
+IRQ by testing that copy on the stack (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
 <p><strong>BRK</strong> is followed by a padding byte that the CPU skips
 on return, as on the 6502. The return address pushed is that of BRK plus
 two.</p>
@@ -638,7 +650,7 @@ a stray NOP before such an instruction changes its meaning.</p>
 </tr>
 <tr class="odd">
 <td>PHW</td>
-<td>Push a 16-bit value, high byte first</td>
+<td>Push a 16-bit value, low byte first</td>
 <td>-</td>
 <td><code>imm16 $F4 · abs $FC</code></td>
 <td>CE</td>
@@ -674,7 +686,7 @@ a stray NOP before such an instruction changes its meaning.</p>
 <tr class="even">
 <td>PLP</td>
 <td>Pull P</td>
-<td>all</td>
+<td>N V D I Z C</td>
 <td><code>impl $28</code></td>
 <td>6502</td>
 </tr>
@@ -702,6 +714,9 @@ a stray NOP before such an instruction changes its meaning.</p>
 </tbody>
 </table>
 <h3 id="notes-2">Notes</h3>
+<p><strong>PLP and RTI</strong> restore N, V, D, I, Z and C from the
+stack, but never E: only CLE and SEE change the stack mode (MEGA65 Book,
+PLP and RTI instruction entries; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
 <p><strong>INW</strong> increments a 16-bit value at a base page
 address, low byte first. It is the 45GS02's most common way to advance a
 pointer.</p>
@@ -718,9 +733,11 @@ page, use LDA and TAZ.</p>
 <p><strong>MAP</strong> reads its arguments from all four registers; see
 Chapters 5 and 8. It also gives the megabyte selector when X or Z holds
 <code>$0F</code>.</p>
-<p><strong>PHW</strong> pushes the high byte first, so the word sits on
-the stack low byte first, ready for use as a pointer with stack-relative
-addressing. PHW abs pushes the 16-bit contents of the address, not the
+<p><strong>PHW</strong> pushes the low byte first, so the high byte
+ends up at the lower stack address. That is the reverse of how JSR
+leaves a return address, and it means a word pushed with PHW is not a
+ready-made little-endian pointer for stack-relative addressing (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026;
+<a href="https://github.com/lgblgblgb/xemu">Xemu</a>, <code>cpu65.c</code>). PHW abs pushes the 16-bit contents of the address, not the
 address itself.</p>
 <h2 id="rmb-to-stz">RMB to STZ</h2>
 <table>
@@ -765,7 +782,7 @@ address itself.</p>
 <tr class="odd">
 <td>RTI</td>
 <td>Pull P and PC; return from interrupt</td>
-<td>all</td>
+<td>N V D I Z C</td>
 <td><code>impl $40</code></td>
 <td>6502</td>
 </tr>
@@ -1130,9 +1147,9 @@ difference to them.</p>
 <p><strong>Indirect quad modes</strong> are written <code>(bp)</code>
 and <code>[bp]</code> for every instruction except LDQ, which cc65
 writes <code>(bp),Z</code> and <code>[bp],Z</code>. Because Z is part of
-Q, a quad instruction's use of Z as an index is unusual; for predictable
-results, set Z to zero before an indirect quad access, or use the base
-page and absolute modes.</p>
+Q, the other indirect quad instructions do not add Z to the pointer at
+all; only LDQ does, which is why cc65 writes its modes with
+<code>,Z</code>. Set Z to zero before an indirect LDQ (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
 <p><strong>Flags</strong> reflect the whole 32-bit result: N is bit 31,
 and Z is set only if all 32 bits are zero.</p>
 <p><strong>Every quad instruction that changes Q changes A, X, Y and
@@ -1190,7 +1207,7 @@ into a flat access, and a NEG of A immediately followed by another NEG
 creates a quad prefix. Place padding NOPs elsewhere, and do not negate A
 twice in a row.</p>
 <h3 id="differences-from-the-65c02">Differences from the 65C02</h3>
-<p>Code written for the 65C02 mostly runs unchanged, but four
+<p>Code written for the 65C02 mostly runs unchanged, but five
 differences can catch it out:</p>
 <table>
 <thead>
@@ -1212,18 +1229,24 @@ differences can catch it out:</p>
 <td><code>(bp),Z</code>: the same while Z is zero</td>
 </tr>
 <tr class="odd">
+<td><code>$89</code></td>
+<td>BIT immediate: sets only Z</td>
+<td>BIT immediate: also sets N and V from the operand</td>
+</tr>
+<tr class="even">
 <td><code>$CB</code></td>
 <td>WAI on WDC parts</td>
 <td>ASW abs</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$DB</code></td>
 <td>STP on WDC parts</td>
 <td>PHZ</td>
 </tr>
 </tbody>
 </table>
-<p>With Z held at zero, the first two differences disappear. The last
+<p>With Z held at zero, the first two differences disappear. The third
+matters to 65C02 code that tests N or V after a BIT immediate. The last
 two matter only for code written for WDC's 65C02 variant, which the
 MEGA65 has never needed to run.</p>
 <nav class="chapnav"><span><a href="ch09-mixing-basic-with-machine-language.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch11-mega65-rom-guide.html">Next &rarr;</a></span></nav>
