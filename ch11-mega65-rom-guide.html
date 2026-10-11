@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Programming the MEGA65 ��� Chapter 11: MEGA65 ROM Guide</title>
+  <title>Programming the MEGA65 — Chapter 11: MEGA65 ROM Guide</title>
   <style>
     code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
@@ -136,15 +136,32 @@ from the C128's. Its table has two parts: the standard entries shared
 with the C64, and an extended block below them inherited from the C128
 by way of the C65.</p>
 <h3 id="standard-entries">Standard entries</h3>
-<p>These 39 entries occupy the same addresses as on the C64 and do the
-same jobs (<a
-href="https://www.pagetable.com/?p=926">pagetable.com</a>).</p>
+<p>These 39 entries occupy the same addresses as on the C64, and most
+do the same jobs (<a
+href="https://www.pagetable.com/?p=926">pagetable.com</a>). Four
+addresses hold different routines on the MEGA65: KEY, MONEXIT,
+ScanStopKey and SCRORG take the places of the C64's SCNKEY, SETTMO,
+UDTIM and SCREEN. MEMTOP, MEMBOT and IOBASE are reserved. Some routines
+that keep their C64 names take different arguments: the clock routines
+work in BCD hours, minutes, seconds and tenths. PLOT keeps the C64's
+registers, with the line in X and the column in Y, but measures them
+from the top-left corner of the current window rather than of the
+screen. The inputs and outputs in the table come
+from the MEGA65 Book's KERNAL Jump Table appendix.</p>
+<p>X/Y means a 16-bit value with the low byte in X and the high byte
+in Y. C is the carry flag: routines that can fail return with C=1 and an
+error code in A. A dash means the routine takes no input or returns no
+result. Unless the table says otherwise, assume a KERNAL routine changes
+every register and flag. All of them expect the KERNAL's normal memory
+map, with the base page register B set to <code>$00</code>.</p>
 <table>
 <thead>
 <tr class="header">
 <th>Address</th>
 <th>Name</th>
 <th>Purpose</th>
+<th>Input</th>
+<th>Output</th>
 </tr>
 </thead>
 <tbody>
@@ -152,202 +169,281 @@ href="https://www.pagetable.com/?p=926">pagetable.com</a>).</p>
 <td><code>$FF81</code></td>
 <td>CINT</td>
 <td>Initialise screen editor and video</td>
+<td>— (IRQs disabled)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF84</code></td>
 <td>IOINIT</td>
 <td>Initialise I/O devices and the timer interrupt</td>
+<td>— (IRQs disabled)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FF87</code></td>
 <td>RAMTAS</td>
 <td>Test and initialise RAM</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF8A</code></td>
 <td>RESTOR</td>
 <td>Restore the default KERNAL vectors</td>
+<td>— (IRQs disabled)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FF8D</code></td>
 <td>VECTOR</td>
 <td>Read or set the KERNAL vectors</td>
+<td>C=1 to read, with X/Y = destination; C=0 to set, with X/Y = source</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF90</code></td>
 <td>SETMSG</td>
 <td>Enable or disable KERNAL messages</td>
+<td>A = message flags (bit 7 = control messages, bit 6 = error messages)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FF93</code></td>
 <td>SECOND</td>
 <td>Send a secondary address after LISTEN</td>
+<td>A = secondary address</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF96</code></td>
 <td>TKSA</td>
 <td>Send a secondary address after TALK</td>
+<td>A = secondary address</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FF99</code></td>
 <td>MEMTOP</td>
-<td>Read or set the top of memory</td>
+<td>Reserved, do not use</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF9C</code></td>
 <td>MEMBOT</td>
-<td>Read or set the bottom of memory</td>
+<td>Reserved, do not use</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FF9F</code></td>
-<td>SCNKEY</td>
-<td>Scan the keyboard</td>
+<td>KEY</td>
+<td>Handle special keys (Mega+Shift, No Scroll, Ctrl-S); called by the IRQ handler</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FFA2</code></td>
-<td>SETTMO</td>
-<td>Set IEEE timeout (no effect)</td>
+<td>MONEXIT</td>
+<td>The monitor’s exit to BASIC; not for use by programs</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FFA5</code></td>
 <td>ACPTR</td>
 <td>Read a byte from the serial bus</td>
+<td>—</td>
+<td>A = byte received</td>
 </tr>
 <tr class="even">
 <td><code>$FFA8</code></td>
 <td>CIOUT</td>
 <td>Send a byte to the serial bus</td>
+<td>A = byte to send</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FFAB</code></td>
 <td>UNTLK</td>
 <td>Send UNTALK</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FFAE</code></td>
 <td>UNLSN</td>
 <td>Send UNLISTEN</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FFB1</code></td>
 <td>LISTEN</td>
 <td>Send LISTEN</td>
+<td>A = device number (0–31)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FFB4</code></td>
 <td>TALK</td>
 <td>Send TALK</td>
+<td>A = device number (0–31)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FFB7</code></td>
 <td>READST</td>
 <td>Read the I/O status byte</td>
+<td>—</td>
+<td>A = status byte</td>
 </tr>
 <tr class="even">
 <td><code>$FFBA</code></td>
 <td>SETLFS</td>
 <td>Set logical file, device and secondary address</td>
+<td>A = logical file, X = device, Y = secondary address ($FF for none)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FFBD</code></td>
 <td>SETNAM</td>
 <td>Set the file name</td>
+<td>A = name length (0 for none), X/Y = address of name (bank set by SETBNK)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FFC0</code></td>
 <td>OPEN</td>
 <td>Open a logical file</td>
+<td>— (call SETBNK, SETLFS and SETNAM first)</td>
+<td>C=1 on error, A = error code</td>
 </tr>
 <tr class="odd">
 <td><code>$FFC3</code></td>
 <td>CLOSE</td>
 <td>Close a logical file</td>
+<td>A = logical file; C=1 to close without sending a close command</td>
+<td>C=1 on error, A = error code</td>
 </tr>
 <tr class="even">
 <td><code>$FFC6</code></td>
 <td>CHKIN</td>
 <td>Set the input channel</td>
+<td>X = logical file</td>
+<td>C=1 on error, A = error code</td>
 </tr>
 <tr class="odd">
 <td><code>$FFC9</code></td>
 <td>CHKOUT</td>
 <td>Set the output channel</td>
+<td>X = logical file</td>
+<td>C=1 on error, A = error code</td>
 </tr>
 <tr class="even">
 <td><code>$FFCC</code></td>
 <td>CLRCHN</td>
 <td>Restore default channels</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FFCF</code></td>
 <td>BASIN</td>
 <td>Input a character (CHRIN)</td>
+<td>—</td>
+<td>C=0: A = byte read; C=1: A = error code</td>
 </tr>
 <tr class="even">
 <td><code>$FFD2</code></td>
 <td>BSOUT</td>
 <td>Output a character (CHROUT)</td>
+<td>A = byte to write</td>
+<td>C=1 on error, A = error code</td>
 </tr>
 <tr class="odd">
 <td><code>$FFD5</code></td>
 <td>LOAD</td>
 <td>Load or verify a file</td>
+<td>A = 0 to load, 1 to verify (add $40 for raw mode); X/Y = load address (bank set by SETBNK)</td>
+<td>C=1 on error, A = error code; X/Y = end address</td>
 </tr>
 <tr class="even">
 <td><code>$FFD8</code></td>
 <td>SAVE</td>
 <td>Save memory to a file</td>
+<td>A = base-page address of a pointer to the start; X/Y = end address + 1</td>
+<td>C=1 on error, A = error code</td>
 </tr>
 <tr class="odd">
 <td><code>$FFDB</code></td>
 <td>SETTIM</td>
 <td>Set the system clock</td>
+<td>Y = hours (0–23), X = minutes, A = seconds, all in BCD; Z = tenths (0–9)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FFDE</code></td>
 <td>RDTIM</td>
 <td>Read the system clock</td>
+<td>—</td>
+<td>Y = hours (0–23), X = minutes, A = seconds, all in BCD; Z = tenths (0–9)</td>
 </tr>
 <tr class="odd">
 <td><code>$FFE1</code></td>
 <td>STOP</td>
 <td>Test the STOP key</td>
+<td>—</td>
+<td>Z=1 if STOP is pressed</td>
 </tr>
 <tr class="even">
 <td><code>$FFE4</code></td>
 <td>GETIN</td>
 <td>Get a character from the keyboard buffer</td>
+<td>—</td>
+<td>A = character; C=1 on error</td>
 </tr>
 <tr class="odd">
 <td><code>$FFE7</code></td>
 <td>CLALL</td>
 <td>Close all files</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FFEA</code></td>
-<td>UDTIM</td>
-<td>Advance the system clock</td>
+<td>ScanStopKey</td>
+<td>Test the STOP key without closing channels or clearing the keyboard buffer</td>
+<td>—</td>
+<td>A = $7F and N=0 if STOP is pressed; A = $FF and N=1 if not</td>
 </tr>
 <tr class="odd">
 <td><code>$FFED</code></td>
-<td>SCREEN</td>
-<td>Return the screen size in columns and rows</td>
+<td>SCRORG</td>
+<td>Return the size and position of the screen window</td>
+<td>—</td>
+<td>X = window width, Y = window height; A/Z = screen-memory address of the window’s top-left corner (low/high); C=0 for 80 columns, C=1 for 40</td>
 </tr>
 <tr class="even">
 <td><code>$FFF0</code></td>
 <td>PLOT</td>
 <td>Read or set the cursor position</td>
+<td>C=1 to read; C=0 to set, with X = line, Y = column, relative to the window origin</td>
+<td>X = line, Y = column, relative to the window origin (when read); C=1 on error (when set)</td>
 </tr>
 <tr class="odd">
 <td><code>$FFF3</code></td>
 <td>IOBASE</td>
-<td>Return the base address of the I/O area</td>
+<td>Reserved, do not use; on the C65 it always returns $D000</td>
+<td>—</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
-<p>SCREEN is worth using on the MEGA65, where the text screen may be 40
-or 80 columns wide and 25 or 50 rows high. A program that asks SCREEN
-for its dimensions works in every mode.</p>
+<p>SCRORG is worth using on the MEGA65, where the text screen may be 40
+or 80 columns wide and 25 or 50 rows high, and the WINDOW command can
+shrink the area the editor uses. A program that asks SCRORG for the
+window's size and position works in every mode.</p>
 <h3 id="extended-entries">Extended entries</h3>
 <p>The C65 kept most of the C128's additions, dropped three that made
 sense only on a C128 (DMA_CALL, DLCHR and GETCFG), and added
@@ -360,6 +456,8 @@ href="https://www.pagetable.com/?p=926">pagetable.com</a>).</p>
 <th>Address</th>
 <th>Name</th>
 <th>Purpose</th>
+<th>Input</th>
+<th>Output</th>
 </tr>
 </thead>
 <tbody>
@@ -367,86 +465,120 @@ href="https://www.pagetable.com/?p=926">pagetable.com</a>).</p>
 <td><code>$FF4D</code></td>
 <td>SPIN_SPOUT</td>
 <td>Set up fast serial for I/O</td>
+<td>C=0 to set up for input (SPINP), C=1 for output (SPOUT)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF50</code></td>
 <td>CLOSE_ALL</td>
 <td>Close all files on a device</td>
+<td>A = device number (0–31)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$FF53</code></td>
 <td>C64MODE</td>
 <td>Switch to C64 mode</td>
+<td>— (call with JMP)</td>
+<td>Does not return</td>
 </tr>
 <tr class="even">
 <td><code>$FF56</code></td>
 <td>MONITOR_CALL</td>
 <td>Enter the machine-language monitor</td>
+<td>— (call with JMP)</td>
+<td>Does not return</td>
 </tr>
 <tr class="odd">
 <td><code>$FF59</code></td>
 <td>BOOT_CALL</td>
 <td>Boot a program from disk</td>
+<td>— (call with JMP)</td>
+<td>Does not return</td>
 </tr>
 <tr class="even">
 <td><code>$FF5C</code></td>
 <td>PHOENIX</td>
 <td>Initialise function cartridges</td>
+<td>— (call with JMP)</td>
+<td>Does not return</td>
 </tr>
 <tr class="odd">
 <td><code>$FF5F</code></td>
 <td>LKUPLA</td>
 <td>Find a free logical file number</td>
+<td>A = logical file</td>
+<td>C=0 if found: A = logical file, X = device, Y = secondary address ($FF for none); C=1 if not found</td>
 </tr>
 <tr class="even">
 <td><code>$FF62</code></td>
 <td>LKUPSA</td>
 <td>Find a free secondary address</td>
+<td>Y = secondary address</td>
+<td>C=0 if found: A = logical file, X = device, Y = secondary address ($FF for none); C=1 if not found</td>
 </tr>
 <tr class="odd">
 <td><code>$FF65</code></td>
 <td>SWAPPER</td>
 <td>Switch screen width</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF68</code></td>
 <td>PFKEY</td>
 <td>Program a function key</td>
+<td>A = base-page address of a pointer to the string (low, high, bank); X = key number (1–16); Y = string length</td>
+<td>C=1 if the update failed</td>
 </tr>
 <tr class="odd">
 <td><code>$FF6B</code></td>
 <td>SETBNK</td>
 <td>Set the banks for LOAD and SAVE data and the file name</td>
+<td>Banks 0–5: A = data bank, X = file name bank. 28-bit addresses: A = $80 + address bits 24–27, Y = bits 16–23; X = $80 + file name bits 24–27, Z = bits 16–23</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF6E</code></td>
 <td>JSRFAR</td>
 <td>Call a routine in another bank</td>
+<td>$02 = bank (0–5), $03 = address high, $04 = address low; $05–$09 = status, A, X, Y and Z to pass to the routine. In banks 1–5 the target must lie in $2000–$7FFF</td>
+<td>Status, A, X, Y and Z as the routine left them</td>
 </tr>
 <tr class="odd">
 <td><code>$FF71</code></td>
 <td>JMPFAR</td>
 <td>Jump to a routine in another bank</td>
+<td>As JSRFAR (call with JMP)</td>
+<td>Does not return</td>
 </tr>
 <tr class="even">
 <td><code>$FF74</code></td>
 <td>LDA_FAR</td>
 <td>Load a byte from another bank</td>
+<td>X = base-page address of a pointer, Y = index, Z = bank</td>
+<td>A = byte read</td>
 </tr>
 <tr class="odd">
 <td><code>$FF77</code></td>
 <td>STA_FAR</td>
 <td>Store a byte in another bank</td>
+<td>A = byte to store; X = base-page address of a pointer, Y = index, Z = bank</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$FF7A</code></td>
 <td>CMP_FAR</td>
 <td>Compare A with a byte in another bank</td>
+<td>A = byte to compare; X = base-page address of a pointer, Y = index, Z = bank</td>
+<td>Flags set as by CMP</td>
 </tr>
 <tr class="odd">
 <td><code>$FF7D</code></td>
 <td>PRIMM</td>
 <td>Print the zero-terminated string that follows the JSR</td>
+<td>A zero-terminated string of up to 255 bytes, including the zero, after the JSR</td>
+<td>All registers preserved</td>
 </tr>
 </tbody>
 </table>
@@ -455,10 +587,10 @@ their C128 addresses. PRIMM at <code>$FF7D</code> is confirmed on the
 MEGA65 (<a
 href="https://m65digest.substack.com/p/robotfindskitten-part-2">MEGA65
 Digest</a>). The far-memory calls do not take the same arguments as on
-the C128: the C65 versions pass the bank in the Z register. Check the
-arguments for these calls against the documentation for your ROM before
-relying on them, since the MEGA65 team has said the extended entries
-carry over "with some changes".</p>
+the C128: LDA_FAR, STA_FAR and CMP_FAR take the bank in the Z register,
+and JSRFAR and JMPFAR take their target and register values from base
+page locations <code>$02</code>-<code>$09</code>. The inputs and outputs
+come from the MEGA65 Book's KERNAL Jump Table appendix.</p>
 <h3 id="example-printing-with-primm">Example: printing with PRIMM</h3>
 <p>PRIMM reads the bytes after the JSR as a string, prints them, and
 returns to the instruction after the terminating zero:</p>
@@ -636,6 +768,12 @@ monitor output, and <code>$D67F</code> for a program to freeze itself
 <p>The table lists the services the Book documents. "Not in 1.2" marks
 services the Book defines but describes as not implemented in Hyppo 1.2;
 they return error <code>$82</code> there.</p>
+<p>The Input column lists the registers a service reads besides A, and
+anything that must be set up first. A page is the high byte of a
+page-aligned address between <code>$0000</code> and <code>$7E00</code>.
+The Output column lists results besides the carry flag. "Not documented"
+means the Book gives no details for a service it does not
+implement.</p>
 <table>
 <thead>
 <tr class="header">
@@ -643,6 +781,8 @@ they return error <code>$82</code> there.</p>
 <th>Service</th>
 <th>Status in 1.2</th>
 <th>Purpose</th>
+<th>Input</th>
+<th>Output</th>
 </tr>
 </thead>
 <tbody>
@@ -651,271 +791,360 @@ they return error <code>$82</code> there.</p>
 <td>getversion</td>
 <td>Yes</td>
 <td>Hyppo version in A.X, HDOS version in Y.Z</td>
+<td>—</td>
+<td>A.X = Hyppo version, Y.Z = HDOS version (major.minor)</td>
 </tr>
 <tr class="even">
 <td><code>$02</code></td>
 <td>getdefaultdrive</td>
 <td>Yes</td>
 <td>SD card partition selected at boot</td>
+<td>—</td>
+<td>A = drive number</td>
 </tr>
 <tr class="odd">
 <td><code>$04</code></td>
 <td>getcurrentdrive</td>
 <td>Yes</td>
 <td>Current drive</td>
+<td>—</td>
+<td>A = drive number</td>
 </tr>
 <tr class="even">
 <td><code>$06</code></td>
 <td>selectdrive</td>
 <td>Yes</td>
 <td>Select a drive (SD card partition)</td>
+<td>X = drive number</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$08</code></td>
 <td>getdrivesize</td>
 <td>Not in 1.2</td>
 <td>Size of a drive</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="even">
 <td><code>$0A</code></td>
 <td>getcwd</td>
 <td>Not in 1.2</td>
 <td>Current directory</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="odd">
 <td><code>$0C</code></td>
 <td>chdir</td>
 <td>Yes</td>
 <td>Change directory</td>
+<td>— (find the directory’s entry first with findfile, findfirst, findnext or readdir)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$0E</code></td>
 <td>mkdir</td>
 <td>Not in 1.2</td>
 <td>Create a directory</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="odd">
 <td><code>$10</code></td>
 <td>rmdir</td>
 <td>Not in 1.2</td>
 <td>Remove a directory</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="even">
 <td><code>$12</code></td>
 <td>opendir</td>
 <td>Yes</td>
 <td>Open a directory for reading</td>
+<td>— (select the drive and directory first)</td>
+<td>A = file descriptor</td>
 </tr>
 <tr class="odd">
 <td><code>$14</code></td>
 <td>readdir</td>
 <td>Yes</td>
 <td>Read the next directory entry</td>
+<td>X = file descriptor; Y = page of an 87-byte destination</td>
+<td>Directory entry at $YY00: long name, 8.3 name, start cluster, length and attributes</td>
 </tr>
 <tr class="even">
 <td><code>$16</code></td>
 <td>closedir</td>
 <td>Yes</td>
 <td>Close a directory</td>
+<td>X = file descriptor</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$18</code></td>
 <td>openfile</td>
 <td>Yes</td>
 <td>Open a file</td>
+<td>— (find the file first)</td>
+<td>A = file descriptor</td>
 </tr>
 <tr class="even">
 <td><code>$1A</code></td>
 <td>readfile</td>
 <td>Yes</td>
 <td>Read a sector of the open file</td>
+<td>— (reads the current open file)</td>
+<td>X/Y = number of bytes read</td>
 </tr>
 <tr class="odd">
 <td><code>$1C</code></td>
 <td>writefile</td>
 <td>Yes</td>
 <td>Write a sector to the open file</td>
+<td>— (writes the current open file; the Book’s description is incomplete)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$1E</code></td>
 <td>mkfile</td>
 <td>Not in 1.2</td>
 <td>Create a file</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="odd">
 <td><code>$20</code></td>
 <td>closefile</td>
 <td>Yes</td>
 <td>Close a file</td>
+<td>X = file descriptor</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$22</code></td>
 <td>closeall</td>
 <td>Yes</td>
 <td>Close all files and directories</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$24</code></td>
 <td>seekfile</td>
 <td>Not in 1.2</td>
 <td>Seek within a file</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="even">
 <td><code>$26</code></td>
 <td>rmfile</td>
 <td>Yes</td>
 <td>Delete a file</td>
+<td>— (find the file first)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$28</code></td>
 <td>fstat</td>
 <td>Not in 1.2</td>
 <td>File information</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="even">
 <td><code>$2A</code></td>
 <td>rename</td>
 <td>Not in 1.2</td>
 <td>Rename a file</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="odd">
 <td><code>$2C</code></td>
 <td>filedate</td>
 <td>Not in 1.2</td>
 <td>File date</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="even">
 <td><code>$2E</code></td>
 <td>setname</td>
 <td>Yes</td>
-<td>Set the current file name; Y = page of a page-aligned ASCII
-name</td>
+<td>Set the current file name</td>
+<td>Y = page of the name</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$30</code></td>
 <td>findfirst</td>
 <td>Yes</td>
 <td>Find the first file matching the name</td>
+<td>— (set the name with setname first)</td>
+<td>A = file descriptor for the directory, which may need closing with closedir</td>
 </tr>
 <tr class="even">
 <td><code>$32</code></td>
 <td>findnext</td>
 <td>Yes</td>
 <td>Find the next matching file</td>
+<td>— (call findfirst first)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$34</code></td>
 <td>findfile</td>
 <td>Yes</td>
 <td>Find a file by name</td>
+<td>— (set the name with setname first)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$36</code></td>
 <td>loadfile</td>
 <td>Yes</td>
 <td>Load the named file to <code>$00ZZYYXX</code></td>
+<td>X/Y/Z = load address, low/middle/high; set the name with setname first</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$38</code></td>
 <td>geterrorcode</td>
 <td>Yes</td>
 <td>Error code of the last failed service</td>
+<td>—</td>
+<td>A = error code of the last failed service</td>
 </tr>
 <tr class="even">
 <td><code>$3A</code></td>
 <td>setup_transfer_area</td>
 <td>Yes</td>
-<td>Y = page used to pass data</td>
+<td>Set the page used to pass data</td>
+<td>Y = page of the transfer area</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$3C</code></td>
 <td>cdrootdir</td>
 <td>Yes</td>
 <td>Change to the root directory</td>
+<td>X = drive number</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$3E</code></td>
 <td>loadfile_attic</td>
 <td>Yes</td>
 <td>Load the named file to <code>$08ZZYYXX</code></td>
+<td>X/Y/Z = load address in attic RAM, low/middle/high; set the name with setname first</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$40</code></td>
 <td>d81attach0</td>
 <td>Yes</td>
 <td>Attach a D81 image as drive 0</td>
+<td>— (set the image name with setname first)</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$42</code></td>
 <td>d81detach</td>
 <td>Yes</td>
 <td>Detach disk images</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$44</code></td>
 <td>d81write_en</td>
 <td>Yes</td>
 <td>Allow writing to attached images</td>
+<td>—</td>
+<td>—</td>
 </tr>
 <tr class="even">
 <td><code>$46</code></td>
 <td>d81attach1</td>
 <td>Yes</td>
 <td>Attach a D81 image as drive 1</td>
+<td>— (set the image name with setname first)</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$48</code></td>
 <td>get_proc_desc</td>
 <td>Yes</td>
 <td>Read the process descriptor</td>
+<td>Y = page of a 256-byte destination</td>
+<td>Process descriptor at $YY00: task ID and name, attached disk images, file descriptors</td>
 </tr>
 <tr class="even">
 <td><code>$4A</code></td>
 <td>attach</td>
 <td>Yes</td>
 <td>Attach a disk image</td>
+<td>X bit 0 = drive (0 or 1); bit 7 = 0 to attach, 1 to detach; when detaching, bit 1 = both drives and bit 6 = do not reattach real drives. Set the image name with setname before attaching</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$50</code>-<code>$6E</code></td>
 <td>task and message services</td>
 <td>Not in 1.2</td>
 <td>Create, switch and exit tasks; send and receive messages</td>
+<td>Not documented</td>
+<td>Not documented</td>
 </tr>
 <tr class="even">
 <td><code>$70</code></td>
 <td>toggle_rom_writeprotect</td>
 <td>Yes</td>
 <td>Toggle write-protection of the ROM in banks 2 and 3</td>
+<td>—</td>
+<td>A bit 2 set if the ROM area is write-protected</td>
 </tr>
 <tr class="odd">
 <td><code>$72</code></td>
 <td>toggle_force_4502</td>
 <td>Yes</td>
 <td>Toggle the CPU's 6502 personality</td>
+<td>—</td>
+<td>A bit 5 set for the 45GS02 personality, clear for 6502</td>
 </tr>
 <tr class="even">
 <td><code>$74</code></td>
 <td>get_mapping</td>
 <td>Yes</td>
 <td>Copy the MAP state to six bytes at page Y</td>
+<td>Y = page of a 6-byte destination</td>
+<td>At $YY00: MAPLO and MAPHI (big-endian words), then their megabyte offsets</td>
 </tr>
 <tr class="odd">
 <td><code>$76</code></td>
 <td>set_mapping</td>
 <td>Yes</td>
 <td>Set the MAP state from memory</td>
+<td>Y = page of a 6-byte source, laid out as for get_mapping</td>
+<td>— (execution continues with the new mapping)</td>
 </tr>
 <tr class="even">
 <td><code>$7C</code></td>
 <td>serial_monitor_write</td>
 <td>Yes</td>
 <td>Write to the serial monitor</td>
+<td>Y = ASCII character</td>
+<td>—</td>
 </tr>
 <tr class="odd">
 <td><code>$7E</code></td>
 <td>reset</td>
 <td>Yes</td>
 <td>Warm boot the MEGA65</td>
+<td>—</td>
+<td>Does not return</td>
 </tr>
 </tbody>
 </table>
