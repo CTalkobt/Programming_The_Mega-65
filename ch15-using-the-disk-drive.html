@@ -32,10 +32,11 @@ id="programming-the-mega65--chapter-15-using-the-disk-drive">Programming
 the MEGA65 — Chapter 15: Using the Disk Drive</h1>
 <p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
-<p>Everything in this chapter applies equally to a disk image on the SD
-card, the MEGA65's internal 3.5" drive and a Commodore drive on the IEC
-port. All three speak the same Commodore DOS, so a program written for
-one works on the others. Chapter 14 explained images and unit numbers;
+<p>Most of this chapter applies equally to a disk image on the SD card,
+the MEGA65's internal 3.5" drive and a Commodore drive on the IEC port.
+All three speak Commodore DOS, so ordinary file handling written for one
+works on the others. The MEGA65's own DOS adds features an older drive
+lacks, such as partitions; the text notes where that matters. Chapter 14 explained images and unit numbers;
 this chapter covers the drive itself, files of each type, the drive's
 status, and disk access from machine language.</p>
 <h2 id="drives-units-and-drive-numbers">Drives, Units and Drive
@@ -62,7 +63,8 @@ Book, pp. 6-7, 6-8).</p>
 <p>To format a disk, mount the drive as unit 8, insert the disk and give
 it a name and a two-character ID:</p>
 <pre><code>FORMAT &quot;MYDISK&quot;, IXX</code></pre>
-<p>Formatting takes about a minute; afterwards, DIR shows an empty
+<p>When asked ARE YOU SURE?, type YES and press RETURN. Formatting takes
+about a minute; afterwards, DIR shows an empty
 directory with the new name and ID.</p>
 <h3 id="iec-drives">IEC drives</h3>
 <p>External drives such as the 1541, 1571 and 1581, and modern devices
@@ -105,7 +107,8 @@ address</td>
 <tr class="odd">
 <td>CBM</td>
 <td>A 1581 partition, used for subdirectories</td>
-<td>MKDIR, CHDIR</td>
+<td>MKDIR, CHDIR (internal drive and disk images only, not IEC
+drives)</td>
 </tr>
 </tbody>
 </table>
@@ -123,8 +126,10 @@ each on its own line, so INPUT# can tell where one ends:</p>
 120 DCLOSE#2</code></pre>
 <p>ST becomes non-zero when the last item has been read. Adding to an
 existing file uses APPEND# instead of DOPEN#, and replacing a file needs
-it to be scratched first, or an <code>@</code> before the name when
-saving a program.</p>
+it to be scratched first, or an <code>@</code> before the name, which
+works for data files as well as programs, as in <code>DOPEN#2,
+"@SCORES", W</code> (MEGA65 Book, DOPEN). Avoid <code>@</code> with
+1541 and 1571 drives, as the Book advises.</p>
 <h3 id="relative-files">Relative files</h3>
 <p>A relative file holds numbered records of a fixed length, given with
 L when the file is first created. RECORD moves to any record directly,
@@ -160,7 +165,8 @@ the common ones are:</p>
 </tr>
 <tr class="odd">
 <td>20-29</td>
-<td>Read errors: the disk is damaged or unformatted</td>
+<td>Read or write errors: the disk is damaged, unformatted or
+write-protected</td>
 </tr>
 <tr class="even">
 <td>26</td>
@@ -192,16 +198,19 @@ most effective way to make a program that uses disks reliable.</p>
 6-9, 6-10):</p>
 <ul>
 <li><strong>SHIFT+RUN/STOP</strong> runs <code>RUN "*"</code>, loading
-and running the first program on the disk, the convention most C64
-software follows.</li>
+and running the first program on the disk, a convention many older
+Commodore disks follow.</li>
 <li><strong>BOOT</strong> loads and runs a program named
 <code>AUTOBOOT.C65</code>, the C65's convention.</li>
 <li><strong>Automatic booting.</strong> If the image or drive mounted at
 power-on has an <code>AUTOBOOT.C65</code>, it runs straight away.</li>
 </ul>
 <p>To make a disk of your own bootable, save its starting program as
-<code>AUTOBOOT.C65</code>. A machine-language program saved there runs
-with BOOT just as well as a BASIC one.</p>
+<code>AUTOBOOT.C65</code>. BOOT loads that file as a BASIC program and
+RUNs it, so a machine-language boot program needs a one-line BASIC stub
+that SYSes to it. To load and start a machine-language file directly,
+use <code>BOOT "name"</code>, which loads the file and calls its load
+address (MEGA65 ROM source, BOOT).</p>
 <h2 id="disk-access-from-machine-language">Disk Access from Machine
 Language</h2>
 <p>Machine language reaches the drive through the KERNAL jump table from
@@ -239,7 +248,8 @@ namelen = * - name</code></pre>
 <p>The secondary address 2 to 14 opens a data channel; 0 and 1 are
 reserved for loading and saving, and 15 is the command channel, through
 which a program sends DOS commands and reads the status, as DISK and DS
-do in BASIC. SETBNK, from the C65 extensions, tells the KERNAL which
+do in BASIC. SETBNK, one of the extended entries the C65 inherited from
+the C128, tells the KERNAL which
 bank the data (A) and the file name (X) are in. It must be called before
 OPEN, LOAD or SAVE; Chapter 11 also covers its form for 28-bit
 addresses.</p>

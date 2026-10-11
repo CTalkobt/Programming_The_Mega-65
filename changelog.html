@@ -58,6 +58,19 @@ naming.</li>
 listed the features that need a ROM newer than the stable release.</li>
 <li>Added an "Updated" date to each chapter changed since first
 publication.</li>
+<li>Chapter 14: DSAVE cannot save to unit 12, while LOAD and TYPE can;
+d81attach0/1 are deprecated in favour of attach; corrected what the SD
+card utility copies; removed an unsupported claim about loadfile_attic.
+Chapter 11 also marks d81attach0/1 as deprecated.</li>
+<li>Chapter 15: BOOT runs AUTOBOOT.C65 as BASIC, so machine code needs a
+stub or BOOT "name"; FORMAT asks for confirmation; @ replaces data files
+too; MKDIR and CHDIR work only on the MEGA65's own drives; error range
+20-29 includes write errors; and the IEC compatibility claim is
+narrowed.</li>
+<li>Chapter 17: the RTC example now masks bit 7 of the hours; R4 and
+later boards have 16 bytes of battery-backed RAM, not 64; the UART is
+not connected on current boards and has no interrupts yet; NTSC has 263
+VIC-II lines; corrected the cartridge and battery descriptions.</li>
 <li>Chapter 10: PHW pushes the low byte first, so a PHW word is not a
 ready-made pointer; BIT immediate also sets N and V (a fifth difference
 from the 65C02); PLP and RTI never change E; BRK sets B only in the

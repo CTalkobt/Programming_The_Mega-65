@@ -30,7 +30,7 @@ Peripherals</title>
 <h1
 id="programming-the-mega65--chapter-17-major-peripherals">Programming
 the MEGA65 — Chapter 17: Major Peripherals</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter covers the MEGA65's remaining connections to the outside
 world: the IEC serial bus for printers, the cartridge port, Ethernet,
@@ -55,8 +55,10 @@ as Chapter 15 described. Bus activity slows the CPU temporarily, so
 timing-sensitive code should not run during IEC transfers.</p>
 <h2 id="the-cartridge-port">The Cartridge Port</h2>
 <p>The expansion port accepts C64 cartridges. Switching the MEGA65 on
-with a C64 cartridge in place starts it in C64 mode, so the cartridge
-runs as on a C64 (MEGA65 Book, p. 3-13). Cartridge ROM is mapped into
+with a C64 cartridge in place starts it in GO64 mode, where most C64
+cartridges run, though the Book warns that not all C64 software is
+compatible (MEGA65 Book, p. 3-13). Cartridges made for the MEGA65 can
+instead start in MEGA65 mode. Cartridge ROM is mapped into
 the 28-bit address space from <code>$4000000</code> upward, where
 MEGA65-mode software can reach it with flat addressing or MAP, as
 Chapter 5 described.</p>
@@ -142,17 +144,21 @@ appendix):</p>
 </tr>
 <tr class="odd">
 <td><code>$D605</code>, <code>$D606</code></td>
-<td>Interrupt masks and flags</td>
+<td>Interrupt masks and flags (not yet implemented on the MEGA65)</td>
 </tr>
 </tbody>
 </table>
-<p>This is not the C64's user-port RS-232. How the UART is wired to
-external connectors depends on the board revision; check the Book for
-your machine before relying on it. For connecting to a PC, the usual
-route is the USB serial connection used by the development tools.</p>
+<p>This is not the C64's user-port RS-232. On current boards, R3 to R6,
+the core does not connect this UART to any external connector, so
+programs cannot use it for serial communication (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026). For connecting
+to a PC, the usual route is the USB serial connection used by the
+development tools, which belongs to the serial monitor, not to this
+UART.</p>
 <h2 id="the-real-time-clock">The Real-Time Clock</h2>
 <p>The real-time clock keeps the date and time while the MEGA65 is off,
-powered by a coin cell on recent boards or for several days without one.
+running from a coin-cell battery. On early R3A boards the battery is
+required; on R6 boards it is optional, and the clock keeps time for
+several days without one (MEGA65 Book, setting up).
 BASIC reads it through <code>TI$</code> and <code>DT$</code>; programs
 can also read its registers directly at <code>$FFD7110</code> (MEGA65
 Book, pp. B-265, X-3):</p>
@@ -193,20 +199,25 @@ Book, pp. B-265, X-3):</p>
 <td>Day of week, 0 to 6</td>
 </tr>
 <tr class="even">
-<td><code>$FFD7140-$FFD717F</code></td>
-<td>64 bytes of non-volatile RAM</td>
+<td><code>$FFD7140-$FFD717F</code> (R3);<br />
+<code>$FFD7150-$FFD715F</code> (R4 and later)</td>
+<td>Battery-backed RAM: 64 bytes on R3 boards, 16 bytes on R4 and
+later</td>
 </tr>
 </tbody>
 </table>
 <p>The values are BCD, so <code>$59</code> means 59 seconds. In
 BASIC:</p>
 <pre><code>10 RT = $FFD7110
-20 S = PEEK(RT) : M = PEEK(RT + 1) : H = PEEK(RT + 2)
+20 S = PEEK(RT) : M = PEEK(RT + 1) : H = PEEK(RT + 2) AND $7F
 30 PRINT RIGHT$(HEX$(H), 2); &quot;:&quot;; RIGHT$(HEX$(M), 2); &quot;:&quot;; RIGHT$(HEX$(S), 2)</code></pre>
 <p>Printing the last two digits of each value's <code>HEX$</code> shows
-its BCD digits directly. The 64 bytes of non-volatile RAM survive
-power-off and can store a few settings; the Book suggests machine
-configuration, so programs should use it sparingly. Boards from R4
+its BCD digits directly. Bit 7 of the hours register is a flag, not
+part of the hour, so the program masks it off, as the ROM does (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026;
+MEGA65 ROM source, read_rtc). The battery-backed RAM survives power-off and
+can store a few settings. It is small, 64 bytes on R3 boards and only 16
+on R4 and later, and the Book suggests it for machine configuration, so
+programs should use it sparingly (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026, <code>mega65r4_i2c.vhdl</code>). Boards from R4
 onward have extra RTC registers, documented in the Book.</p>
 <h2 id="video-and-audio-outputs">Video and Audio Outputs</h2>
 <p>The MEGA65 drives a VGA connector and a digital video connector at
@@ -227,7 +238,8 @@ need it off (MEGA65 Book, p. 4-6).</p>
 </tr>
 <tr class="even">
 <td>NTSC, 720 × 480 at 60 Hz</td>
-<td>262 VIC-II raster lines; 60 frames per second</td>
+<td>263 VIC-II raster lines, numbered 0 to 262; 60 frames per
+second</td>
 </tr>
 <tr class="odd">
 <td>CRT emulation</td>
@@ -252,10 +264,11 @@ mode; cartridge ROM appears from <code>$4000000</code>.</li>
 through <code>$D6E0</code> onward and the Ethernet I/O personality. A
 MAC address must be set.</li>
 <li><strong>UART.</strong> The C65's serial controller at
-<code>$D600</code>; check the Book for how it is wired on your
-board.</li>
+<code>$D600</code>; not connected to any external port on current
+boards.</li>
 <li><strong>Real-time clock.</strong> BCD time and date at
-<code>$FFD7110</code>, 64 bytes of non-volatile RAM, and
+<code>$FFD7110</code>, a little battery-backed RAM (64 bytes on R3,
+16 on R4 and later), and
 <code>TI$</code> and <code>DT$</code> in BASIC.</li>
 <li><strong>Outputs.</strong> VGA and digital video in PAL or NTSC;
 audio through the 3.5mm jack and digital video.</li>
