@@ -866,8 +866,9 @@ quotient.</p>
 <td><code>$D70F</code></td>
 <td>8 bits</td>
 <td>Status: bit 7 set while the divider is busy. Bit 6 (MULBUSY) is
-defined but never set, because the multiplier finishes in one
-cycle</td>
+defined but currently never set, because the multiplier finishes in one
+cycle. Programs should still test it before reading MULTOUT, in case a
+future or slower implementation needs it</td>
 </tr>
 </tbody>
 </table>
