@@ -20,14 +20,22 @@ jobs:
 
       - name: Check links and anchors
         uses: lycheeverse/lychee-action@v2
+        env:
+          # Lets lychee query github.com links through the API, which avoids
+          # the 503s GitHub returns to unauthenticated requests from runners.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Every page at the root is checked, including appendices.html.
           # --include-fragments also checks #anchors, such as the
           # appendices.html#appendix-a-... links on the contents page.
           # 429 (rate limited) is accepted so a busy host doesn't fail the build.
+          # Substack answers automated requests with 403, so its links are
+          # skipped; check them by hand.
           args: >-
             --no-progress
             --include-fragments
             --max-retries 3
             --accept 200,429
+            --exclude 'substack\.com'
             './*.html'
           fail: true
