@@ -240,8 +240,9 @@ namelen = * - name</code></pre>
 reserved for loading and saving, and 15 is the command channel, through
 which a program sends DOS commands and reads the status, as DISK and DS
 do in BASIC. SETBNK, from the C65 extensions, tells the KERNAL which
-bank the file name and data are in; check its argument order against the
-documentation for your ROM, as Chapter 11 advises.</p>
+bank the data (A) and the file name (X) are in. It must be called before
+OPEN, LOAD or SAVE; Chapter 11 also covers its form for 28-bit
+addresses.</p>
 <p>For files on the SD card outside disk images, and for loading large
 files into attic RAM, use the Hypervisor services described in Chapters
 8 and 14 instead.</p>

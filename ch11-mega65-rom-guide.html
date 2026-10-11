@@ -126,15 +126,25 @@ all.</p>
 href="https://www.pagetable.com/?p=926">pagetable.com</a>). It
 distinguishes KERNAL revisions, but it is not the six-digit ROM version
 shown in the banner.</p>
-<p>A program that needs the ROM version itself can call VERSIONQ at
-<code>$FF2F</code>, one of the MEGA65's own additions to the jump table
-(see <a href="#extended-entries">Extended entries</a>). It returns the
-ROM version in Q, the 32-bit register made up of A, X, Y and Z, as a
-little-endian integer, so a single STQ stores it in four bytes:</p>
+<p>The six-digit version is also stored as text. The ROM image, which
+the MEGA65 holds at <code>$20000</code>, has the letter V followed by
+the six ASCII digits at <code>$20016</code>-<code>$2001C</code>, for
+example <code>V920422</code>. Reading this string is discouraged: its
+address is not part of the ROM's supported interface, and it may not
+work with future ROM versions.</p>
+<p>From ROM 920417, the KERNAL's VERSIONQ routine at <code>$FF2F</code>
+returns the same number (see <a href="#extended-entries">Extended
+entries</a>). It loads the version into Q, the 32-bit register made up
+of A, X, Y and Z, as a little-endian binary integer: 920422 is
+<code>$000E0B66</code>. A single STQ stores it in four bytes:</p>
 <pre><code>        jsr $ff2f       ; VERSIONQ
         stq version     ; four bytes, low byte first</code></pre>
-<p>VERSIONQ is not on the C65, so a program that might run on a C65 ROM
-should not rely on it.</p>
+<p>On a ROM older than 920417, <code>$FF2F</code> is not VERSIONQ, and
+calling it is likely to crash the program. At the time of writing,
+920417 and later are beta releases; the latest stable ROM is 920413
+(<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). A program that must also run on older ROMs
+can fall back on the version string, accepting that it may break on a
+future ROM.</p>
 <h2 id="the-kernal-jump-table">The KERNAL Jump Table</h2>
 <p>The jump table is a list of JMP instructions at the top of the
 KERNAL, each at a fixed address. Programs call the fixed address, and
@@ -460,7 +470,10 @@ MONITOR_CALL. The removals moved many entries to new addresses, so they
 do not match the C128 (<a
 href="https://www.pagetable.com/?p=926">pagetable.com</a>). The MEGA65
 has extended the table downwards: the entries from <code>$FF2F</code> to
-<code>$FF4A</code> are its own additions and are not on the C65.</p>
+<code>$FF4A</code> are its own additions and are not on the C65. They
+arrived between ROM 920398 and 920417, as the table notes, so a program
+that uses one should check the ROM version first; KEYLOCKS was renamed
+SYSFLAGS in ROM 920418 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <table>
 <thead>
 <tr class="header">
@@ -475,21 +488,21 @@ has extended the table downwards: the entries from <code>$FF2F</code> to
 <tr class="odd">
 <td><code>$FF2F</code></td>
 <td>VERSIONQ</td>
-<td>Load the ROM version number into Q</td>
+<td>Load the ROM version number into Q (ROM 920417 and later)</td>
 <td>—</td>
 <td>Q (A, X, Y, Z) = ROM version, as a 32-bit little-endian integer</td>
 </tr>
 <tr class="even">
 <td><code>$FF32</code></td>
 <td>RESET_RUN</td>
-<td>Reset the computer, optionally running the program in memory</td>
+<td>Reset the computer, optionally running the program in memory (ROM 920416 and later)</td>
 <td>A = 0 for a KERNAL warm boot, 1 for a Hypervisor reset, 2 for a warm boot that then RUNs the BASIC program at $2001</td>
 <td>Does not return</td>
 </tr>
 <tr class="odd">
 <td><code>$FF35</code></td>
 <td>CURSOR</td>
-<td>Enable or disable the blinking cursor</td>
+<td>Enable or disable the blinking cursor (ROM 920415 and later)</td>
 <td>C=0 to enable, C=1 to disable</td>
 <td>—</td>
 </tr>
@@ -503,7 +516,7 @@ has extended the table downwards: the entries from <code>$FF2F</code> to
 <tr class="odd">
 <td><code>$FF3B</code></td>
 <td>SAVEFL</td>
-<td>Save to a file, with flags</td>
+<td>Save to a file, with flags (ROM 920412 and later)</td>
 <td>As SAVE, plus Z = flags (bit 6 = raw mode: omit the two-byte address header)</td>
 <td>C=1 on error, A = error code</td>
 </tr>
@@ -517,28 +530,28 @@ has extended the table downwards: the entries from <code>$FF2F</code> to
 <tr class="odd">
 <td><code>$FF41</code></td>
 <td>GETIO</td>
-<td>Read the current input and output devices</td>
+<td>Read the current input and output devices (ROM 920398 and later)</td>
 <td>—</td>
 <td>X = input device (0 = keyboard), Y = output device (3 = screen)</td>
 </tr>
 <tr class="even">
 <td><code>$FF44</code></td>
 <td>GETLFS</td>
-<td>Read the current logical file, device and secondary address</td>
+<td>Read the current logical file, device and secondary address (ROM 920398 and later)</td>
 <td>—</td>
 <td>A = logical file, X = device, Y = secondary address ($FF for none)</td>
 </tr>
 <tr class="odd">
 <td><code>$FF47</code></td>
 <td>SYSFLAGS</td>
-<td>Read or set the system flags (keyboard and mode locks)</td>
+<td>Read or set the system flags (keyboard and mode locks) (ROM 920398 and later)</td>
 <td>C=1 to read; C=0 to set, with A = flags (bit 4 = GO64 locked, bit 5 = raw function keys, bit 6 = No Scroll locked, bit 7 = Mega+Shift locked; preserve bits 0–3)</td>
 <td>A = flags (when read)</td>
 </tr>
 <tr class="even">
 <td><code>$FF4A</code></td>
 <td>ADDKEY</td>
-<td>Add a character to the keyboard buffer</td>
+<td>Add a character to the keyboard buffer (ROM 920398 and later)</td>
 <td>A = PETSCII code</td>
 <td>C=1 if the buffer is full</td>
 </tr>
