@@ -126,6 +126,15 @@ all.</p>
 href="https://www.pagetable.com/?p=926">pagetable.com</a>). It
 distinguishes KERNAL revisions, but it is not the six-digit ROM version
 shown in the banner.</p>
+<p>A program that needs the ROM version itself can call VERSIONQ at
+<code>$FF2F</code>, one of the MEGA65's own additions to the jump table
+(see <a href="#extended-entries">Extended entries</a>). It returns the
+ROM version in Q, the 32-bit register made up of A, X, Y and Z, as a
+little-endian integer, so a single STQ stores it in four bytes:</p>
+<pre><code>        jsr $ff2f       ; VERSIONQ
+        stq version     ; four bytes, low byte first</code></pre>
+<p>VERSIONQ is not on the C65, so a program that might run on a C65 ROM
+should not rely on it.</p>
 <h2 id="the-kernal-jump-table">The KERNAL Jump Table</h2>
 <p>The jump table is a list of JMP instructions at the top of the
 KERNAL, each at a fixed address. Programs call the fixed address, and
@@ -134,7 +143,7 @@ ROM moves a routine, only the JMP changes.</p>
 <p>The MEGA65-mode KERNAL derives from the C65's, which in turn derives
 from the C128's. Its table has two parts: the standard entries shared
 with the C64, and an extended block below them inherited from the C128
-by way of the C65.</p>
+by way of the C65, to which the MEGA65 has added entries of its own.</p>
 <h3 id="standard-entries">Standard entries</h3>
 <p>These 39 entries occupy the same addresses as on the C64, and most
 do the same jobs (<a
@@ -449,7 +458,9 @@ window's size and position works in every mode.</p>
 sense only on a C128 (DMA_CALL, DLCHR and GETCFG), and added
 MONITOR_CALL. The removals moved many entries to new addresses, so they
 do not match the C128 (<a
-href="https://www.pagetable.com/?p=926">pagetable.com</a>).</p>
+href="https://www.pagetable.com/?p=926">pagetable.com</a>). The MEGA65
+has extended the table downwards: the entries from <code>$FF2F</code> to
+<code>$FF4A</code> are its own additions and are not on the C65.</p>
 <table>
 <thead>
 <tr class="header">
@@ -461,6 +472,76 @@ href="https://www.pagetable.com/?p=926">pagetable.com</a>).</p>
 </tr>
 </thead>
 <tbody>
+<tr class="odd">
+<td><code>$FF2F</code></td>
+<td>VERSIONQ</td>
+<td>Load the ROM version number into Q</td>
+<td>—</td>
+<td>Q (A, X, Y, Z) = ROM version, as a 32-bit little-endian integer</td>
+</tr>
+<tr class="even">
+<td><code>$FF32</code></td>
+<td>RESET_RUN</td>
+<td>Reset the computer, optionally running the program in memory</td>
+<td>A = 0 for a KERNAL warm boot, 1 for a Hypervisor reset, 2 for a warm boot that then RUNs the BASIC program at $2001</td>
+<td>Does not return</td>
+</tr>
+<tr class="odd">
+<td><code>$FF35</code></td>
+<td>CURSOR</td>
+<td>Enable or disable the blinking cursor</td>
+<td>C=0 to enable, C=1 to disable</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td><code>$FF38</code></td>
+<td>—</td>
+<td>Reserved, do not use</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>$FF3B</code></td>
+<td>SAVEFL</td>
+<td>Save to a file, with flags</td>
+<td>As SAVE, plus Z = flags (bit 6 = raw mode: omit the two-byte address header)</td>
+<td>C=1 on error, A = error code</td>
+</tr>
+<tr class="even">
+<td><code>$FF3E</code></td>
+<td>—</td>
+<td>Reserved, do not use</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td><code>$FF41</code></td>
+<td>GETIO</td>
+<td>Read the current input and output devices</td>
+<td>—</td>
+<td>X = input device (0 = keyboard), Y = output device (3 = screen)</td>
+</tr>
+<tr class="even">
+<td><code>$FF44</code></td>
+<td>GETLFS</td>
+<td>Read the current logical file, device and secondary address</td>
+<td>—</td>
+<td>A = logical file, X = device, Y = secondary address ($FF for none)</td>
+</tr>
+<tr class="odd">
+<td><code>$FF47</code></td>
+<td>SYSFLAGS</td>
+<td>Read or set the system flags (keyboard and mode locks)</td>
+<td>C=1 to read; C=0 to set, with A = flags (bit 4 = GO64 locked, bit 5 = raw function keys, bit 6 = No Scroll locked, bit 7 = Mega+Shift locked; preserve bits 0–3)</td>
+<td>A = flags (when read)</td>
+</tr>
+<tr class="even">
+<td><code>$FF4A</code></td>
+<td>ADDKEY</td>
+<td>Add a character to the keyboard buffer</td>
+<td>A = PETSCII code</td>
+<td>C=1 if the buffer is full</td>
+</tr>
 <tr class="odd">
 <td><code>$FF4D</code></td>
 <td>SPIN_SPOUT</td>
