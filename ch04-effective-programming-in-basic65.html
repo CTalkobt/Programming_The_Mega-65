@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 4: Effective Programming in
+BASIC 65</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch03-basic65-reference-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch05-mega65-architecture.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-4-effective-programming-in-basic-65">Programming
+the MEGA65 — Chapter 4: Effective Programming in BASIC 65</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>Chapter 3 described each keyword. This chapter is about putting them
+together: how to write BASIC 65 programs that are easy to read, easy to
+change, quick to debug and fast enough. Much C64 BASIC was written as a
+tangle of GOTOs, because C64 BASIC offered little else. BASIC 65 has
+proper loops, multi-line blocks, error trapping and editing tools, and a
+program that uses them is both shorter and far easier to work on.</p>
+<p>The chapter covers:</p>
+<ul>
+<li>Structured programming with DO/LOOP, BEGIN/BEND and subroutines</li>
+<li>Editing tools that save typing and mistakes</li>
+<li>Debugging with TRON, HELP and TRAP</li>
+<li>Making programs run fast</li>
+<li>Making programs survive bad input and missing files</li>
+</ul>
+<h2 id="structured-programming">Structured Programming</h2>
+<h3 id="loops-without-goto">Loops without GOTO</h3>
+<p>A C64 program that waits for a key typically reads like this:</p>
+<pre><code>10 GET A$ : IF A$ = &quot;&quot; THEN 10</code></pre>
+<p>It works, but every such line adds a jump to follow when reading the
+program. BASIC 65's DO ... LOOP says what it means and needs no line
+number:</p>
+<pre><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
+<p>The condition can go at either end. With WHILE or UNTIL after DO, it
+is tested before each pass, so the body may never run; after LOOP, it is
+tested after each pass, so the body always runs at least once. A DO ...
+LOOP with no condition repeats until an EXIT, which suits loops whose
+stopping point is in the middle:</p>
+<pre><code>10 DO
+20 INPUT &quot;COMMAND (Q TO QUIT)&quot;; C$
+30 IF C$ = &quot;Q&quot; THEN EXIT
+40 GOSUB 1000 : REM PROCESS THE COMMAND
+50 LOOP
+60 PRINT &quot;BYE&quot;</code></pre>
+<p>Use FOR ... NEXT when the number of passes is known in advance, and
+DO ... LOOP for everything else.</p>
+<h3 id="blocks-with-begin-and-bend">Blocks with BEGIN and BEND</h3>
+<p>On the C64, everything after THEN had to fit on one line, so longer
+actions meant jumping elsewhere. BEGIN and BEND let THEN and ELSE
+control a block of any length:</p>
+<pre><code>100 IF SC &gt; HI THEN BEGIN
+110 HI = SC
+120 PRINT &quot;NEW HIGH SCORE!&quot;
+130 SOUND 1, 7382, 30
+140 BEND : ELSE PRINT &quot;SCORE:&quot;; SC</code></pre>
+<p>The Book notes a quirk: statements after BEND on the same line belong
+to the block's control flow, so keep anything that must always run on a
+separate line (MEGA65 Book, p. B-28).</p>
+<h3 id="subroutines">Subroutines</h3>
+<p>GOSUB and RETURN remain the way to break a program into pieces. A few
+habits make subroutines easy to work with:</p>
+<ul>
+<li><strong>Give each a fixed home</strong>, such as 1000 for input,
+2000 for drawing and 3000 for disk access, and a REM line stating what
+it expects and returns.</li>
+<li><strong>Pass values in agreed variables</strong>, such as X and Y
+for a position, since BASIC subroutines have no parameters.</li>
+<li><strong>Jump over them</strong> at the end of the main program with
+END or GOTO, so execution never falls into a subroutine by
+accident.</li>
+</ul>
+<p>ON ... GOSUB and FGOSUB select a subroutine by number, which replaces
+chains of IF statements:</p>
+<pre><code>10 GETKEY K$ : K = INSTR(&quot;WASD&quot;, K$)
+20 IF K THEN ON K GOSUB 1000, 1100, 1200, 1300
+30 GOTO 10</code></pre>
+<h3 id="functions">Functions</h3>
+<p>DEF FN defines a one-line numeric function, which keeps a repeated
+formula in one place:</p>
+<pre><code>10 DEF FN RN(X) = INT(RND(0) * X) + 1 : REM RANDOM 1 TO X
+20 PRINT FN RN(6), FN RN(100)</code></pre>
+<h3 id="data-in-data-statements">Data in DATA statements</h3>
+<p>Tables of fixed values belong in DATA statements rather than in long
+chains of assignments. READ them into arrays at the start of the
+program, and use RESTORE with a line number to re-read a particular
+table. This keeps the logic of the program separate from its data, so
+changing a level layout or a list of prices does not touch the code.</p>
+<h2 id="writing-and-editing-efficiently">Writing and Editing
+Efficiently</h2>
+<p>BASIC 65 has editing commands that earlier Commodore BASICs lacked.
+Used together, they make typing in and reshaping a program much
+quicker.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Task</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Number lines automatically while typing</td>
+<td><code>AUTO 10</code>; <code>AUTO</code> alone turns it off</td>
+</tr>
+<tr class="even">
+<td>Make room between lines, or tidy numbering</td>
+<td><code>RENUMBER 100, 10</code></td>
+</tr>
+<tr class="odd">
+<td>List part of a program</td>
+<td><code>LIST 500-</code>, <code>LIST -70</code>,
+<code>LIST 240-350</code>; P pauses each screenful</td>
+</tr>
+<tr class="even">
+<td>Find every use of a variable or word</td>
+<td><code>FIND "SCORE"</code></td>
+</tr>
+<tr class="odd">
+<td>Rename a variable throughout</td>
+<td><code>CHANGE "XX$" TO "UU$"</code></td>
+</tr>
+<tr class="even">
+<td>Delete a block of lines</td>
+<td><code>DELETE 240-350</code></td>
+</tr>
+<tr class="odd">
+<td>Add a library of subroutines</td>
+<td><code>MERGE "LIBRARY"</code></td>
+</tr>
+<tr class="even">
+<td>Keep common commands on function keys</td>
+<td><code>KEY 2, "DIR" + CHR$(13)</code></td>
+</tr>
+<tr class="odd">
+<td>Bring in a program written on a PC</td>
+<td><code>IMPORT "PROGRAM"</code> from a SEQ text file</td>
+</tr>
+</tbody>
+</table>
+<p>RENUMBER updates every GOTO, GOSUB and other reference to the lines
+it moves, so it is safe to use at any time. CHANGE is equally thorough,
+which means it should be given a string that cannot also appear inside a
+longer name: changing <code>A</code> would also change
+<code>AB</code>.</p>
+<h3 id="layout">Layout</h3>
+<p>BASIC 65 tolerates spaces, and using them costs only a little memory.
+A few conventions make listings readable:</p>
+<ul>
+<li>One statement per line where practical, except for short, closely
+related ones.</li>
+<li>REM lines to head each section and each subroutine.</li>
+<li>Line numbers in steps of 10, with each major section starting on a
+round hundred or thousand.</li>
+<li>Short variable names, chosen so that they do not contain keywords:
+<code>TOTAL</code> contains <code>TO</code>, and <code>SCORE</code>
+contains <code>OR</code>, and both cause syntax errors.</li>
+</ul>
+<h3 id="saving-often">Saving often</h3>
+<p><code>DSAVE "@NAME"</code> overwrites the previous version in one
+step. For bigger changes, save under a new name first, such as
+<code>"GAME2"</code>, so there is always a working version to go back
+to. The Freezer's freeze slots can also capture the whole machine,
+program and all, at any moment.</p>
+<h2 id="debugging">Debugging</h2>
+<h3 id="read-the-message">Read the message</h3>
+<p>When BASIC stops with an error, it names the error and the line. HELP
+then lists that line and highlights the statement that failed, which
+matters on long lines with several statements (MEGA65 Book, p.
+B-131).</p>
+<h3 id="inspect-variables">Inspect variables</h3>
+<p>After a program stops, its variables keep their values. PRINT them in
+direct mode, change them if needed, and continue with CONT, provided no
+program line has been edited in the meantime. A STOP placed in the
+program acts as a breakpoint:</p>
+<pre><code>200 IF X &gt; 319 THEN PRINT &quot;X OUT OF RANGE:&quot;; X : STOP</code></pre>
+<h3 id="trace-execution">Trace execution</h3>
+<p>TRON prints each line number as it runs, and TROFF turns it off.
+Tracing a whole program produces a flood of numbers, so turn it on just
+before the suspect section and off just after:</p>
+<pre><code>500 TRON
+510 GOSUB 2000
+520 TROFF</code></pre>
+<h3 id="catch-errors">Catch errors</h3>
+<p>TRAP sends errors to a handler line instead of stopping the program,
+and ER, EL and <code>ERR$(ER)</code> say what went wrong and where.
+During development, a handler that prints this information and then
+stops is more useful than letting errors pass silently:</p>
+<pre><code>10 TRAP 9000
+...
+9000 PRINT ERR$(ER); &quot; IN LINE&quot;; EL : STOP</code></pre>
+<p>Chapter 6 shows fuller error handling with RESUME.</p>
+<h3 id="common-mistakes">Common mistakes</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Symptom</th>
+<th>Likely cause</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>?SYNTAX ERROR</code> in a line that looks correct</td>
+<td>A keyword hidden inside a variable name</td>
+</tr>
+<tr class="even">
+<td>A variable is unexpectedly zero</td>
+<td>Its name differs only after the first two characters from another
+variable, or it is misspelled</td>
+</tr>
+<tr class="odd">
+<td><code>?OUT OF DATA</code></td>
+<td>A READ loop runs further than the DATA, or a RESTORE is missing</td>
+</tr>
+<tr class="even">
+<td>A disk command fails without an error</td>
+<td>DS was not checked; print <code>DS$</code></td>
+</tr>
+<tr class="odd">
+<td>POKEs to <code>$D020</code> or similar do nothing</td>
+<td>BANK is not 128</td>
+</tr>
+<tr class="even">
+<td>A program behaves differently after editing</td>
+<td>CONT was used after a change, or variables kept stale values; use
+RUN</td>
+</tr>
+</tbody>
+</table>
+<h2 id="making-programs-fast">Making Programs Fast</h2>
+<p>MEGA65 mode runs at 40.5 MHz, so BASIC 65 is already far faster than
+C64 BASIC. When more speed is needed, these techniques help, roughly in
+order of effect.</p>
+<h3 id="measure-first">Measure first</h3>
+<p>TI is a timer with microsecond resolution, restarted by CLR TI. Time
+the part of the program in question before and after a change, rather
+than guessing:</p>
+<pre><code>10 CLR TI
+20 FOR I = 1 TO 10000 : X = X + 1 : NEXT
+30 PRINT TI; &quot;SECONDS&quot;</code></pre>
+<h3 id="use-fast-variables">Use fast variables</h3>
+<p>A variable whose name is a single letter, with or without a type
+symbol, is a fast variable: BASIC 65 finds it without searching (MEGA65
+Book, p. B-7). Give the variables used in the busiest loops one-letter
+names, such as I, X, Y and C$.</p>
+<h3 id="keep-the-cpu-at-full-speed">Keep the CPU at full speed</h3>
+<p>Check that nothing has slowed the CPU: SPEED with no argument selects
+40.5 MHz, and RSPEED reports the current speed. Programs that run in C64
+mode can use <code>POKE 0,65</code>.</p>
+<h3 id="move-work-out-of-loops">Move work out of loops</h3>
+<p>Calculate values that do not change before the loop starts, and use
+tables read from DATA instead of repeated arithmetic. A table of 360
+sine values, read once, is much faster than calling SIN in every
+pass.</p>
+<h3 id="use-the-commands-that-do-the-work-in-hardware">Use the commands
+that do the work in hardware</h3>
+<p>Several BASIC 65 commands hand work to the MEGA65's hardware or to
+machine code in the ROM, and one of them replaces many BASIC
+statements:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Instead of</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A loop of POKEs to copy or fill memory</td>
+<td>EDMA</td>
+</tr>
+<tr class="even">
+<td>PEEK, AND and POKE to change one bit</td>
+<td>SETBIT and CLRBIT</td>
+</tr>
+<tr class="odd">
+<td>Two POKEs for a 16-bit value</td>
+<td>WPOKE</td>
+</tr>
+<tr class="even">
+<td>A POKE loop to draw on the text screen</td>
+<td><code>T@&amp;</code> and <code>C@&amp;</code>, or PRINT</td>
+</tr>
+<tr class="odd">
+<td>Plotting shapes pixel by pixel</td>
+<td>LINE, BOX, CIRCLE, PAINT</td>
+</tr>
+<tr class="even">
+<td>Moving sprites every frame</td>
+<td>MOVSPR with a speed, which BASIC updates in the background</td>
+</tr>
+</tbody>
+</table>
+<h3 id="avoid-string-churn">Avoid string churn</h3>
+<p>Every new string value takes fresh memory, and BASIC pauses to
+reclaim the old ones when memory runs low. Avoid building strings a
+character at a time inside fast loops, and reuse string variables rather
+than creating many.</p>
+<h3 id="when-basic-is-not-enough">When BASIC is not enough</h3>
+<p>If a routine is still too slow after these steps, rewrite just that
+routine in machine language and call it with SYS, as Chapter 9
+describes. Usually only a small part of a program needs this.</p>
+<h2 id="robust-programs">Robust Programs</h2>
+<p>A program used by other people meets input and situations its author
+did not expect. Four habits deal with most of them:</p>
+<ul>
+<li><strong>Validate input.</strong> Check that a number is in range and
+a string is not empty before using it, and ask again if not.</li>
+<li><strong>Check every disk operation.</strong> Test DS after DOPEN,
+DLOAD and similar commands, and show <code>DS$</code> if it is not
+zero.</li>
+<li><strong>Trap the rest.</strong> A TRAP handler that reports the
+problem and returns to a safe point, such as the main menu, is better
+than a program that stops with an error.</li>
+<li><strong>Leave the machine as you found it.</strong> Restore BANK
+128, the palette, the screen mode and SPEED before the program ends, and
+close every file.</li>
+</ul>
+<p>This input routine combines several of them:</p>
+<pre><code>1000 REM INPUT A NUMBER FROM LO TO HI INTO N
+1010 DO
+1020 INPUT &quot;NUMBER&quot;; N$
+1030 N = VAL(N$)
+1040 LOOP UNTIL N &gt;= LO AND N &lt;= HI AND N$ &lt;&gt; &quot;&quot;
+1050 RETURN</code></pre>
+<p>Reading the input as a string and converting it with VAL means a
+typed letter never produces a REDO FROM START message or stops the
+program.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Structure.</strong> DO ... LOOP with WHILE, UNTIL and EXIT
+replaces most GOTOs; BEGIN and BEND give IF multi-line blocks;
+subroutines and DEF FN keep repeated code in one place.</li>
+<li><strong>Editing.</strong> AUTO, RENUMBER, FIND, CHANGE, DELETE,
+MERGE, KEY and IMPORT make writing and reshaping programs quick.</li>
+<li><strong>Debugging.</strong> HELP shows the failing statement; STOP
+and CONT inspect state; TRON and TROFF trace; TRAP catches errors.</li>
+<li><strong>Speed.</strong> Measure with TI, use one-letter variables,
+keep the CPU at 40.5 MHz, move work out of loops, and use EDMA, SETBIT,
+WPOKE, the screen arrays and graphics commands.</li>
+<li><strong>Robustness.</strong> Validate input, check DS, trap errors
+and restore the machine's state.</li>
+</ul>
+<p>Chapter 5 turns from BASIC to the machine underneath it.</p>
+<nav class="chapnav"><span><a href="ch03-basic65-reference-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch05-mega65-architecture.html">Next &rarr;</a></span></nav>
+</body>
+</html>

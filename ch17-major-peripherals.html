@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 17: Major
+Peripherals</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch16-control-ports.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="appendices.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-17-major-peripherals">Programming
+the MEGA65 — Chapter 17: Major Peripherals</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>This chapter covers the MEGA65's remaining connections to the outside
+world: the IEC serial bus for printers, the cartridge port, Ethernet,
+the serial UART, the real-time clock, and the video and audio outputs.
+Some correspond to C64 peripherals West described; Ethernet and the
+clock are new. The C64's user port and cassette port have no MEGA65
+equivalent.</p>
+<h2 id="printers-and-the-iec-bus">Printers and the IEC Bus</h2>
+<p>The IEC serial port at the rear is the same bus the C64 used, and
+Commodore printers and plotters connect to it exactly as before, usually
+as device 4 or 5. Output is sent by opening a channel to the printer and
+printing to it, or by redirecting all screen output with CMD:</p>
+<pre><code>10 OPEN 4, 4          : REM PRINTER ON DEVICE 4
+20 PRINT#4, &quot;MEGA65 PRINTER TEST&quot;
+30 CMD 4 : LIST       : REM SEND A LISTING TO THE PRINTER
+40 PRINT#4 : CLOSE 4  : REM RESTORE SCREEN OUTPUT AND CLOSE</code></pre>
+<p>The secondary address selects a printer mode on Commodore printers;
+for example, 7 selects upper and lower case on many models. Consult the
+printer's own manual for its modes and control codes.</p>
+<p>The same bus carries disk drives and modern devices such as SD2IEC,
+as Chapter 15 described. Bus activity slows the CPU temporarily, so
+timing-sensitive code should not run during IEC transfers.</p>
+<h2 id="the-cartridge-port">The Cartridge Port</h2>
+<p>The expansion port accepts C64 cartridges. Switching the MEGA65 on
+with a C64 cartridge in place starts it in C64 mode, so the cartridge
+runs as on a C64 (MEGA65 Book, p. 3-13). Cartridge ROM is mapped into
+the 28-bit address space from <code>$4000000</code> upward, where
+MEGA65-mode software can reach it with flat addressing or MAP, as
+Chapter 5 described.</p>
+<p>Switch the computer off before inserting or removing a cartridge.</p>
+<h2 id="ethernet">Ethernet</h2>
+<p>The MEGA65 has an Ethernet port. Its everyday use is file transfer
+with M65Connect and mega65_ftp, as Chapter 14 described, but programs
+can also send and receive their own network frames.</p>
+<p>The Ethernet controller lives in the MEGA65 I/O personality. Its main
+registers are (MEGA65 Book, Appendix: Ethernet controller):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D6E0</code></td>
+<td>Control: controller reset, transmitter reset, receive and transmit
+status</td>
+</tr>
+<tr class="even">
+<td><code>$D6E1</code></td>
+<td>Receive and transmit buffer queue control and status</td>
+</tr>
+<tr class="odd">
+<td><code>$D6E2</code>, <code>$D6E3</code></td>
+<td>Length of the frame to transmit</td>
+</tr>
+<tr class="even">
+<td><code>$D6E4</code></td>
+<td>Command register</td>
+</tr>
+<tr class="odd">
+<td><code>$D6E5</code></td>
+<td>Receive filtering: broadcast, multicast, CRC checking, promiscuous
+mode</td>
+</tr>
+<tr class="even">
+<td><code>$D6E9</code> onward</td>
+<td>The MAC address</td>
+</tr>
+</tbody>
+</table>
+<p>Frames are built in, and received into, buffers that appear in place
+of part of the I/O area when the Ethernet I/O personality is selected
+with the knock <code>$45</code>, <code>$54</code> described in Chapter
+5. The MEGA65 has no built-in MAC address: it uses the one set on the
+configuration utility's Network page, and networking does not work while
+that is all zeros (MEGA65 Book, p. 4-7).</p>
+<p>Writing a network stack, even a simple one for UDP, is a substantial
+project. Community libraries implement TCP/IP for the MEGA65, and the
+Book's Ethernet appendix documents the controller in full.</p>
+<h2 id="the-uart">The UART</h2>
+<p>The C65 included a UART, a serial port controller, and the MEGA65
+keeps its registers at <code>$D600-$D606</code> (MEGA65 Book, register
+appendix):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D600</code></td>
+<td>Data: the byte received or to send</td>
+</tr>
+<tr class="even">
+<td><code>$D601</code></td>
+<td>Status: receive ready, framing and parity errors</td>
+</tr>
+<tr class="odd">
+<td><code>$D602</code></td>
+<td>Control: enable transmit and receive, character size, parity</td>
+</tr>
+<tr class="even">
+<td><code>$D603</code>, <code>$D604</code></td>
+<td>Baud rate divisor</td>
+</tr>
+<tr class="odd">
+<td><code>$D605</code>, <code>$D606</code></td>
+<td>Interrupt masks and flags</td>
+</tr>
+</tbody>
+</table>
+<p>This is not the C64's user-port RS-232. How the UART is wired to
+external connectors depends on the board revision; check the Book for
+your machine before relying on it. For connecting to a PC, the usual
+route is the USB serial connection used by the development tools.</p>
+<h2 id="the-real-time-clock">The Real-Time Clock</h2>
+<p>The real-time clock keeps the date and time while the MEGA65 is off,
+powered by a coin cell on recent boards or for several days without one.
+BASIC reads it through <code>TI$</code> and <code>DT$</code>; programs
+can also read its registers directly at <code>$FFD7110</code> (MEGA65
+Book, pp. B-265, X-3):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Contents (binary-coded decimal)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$FFD7110</code></td>
+<td>Seconds</td>
+</tr>
+<tr class="even">
+<td><code>$FFD7111</code></td>
+<td>Minutes</td>
+</tr>
+<tr class="odd">
+<td><code>$FFD7112</code></td>
+<td>Hours</td>
+</tr>
+<tr class="even">
+<td><code>$FFD7113</code></td>
+<td>Day of month</td>
+</tr>
+<tr class="odd">
+<td><code>$FFD7114</code></td>
+<td>Month</td>
+</tr>
+<tr class="even">
+<td><code>$FFD7115</code></td>
+<td>Year</td>
+</tr>
+<tr class="odd">
+<td><code>$FFD7116</code></td>
+<td>Day of week, 0 to 6</td>
+</tr>
+<tr class="even">
+<td><code>$FFD7140-$FFD717F</code></td>
+<td>64 bytes of non-volatile RAM</td>
+</tr>
+</tbody>
+</table>
+<p>The values are BCD, so <code>$59</code> means 59 seconds. In
+BASIC:</p>
+<pre><code>10 RT = $FFD7110
+20 S = PEEK(RT) : M = PEEK(RT + 1) : H = PEEK(RT + 2)
+30 PRINT RIGHT$(HEX$(H), 2); &quot;:&quot;; RIGHT$(HEX$(M), 2); &quot;:&quot;; RIGHT$(HEX$(S), 2)</code></pre>
+<p>Printing the last two digits of each value's <code>HEX$</code> shows
+its BCD digits directly. The 64 bytes of non-volatile RAM survive
+power-off and can store a few settings; the Book suggests machine
+configuration, so programs should use it sparingly. Boards from R4
+onward have extra RTC registers, documented in the Book.</p>
+<h2 id="video-and-audio-outputs">Video and Audio Outputs</h2>
+<p>The MEGA65 drives a VGA connector and a digital video connector at
+the same time. The digital output can also carry sound, which the
+configuration utility's Video page turns on or off; some DVI monitors
+need it off (MEGA65 Book, p. 4-6).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th>Effect on programs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PAL, 720 × 576 at 50 Hz</td>
+<td>312 VIC-II raster lines; 50 frames per second</td>
+</tr>
+<tr class="even">
+<td>NTSC, 720 × 480 at 60 Hz</td>
+<td>262 VIC-II raster lines; 60 frames per second</td>
+</tr>
+<tr class="odd">
+<td>CRT emulation</td>
+<td>Purely visual; no effect on programs</td>
+</tr>
+</tbody>
+</table>
+<p>Bit 7 of <code>$D06F</code> is set in NTSC mode, so a program can
+adapt timing, as Chapters 8 and 13 showed. The user can switch modes in
+the Freezer while a program runs.</p>
+<p>Audio leaves through the 3.5mm jack, which has a headphone amplifier
+that the configuration utility can turn off for line-level equipment,
+and through the digital video connector. Chapter 13 covers the mixer
+that feeds both.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Printers.</strong> OPEN a channel to device 4 or 5 on the
+IEC bus and use PRINT#, or redirect output with CMD.</li>
+<li><strong>Cartridges.</strong> C64 cartridges start the machine in C64
+mode; cartridge ROM appears from <code>$4000000</code>.</li>
+<li><strong>Ethernet.</strong> Used for file transfer, and programmable
+through <code>$D6E0</code> onward and the Ethernet I/O personality. A
+MAC address must be set.</li>
+<li><strong>UART.</strong> The C65's serial controller at
+<code>$D600</code>; check the Book for how it is wired on your
+board.</li>
+<li><strong>Real-time clock.</strong> BCD time and date at
+<code>$FFD7110</code>, 64 bytes of non-volatile RAM, and
+<code>TI$</code> and <code>DT$</code> in BASIC.</li>
+<li><strong>Outputs.</strong> VGA and digital video in PAL or NTSC;
+audio through the 3.5mm jack and digital video.</li>
+</ul>
+<p>The appendices that follow gather reference tables used throughout
+the book.</p>
+<nav class="chapnav"><span><a href="ch16-control-ports.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="appendices.html">Next &rarr;</a></span></nav>
+</body>
+</html>

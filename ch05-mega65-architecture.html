@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 5: MEGA65
+Architecture</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch04-effective-programming-in-basic65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch06-advanced-basic65.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-5-mega65-architecture">Programming
+the MEGA65 — Chapter 5: MEGA65 Architecture</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>The MEGA65 is an 8-bit machine with a 28-bit address space, and
+almost everything interesting about programming it follows from that
+mismatch. A CPU that can only see 64KB at a time must reach 256MB of
+potential address space, three generations of video chip must share one
+set of registers, and a modern operating layer must sit underneath a
+Commodore-style ROM without getting in the way.</p>
+<p>BASIC 65 hides most of this. You can write substantial programs
+without ever thinking about where your variables live or which bank a
+bitmap occupies. But the moment you want to go faster, use more memory,
+mix BASIC with machine language, or understand why a POKE did nothing,
+you need a working model of the machine underneath.</p>
+<p>This chapter builds that model. It covers:</p>
+<ul>
+<li>The 45GS02 processor and how its speed is controlled</li>
+<li>The 28-bit address space and what lives where</li>
+<li>The different kinds of RAM: chip RAM, attic RAM and colour RAM</li>
+<li>The three banking mechanisms that decide what the CPU sees in its
+64KB window</li>
+<li>I/O personalities, which let one set of chips behave as a VIC-II,
+VIC-III or VIC-IV</li>
+<li>The Hypervisor, DMAgic and the math accelerator</li>
+</ul>
+<p>Later chapters return to each of these in depth. Chapter 7 covers the
+45GS02 instruction set, Chapter 8 covers machine-language techniques
+that depend on banking and DMA, and Chapter 12 covers the VIC-IV in
+detail. Here the aim is the big picture: enough to reason about the
+machine as a whole.</p>
+<p>A note on notation. Addresses the CPU sees directly are written as
+four hex digits, such as $D020. Full 28-bit addresses are written with
+seven hex digits, such as $FF80000. Where it helps, a 28-bit address may
+be split with a dot, as $FF8.0000, separating the megabyte from the
+offset within it.</p>
+<h2 id="the-45gs02-processor">The 45GS02 Processor</h2>
+<p>The 45GS02 is the latest member of a family that runs 6502 → 65CE02 →
+4510 → 45GS02. Each step kept everything below it, so standard 6502 code
+runs unchanged, and the C65's 4510 code runs unchanged too.</p>
+<p>The 65CE02 contributed the features most visible to a 6502
+programmer: a third index register, a relocatable zero page, a 16-bit
+stack pointer, 16-bit branches, and word increment and shift
+instructions. The 4510 added the MAP instruction for memory management.
+The 45GS02 adds 32-bit pointers, 32-bit arithmetic using a virtual
+register called Q, and the hooks that let the Hypervisor take
+control.</p>
+<h3 id="registers">Registers</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Width</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>8 bits</td>
+<td>Accumulator</td>
+</tr>
+<tr class="even">
+<td>X</td>
+<td>8 bits</td>
+<td>Index register</td>
+</tr>
+<tr class="odd">
+<td>Y</td>
+<td>8 bits</td>
+<td>Index register</td>
+</tr>
+<tr class="even">
+<td>Z</td>
+<td>8 bits</td>
+<td>Third index register, used by the (zp),Z and [zp],Z modes</td>
+</tr>
+<tr class="odd">
+<td>B</td>
+<td>8 bits</td>
+<td>Base page: the high byte of the page used as zero page</td>
+</tr>
+<tr class="even">
+<td>SP</td>
+<td>8 or 16 bits</td>
+<td>Stack pointer; 16 bits when the E flag is clear</td>
+</tr>
+<tr class="odd">
+<td>PC</td>
+<td>16 bits</td>
+<td>Program counter</td>
+</tr>
+<tr class="even">
+<td>P</td>
+<td>8 bits</td>
+<td>Status flags: N V E B D I Z C</td>
+</tr>
+<tr class="odd">
+<td>Q</td>
+<td>32 bits</td>
+<td>Virtual register formed from A, X, Y and Z, with A as the low byte
+and Z as the high byte</td>
+</tr>
+</tbody>
+</table>
+<p>The B register deserves a word of warning. On a 6502, zero page is
+always $0000-$00FF. On the 45GS02 it is whichever page B points to. B is
+zero after reset, so existing code behaves as expected, but a routine
+that changes B and forgets to restore it will break everything that uses
+zero page afterwards, including the KERNAL.</p>
+<p>The E flag occupies the bit that is unused on a 6502. When E is set,
+the stack behaves exactly as on a 6502, confined to page 1. When E is
+clear, the stack pointer is 16 bits wide and the stack can live anywhere
+in the 64KB the CPU currently sees.</p>
+<h3 id="speed">Speed</h3>
+<p>The 45GS02 can run at four speeds:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Speed</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1 MHz</td>
+<td>C64 compatibility: 6502 cycle counts per instruction, though not
+exact access timing</td>
+</tr>
+<tr class="even">
+<td>2 MHz</td>
+<td>C128 fast mode compatibility</td>
+</tr>
+<tr class="odd">
+<td>3.5 MHz</td>
+<td>C65 fast mode compatibility</td>
+</tr>
+<tr class="even">
+<td>40.5 MHz</td>
+<td>Full MEGA65 speed</td>
+</tr>
+</tbody>
+</table>
+<p>MEGA65 mode starts at full speed. C64 mode starts at 1 MHz so that
+games, demos and loaders that count cycles behave as they would on a
+real C64. From C64 mode, POKE 0,65 switches to full speed, which is
+often the quickest way to make an old BASIC program dramatically
+faster.</p>
+<p>At 40.5 MHz, instruction cycle counts differ from the 6502's, so code
+that relies on exact timing must run at 1 MHz. Chapter 10 gives timings
+for every instruction. The practical consequence is simple: at full
+speed, code that was too slow in BASIC on a C64 is often fast enough on
+a MEGA65 without any machine language at all.</p>
+<h2 id="the-28-bit-address-space">The 28-Bit Address Space</h2>
+<p>Every byte the MEGA65 can reach has a 28-bit address, giving a 256MB
+address space. Only a small part of it is populated, and the CPU never
+sees more than 64KB of it at once. The rest of this chapter is largely
+about how pieces of the 28-bit space are brought into that 64KB
+window.</p>
+<p>The C65 had a 20-bit, 1MB address space, divided into sixteen 64KB
+banks numbered 0 to 15. The MEGA65 keeps that arrangement for its first
+megabyte, so C65 software and BASIC 65's BANK command still make sense.
+Bank 0 is <code>$00000-$0FFFF</code>, bank 1 is
+<code>$10000-$1FFFF</code>, and so on.</p>
+<h3 id="the-memory-map">The memory map</h3>
+<table>
+<thead>
+<tr class="header">
+<th>28-bit address</th>
+<th>Size</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0000000-$001FFFF</code></td>
+<td>128KB</td>
+<td>Chip RAM, banks 0 and 1: the C65's original main memory</td>
+</tr>
+<tr class="even">
+<td><code>$0020000-$003FFFF</code></td>
+<td>128KB</td>
+<td>Chip RAM holding the system ROM, normally write-protected</td>
+</tr>
+<tr class="odd">
+<td><code>$0040000-$005FFFF</code></td>
+<td>128KB</td>
+<td>Chip RAM, banks 4 and 5</td>
+</tr>
+<tr class="even">
+<td><code>$4000000</code> upward</td>
+<td>varies</td>
+<td>Cartridge port</td>
+</tr>
+<tr class="odd">
+<td><code>$8000000-$87FFFFF</code></td>
+<td>8MB</td>
+<td>Attic RAM</td>
+</tr>
+<tr class="even">
+<td><code>$FF80000-$FF87FFF</code></td>
+<td>32KB</td>
+<td>Colour RAM (64KB on some models)</td>
+</tr>
+<tr class="odd">
+<td><code>$FFD0000-$FFD3FFF</code></td>
+<td>16KB</td>
+<td>I/O, one 4KB block per personality</td>
+</tr>
+<tr class="even">
+<td><code>$FFF8000-$FFFBFFF</code></td>
+<td>16KB</td>
+<td>Hypervisor</td>
+</tr>
+</tbody>
+</table>
+<p>Two details trip people up. First, the first 2KB of colour RAM also
+appears at <code>$001F800-$001FFFF</code>, where the C65 kept its colour
+RAM. Writing to that range writes to colour RAM, not chip RAM. Second,
+the ROM is not a separate chip: it is loaded into chip RAM at boot and
+then protected. Software that disables the protection can patch the ROM,
+or reclaim that 128KB as ordinary RAM.</p>
+<h3 id="what-the-cpu-sees">What the CPU sees</h3>
+<p>The 16-bit addresses a program uses are translated into 28-bit
+addresses through several layers. In C64 mode the result is exactly the
+C64's memory map, controlled by the CPU port at $01:</p>
+<table>
+<thead>
+<tr class="header">
+<th>CPU address</th>
+<th>Default contents in C64 mode</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0000-$9FFF</code></td>
+<td>RAM</td>
+</tr>
+<tr class="even">
+<td><code>$A000-$BFFF</code></td>
+<td>C64 BASIC ROM</td>
+</tr>
+<tr class="odd">
+<td><code>$C000-$CFFF</code></td>
+<td>RAM</td>
+</tr>
+<tr class="even">
+<td><code>$D000-$DFFF</code></td>
+<td>I/O</td>
+</tr>
+<tr class="odd">
+<td><code>$E000-$FFFF</code></td>
+<td>C64 KERNAL ROM</td>
+</tr>
+</tbody>
+</table>
+<p>In MEGA65 mode there is no single fixed layout. The KERNAL and BASIC
+65 keep parts of the ROM mapped into the window and change the map as
+they run, reaching program text, variables and strings in other banks
+behind the scenes. Chapter 6 shows how. Any machine-language program is
+free to rearrange the view entirely.</p>
+<h2 id="kinds-of-memory">Kinds of Memory</h2>
+<p>The MEGA65 has four kinds of memory, and they are not
+interchangeable. Each differs in speed, size and, most importantly, in
+what can see it.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Memory</th>
+<th>Size</th>
+<th>CPU speed</th>
+<th>VIC-IV can see it</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Chip RAM</td>
+<td>384KB</td>
+<td>Full speed</td>
+<td>Yes</td>
+<td>Programs, screens, bitmaps, sprites, character sets</td>
+</tr>
+<tr class="even">
+<td>Attic RAM</td>
+<td>8MB</td>
+<td>Slower</td>
+<td>No</td>
+<td>Bulk data, buffers, overlays, assets loaded once</td>
+</tr>
+<tr class="odd">
+<td>Colour RAM</td>
+<td>32KB or 64KB</td>
+<td>Full speed</td>
+<td>Colour data only</td>
+<td>Colour and attribute information for text screens</td>
+</tr>
+<tr class="even">
+<td>ROM</td>
+<td>128KB in chip RAM</td>
+<td>Full speed</td>
+<td>Yes</td>
+<td>KERNAL, BASIC 65, editor, DOS, character sets</td>
+</tr>
+</tbody>
+</table>
+<h3 id="chip-ram">Chip RAM</h3>
+<p>Chip RAM lives inside the FPGA. The term comes from the Amiga, where
+it meant the same thing: memory the custom chips can reach. Anything the
+VIC-IV must display, such as a screen, a bitmap, a character set or
+sprite data, has to be in chip RAM. Because it is internal it also runs
+at full CPU speed with no wait states.</p>
+<h3 id="attic-ram">Attic RAM</h3>
+<p>Attic RAM is 8MB of external memory on the main board. It is much
+larger than chip RAM but slower, and the VIC-IV cannot see it at all.
+The name suggests its role: a place to store things until they are
+needed. A game might keep all its levels in attic RAM and copy the
+current one into chip RAM with a DMA job.</p>
+<p>The CPU can reach attic RAM in two ways: through a 32-bit pointer
+using the <code>[zp],Z</code> addressing mode, or by mapping it into the
+64KB window with MAP. For large transfers DMA is usually the better
+choice. Early development boards had no attic RAM, so software meant for
+every MEGA65 variant should check for it rather than assume it.</p>
+<h3 id="colour-ram">Colour RAM</h3>
+<p>On the C64, colour RAM is a separate 1KB of 4-bit memory at
+<code>$D800</code>. On the MEGA65 it is 8 bits wide and much larger, at
+<code>$FF80000</code>. The first 1KB still appears at <code>$D800</code>
+for compatibility, and the first 2KB is mirrored into bank 1 as
+described above.</p>
+<p>The extra width matters. In the VIC-IV's enhanced text modes each
+character cell uses two bytes of colour RAM, holding attributes such as
+blink, reverse, underline and alternate palette selection as well as the
+colour itself. Chapter 12 covers these modes.</p>
+<h3 id="rom">ROM</h3>
+<p>The MEGA65 ROM is a 128KB image loaded from the SD card into chip RAM
+at <code>$20000-$3FFFF</code> when the machine starts. It contains the
+KERNAL, BASIC 65, the screen editor, the DOS and the character sets.
+Because it is really RAM, a different ROM version can be used simply by
+placing a different file on the SD card, and the C64-mode KERNAL and
+BASIC are part of the same image.</p>
+<h2 id="banking">Banking</h2>
+<p>Three separate mechanisms decide what appears in the CPU's 64KB
+window, and a fourth lets the CPU bypass the window altogether. Each was
+added by a different generation of machine, and all of them are active
+at once. MAP takes precedence over every other banking mechanism (MEGA65
+Book, p. K-7), but only for the 8KB blocks it actually maps. For every
+block MAP leaves unmapped, the older mechanisms decide:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Order</th>
+<th>Mechanism</th>
+<th>Origin</th>
+<th>Applies to</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>MAP instruction</td>
+<td>4510</td>
+<td>Each 8KB block it maps, with any offset</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>$D030</code> ROM bits and the CPU port at
+<code>$01</code></td>
+<td>C65 / VIC-III and C64</td>
+<td>Fixed ROM and I/O areas in unmapped blocks; if either brings ROM
+into a region, ROM appears there</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Nothing mapped</td>
+<td></td>
+<td>Chip RAM in bank 0</td>
+</tr>
+</tbody>
+</table>
+<p>Flat 32-bit addressing sits outside this table: it ignores all three
+and goes straight to a 28-bit address.</p>
+<p>The interaction matters most in the <code>$A000-$BFFF</code> and
+<code>$E000-$FFFF</code> regions, where both <code>$D030</code> and
+<code>$01</code> can bring in ROM: if either is active and MAP does not
+map the block, the region shows ROM (MEGA65 Book, p. 14-39).</p>
+<h3 id="the-c64-cpu-port">The C64 CPU port</h3>
+<p>Location <code>$01</code> works exactly as on the C64. Its low three
+bits, LORAM, HIRAM and CHAREN, choose whether BASIC ROM, KERNAL ROM, I/O
+and the character ROM appear in the window. The familiar values still
+apply: <code>$37</code> is the default, <code>$35</code> leaves only I/O
+visible above RAM, and <code>$34</code> gives RAM everywhere. This
+mechanism matters most in C64 mode, but it remains active underneath
+MEGA65 mode too.</p>
+<h3 id="the-d030-rom-bits">The <code>$D030</code> ROM bits</h3>
+<p>The C65 added a register in the VIC-III, at <code>$D030</code>, that
+switches pieces of ROM into fixed places in the window. They are the
+C64-mode ROMs in bank 2; the MEGA65's own ROM is reached through MAP
+instead. These regions are read-only, and MAP overrides them for any
+block it maps (MEGA65 Book, pp. K-6, K-7).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Name</th>
+<th>Effect when set</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>CRAM2K</td>
+<td>Shows the second kilobyte of colour RAM at
+<code>$DC00-$DFFF</code></td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>ROM8</td>
+<td><code>$28000-$29FFF</code> at <code>$8000-$9FFF</code></td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>ROMA</td>
+<td><code>$2A000-$2BFFF</code> (C64 BASIC) at
+<code>$A000-$BFFF</code></td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td>ROMC</td>
+<td><code>$2C000-$2CFFF</code> at <code>$C000-$CFFF</code></td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>CROM9</td>
+<td>Selects which character set the video chip uses</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>ROME</td>
+<td><code>$2E000-$2FFFF</code> (C64 KERNAL) at
+<code>$E000-$FFFF</code></td>
+</tr>
+</tbody>
+</table>
+<p>Bits 1 and 2 control video timing rather than banking.
+<code>$D030</code> exists only when the VIC-III or VIC-IV personality is
+active, as described in the next section. CRAM2K deserves a warning:
+while it is set, the CIAs at <code>$DC00</code> and <code>$DD00</code>
+are hidden behind colour RAM, so keyboard scanning and timer interrupts
+stop working.</p>
+<h3 id="the-map-instruction">The MAP instruction</h3>
+<p>MAP is the general-purpose mechanism. It divides the 64KB window into
+eight 8KB blocks and lets each block be redirected by adding an offset
+to its address. The lower four blocks, <code>$0000-$7FFF</code>, share
+one offset; the upper four, <code>$8000-$FFFF</code>, share another.</p>
+<p>MAP takes its arguments in the four registers:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Bits 7-4</th>
+<th>Bits 3-0</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>Lower offset, bits 15-12</td>
+<td>Lower offset, bits 11-8</td>
+</tr>
+<tr class="even">
+<td>X</td>
+<td>Enable blocks 3-0 (<code>$6000</code>, <code>$4000</code>,
+<code>$2000</code>, <code>$0000</code>)</td>
+<td>Lower offset, bits 19-16</td>
+</tr>
+<tr class="odd">
+<td>Y</td>
+<td>Upper offset, bits 15-12</td>
+<td>Upper offset, bits 11-8</td>
+</tr>
+<tr class="even">
+<td>Z</td>
+<td>Enable blocks 7-4 (<code>$E000</code>, <code>$C000</code>,
+<code>$A000</code>, <code>$8000</code>)</td>
+<td>Upper offset, bits 19-16</td>
+</tr>
+</tbody>
+</table>
+<p>The offset is added to the CPU address to form the physical address.
+To show bank 4 memory at <code>$44000-$45FFF</code> in the window at
+<code>$4000-$5FFF</code>, the offset is
+<code>$44000 - $4000 = $40000</code>, and only block 2 needs to be
+enabled:</p>
+<pre><code>        lda #$00        ; lower offset bits 15-8
+        ldx #$44        ; enable block 2 ($4000), offset bits 19-16 = 4
+        ldy #$00        ; upper offset bits 15-8
+        ldz #$00        ; no upper blocks mapped
+        map
+        eom</code></pre>
+<p>Two things about MAP are easy to get wrong. First, it sets both
+halves at once. The example above also unmaps anything the upper half
+was showing, including the KERNAL, so a real program must supply
+suitable values for Y and Z as well. Second, MAP blocks interrupts until
+the next EOM. EOM shares the 6502's NOP opcode, <code>$EA</code>, so the
+pair is always written together.</p>
+<p>The C65's MAP could only reach the first megabyte. The MEGA65 extends
+it with a megabyte selector. A MAP with X set to <code>$0F</code> loads
+A into bits 27-20 of the lower offset, and a MAP with Z set to
+<code>$0F</code> loads Y into bits 27-20 of the upper offset. A second
+MAP then sets the offset within that megabyte as usual. This is how
+attic RAM or the I/O personalities can be mapped into the window.</p>
+<h3 id="flat-32-bit-addressing">Flat 32-bit addressing</h3>
+<p>The simplest way to reach any byte is not to map it at all. The
+45GS02's <code>[zp],Z</code> addressing mode takes a four-byte pointer
+from zero page and uses it as a 28-bit address, ignoring every banking
+mechanism above:</p>
+<pre><code>ptr     = $fb
+        lda #$00
+        sta ptr
+        sta ptr+1
+        lda #$f8
+        sta ptr+2
+        lda #$0f
+        sta ptr+3       ; ptr = $0FF80000, start of colour RAM
+        ldz #$00
+        lda [ptr],z     ; read the first colour RAM byte</code></pre>
+<p>The assembler emits this as an EOM prefix before the ordinary
+<code>(zp),Z</code> instruction. It costs a couple of cycles more than a
+16-bit indirect access, which is very little for the ability to reach
+any address without disturbing the map. For scattered accesses this is
+usually the best choice; for bulk copies, DMA is faster.</p>
+<h2 id="io-personalities">I/O Personalities</h2>
+<p>The <code>$D000-$DFFF</code> I/O area looks different depending on
+which machine the MEGA65 is pretending to be. This is called its I/O
+personality. A C64 program expects to find a VIC-II there and nothing
+else; a MEGA65 program wants the full VIC-IV register set, the DMA
+controller, the math unit and much more. Rather than compromise, the
+MEGA65 keeps a separate 4KB I/O view for each case and shows the CPU
+whichever one is selected.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Personality</th>
+<th>28-bit address</th>
+<th>Visible at <code>$D000</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C64</td>
+<td><code>$FFD0000</code></td>
+<td>VIC-II, SID, CIAs, colour RAM: what a C64 program expects</td>
+</tr>
+<tr class="even">
+<td>C65</td>
+<td><code>$FFD1000</code></td>
+<td>Adds the VIC-III registers, including <code>$D030</code>, and the
+C65 DMA controller</td>
+</tr>
+<tr class="odd">
+<td>MEGA65 with Ethernet</td>
+<td><code>$FFD2000</code></td>
+<td>MEGA65 registers, with the Ethernet buffers in place of part of the
+I/O area</td>
+</tr>
+<tr class="even">
+<td>MEGA65</td>
+<td><code>$FFD3000</code></td>
+<td>Full VIC-IV register set and all MEGA65 devices</td>
+</tr>
+</tbody>
+</table>
+<p>The split exists for compatibility. Many C64 programs write to I/O
+addresses that are unused on a real C64, sometimes deliberately and
+sometimes by accident. If those addresses held live VIC-IV registers,
+such programs would scramble the display. In the C64 personality those
+addresses do what they did on a C64, which is usually nothing.</p>
+<h3 id="the-knock">The knock</h3>
+<p>The personality is changed by writing a two-byte "knock" sequence to
+<code>$D02F</code>, a register that does nothing on a real VIC-II. The
+same register exists in every personality, so the knock always
+works:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Personality wanted</th>
+<th>Bytes to write to <code>$D02F</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>VIC-III (C65)</td>
+<td><code>$A5</code>, then <code>$96</code></td>
+</tr>
+<tr class="even">
+<td>VIC-IV (MEGA65)</td>
+<td><code>$47</code>, then <code>$53</code></td>
+</tr>
+<tr class="odd">
+<td>MEGA65 with Ethernet</td>
+<td><code>$45</code>, then <code>$54</code></td>
+</tr>
+<tr class="even">
+<td>VIC-II (C64)</td>
+<td>Any other value, such as <code>$00</code></td>
+</tr>
+</tbody>
+</table>
+<p>To unlock the VIC-IV from machine language:</p>
+<pre><code>        lda #$47
+        sta $d02f
+        lda #$53
+        sta $d02f</code></pre>
+<p>The VIC-IV bytes are the ASCII codes for "GS", and the Ethernet bytes
+spell "ET". MEGA65 mode starts with the VIC-IV personality already
+selected, so most MEGA65 programs never need the knock. It matters when
+you write code that starts in C64 mode, or when you need to be certain
+of the state after other software has run.</p>
+<p>The personality affects only what the CPU sees at
+<code>$D000-$DFFF</code>. It does not change the video hardware itself,
+and a flat 32-bit pointer can reach any personality's registers at its
+28-bit address regardless of which one is selected.</p>
+<h2 id="the-hypervisor">The Hypervisor</h2>
+<p>Underneath the KERNAL runs a small, privileged program called the
+Hypervisor, often known by the name of its implementation, Hyppo. It is
+the first code to run at power-on, and it remains resident afterwards in
+its own 16KB of memory, which the CPU maps in at
+<code>$8000-$BFFF</code> only while in hypervisor mode and which
+ordinary programs cannot reach by any means (MEGA65 Book, p. K-3).</p>
+<p>The idea comes from virtual machines on larger computers. The
+Hypervisor runs in a special CPU mode with access to everything, while
+the KERNAL, BASIC and user programs run in a normal mode that cannot see
+it. When something needs the Hypervisor's help, the CPU switches into
+hypervisor mode, the Hypervisor does its work, and control returns as
+though nothing had happened.</p>
+<h3 id="what-it-does">What it does</h3>
+<ul>
+<li><strong>Starts the machine.</strong> It initialises the hardware,
+reads the SD card, loads the ROM image into chip RAM and protects it,
+then starts the KERNAL.</li>
+<li><strong>Provides file services.</strong> It contains a FAT32 file
+system driver, so programs can read and write files on the SD card.</li>
+<li><strong>Manages disk images.</strong> It mounts D81 disk images so
+that the KERNAL and DOS see them as real floppy disks.</li>
+<li><strong>Runs the Freezer.</strong> Holding RESTORE enters the
+Freezer, which stops the running program, saves its complete state, and
+lets you inspect memory, change settings or swap disks before
+resuming.</li>
+</ul>
+<h3 id="hypervisor-traps">Hypervisor traps</h3>
+<p>A program asks for a Hypervisor service by writing to one of the trap
+registers at <code>$D640-$D67F</code>. The write switches the CPU into
+hypervisor mode and jumps to the matching handler. The service number
+must be in A, and the trap is followed by a CLV instruction, because the
+CPU may or may not execute the byte after the trap when the service
+returns. On return, the carry flag is set if the call succeeded; if it
+is clear, A holds an error code (MEGA65 Book, pp. N-4, N-5).</p>
+<p>For example, this asks the Hypervisor for its version number using
+the general DOS trap at <code>$D640</code>:</p>
+<pre><code>        lda #$00        ; function: get version
+        sta $d640       ; trap into the Hypervisor
+        clv
+        bcc failed      ; carry clear means the call failed</code></pre>
+<p>The trap registers exist only in the MEGA65 I/O personality. Chapter
+11 lists every Hypervisor function, and Chapter 14 shows how to use the
+file services to read and write SD card files directly.</p>
+<p>Because the Hypervisor saves and restores the complete machine state,
+a trap is safe to use from almost anywhere, including from inside a
+program that has remapped memory heavily. That same property is what
+makes the Freezer possible.</p>
+<h2 id="dmagic">DMAgic</h2>
+<p>DMAgic is the MEGA65's DMA controller: hardware that copies and fills
+blocks of memory far faster than the CPU can, at 40.5MB per second for
+fills and 20.25MB per second for copies (MEGA65 Book, p. P-3). It was
+designed for the C65; on the MEGA65 it is built into the CPU, and it
+reaches the full 28-bit address space.</p>
+<p>DMAgic does not take commands through registers alone. Instead the
+program builds a small data structure in memory, called a DMA list,
+describing the job, then tells DMAgic where the list is. Writing the
+final byte of the list's address starts the job, and the CPU pauses
+until it finishes.</p>
+<h3 id="the-registers">The registers</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D700</code></td>
+<td>List address, bits 7-0. Writing here starts a job in the original
+C65 list format</td>
+</tr>
+<tr class="even">
+<td><code>$D701</code></td>
+<td>List address, bits 15-8</td>
+</tr>
+<tr class="odd">
+<td><code>$D702</code></td>
+<td>List address, bits 22-16: the bank holding the list</td>
+</tr>
+<tr class="even">
+<td><code>$D703</code></td>
+<td>Bit 0 selects the F018B list format instead of F018A</td>
+</tr>
+<tr class="odd">
+<td><code>$D704</code></td>
+<td>List address, bits 27-20: the megabyte holding the list</td>
+</tr>
+<tr class="even">
+<td><code>$D705</code></td>
+<td>List address, bits 7-0. Writing here starts an enhanced job</td>
+</tr>
+</tbody>
+</table>
+<p>An enhanced job is the normal choice on the MEGA65. Its list begins
+with option bytes, ended by <code>$00</code>, that extend what the job
+can do. The most useful options are:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Option</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0A</code></td>
+<td>The list that follows uses the F018A format</td>
+</tr>
+<tr class="even">
+<td><code>$0B</code></td>
+<td>The list that follows uses the F018B format</td>
+</tr>
+<tr class="odd">
+<td><code>$80</code> nn</td>
+<td>Source address is in megabyte nn</td>
+</tr>
+<tr class="even">
+<td><code>$81</code> nn</td>
+<td>Destination address is in megabyte nn</td>
+</tr>
+<tr class="odd">
+<td><code>$00</code></td>
+<td>End of options</td>
+</tr>
+</tbody>
+</table>
+<p>The megabyte options are what let a DMA job reach attic RAM at
+<code>$8000000</code> or colour RAM at <code>$FF80000</code>.</p>
+<h3 id="a-dma-list">A DMA list</h3>
+<p>After the options comes the job itself. The low two bits of the
+command byte choose the operation: <code>%00</code> copy,
+<code>%01</code> mix, <code>%10</code> swap, <code>%11</code> fill. Only
+copy and fill are implemented on the MEGA65; the swap and mix codes are
+defined by the F018 format but do nothing useful (MEGA65 Book, pp. P-6,
+P-24). A copy needs a source; a fill uses the low byte of the source
+address as the fill value.</p>
+<p>This example clears an 80 by 25 text screen at <code>$0800</code> in
+bank 0 by filling its 2,000 bytes with spaces:</p>
+<pre><code>        lda #$00
+        sta $d702       ; list is in bank 0
+        sta $d704       ; list is in megabyte 0
+        lda #&gt;list
+        sta $d701
+        lda #&lt;list
+        sta $d705       ; start the enhanced job
+        rts
+
+list    .byte $0a       ; option: F018A format
+        .byte $00       ; end of options
+        .byte $03       ; command: fill
+        .word 2000      ; byte count
+        .word $0020     ; source: fill value $20 in the low byte
+        .byte $00       ; source bank
+        .word $0800     ; destination address
+        .byte $00       ; destination bank
+        .word $0000     ; modulo, unused here</code></pre>
+<p>The same job in a loop of STA instructions would take thousands of
+cycles. DMAgic does it in a small fraction of that time, and BASIC 65
+exposes the controller directly through its EDMA command. Chapter 8
+covers chained jobs, modulo and skip options, and copying to and from
+attic RAM.</p>
+<h2 id="the-math-accelerator">The Math Accelerator</h2>
+<p>The 6502 family has no multiply or divide instructions, and
+generations of programmers have written shift-and-add routines to make
+up for it. The MEGA65 instead provides a hardware multiplier and divider
+in the I/O area. You write two numbers into input registers and read the
+results back from output registers.</p>
+<p>Both units work on unsigned 32-bit inputs and share the same pair of
+inputs, so a single setup gives you both the product and the
+quotient.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Size</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D770-$D773</code></td>
+<td>32 bits</td>
+<td>MULTINA: first input</td>
+</tr>
+<tr class="even">
+<td><code>$D774-$D777</code></td>
+<td>32 bits</td>
+<td>MULTINB: second input</td>
+</tr>
+<tr class="odd">
+<td><code>$D778-$D77F</code></td>
+<td>64 bits</td>
+<td>MULTOUT: MULTINA × MULTINB</td>
+</tr>
+<tr class="even">
+<td><code>$D768-$D76B</code></td>
+<td>32 bits</td>
+<td>DIVOUT fraction: fractional part of MULTINA ÷ MULTINB</td>
+</tr>
+<tr class="odd">
+<td><code>$D76C-$D76F</code></td>
+<td>32 bits</td>
+<td>DIVOUT whole: integer part of MULTINA ÷ MULTINB</td>
+</tr>
+<tr class="even">
+<td><code>$D70F</code></td>
+<td>8 bits</td>
+<td>Status: bit 7 set while dividing, bit 6 set while multiplying</td>
+</tr>
+</tbody>
+</table>
+<p>All values are little-endian, low byte first, as everywhere else on
+the 6502 family.</p>
+<h3 id="multiplying">Multiplying</h3>
+<p>The multiplier is effectively instantaneous: by the time the CPU can
+read MULTOUT after writing an input, the product is ready. This
+multiplies two 16-bit values:</p>
+<pre><code>        lda #&lt;1000
+        sta $d770
+        lda #&gt;1000
+        sta $d771
+        lda #&lt;300
+        sta $d774
+        lda #&gt;300
+        sta $d775
+        lda #$00
+        sta $d772       ; clear the upper input bytes
+        sta $d773
+        sta $d776
+        sta $d777
+        lda $d778       ; product 300000 is now in $d778-$d77b</code></pre>
+<h3 id="dividing">Dividing</h3>
+<p>Division takes a few cycles longer. Wait for bit 7 of
+<code>$D70F</code> to clear before reading DIVOUT:</p>
+<pre><code>wait    bit $d70f
+        bmi wait        ; bit 7 set: divider still busy
+        lda $d76c       ; integer part of the quotient</code></pre>
+<p>The fractional part makes the divider useful for fixed-point
+arithmetic, such as computing line slopes or scaling factors in graphics
+routines, without any floating-point code. If you need signed results,
+handle the sign yourself before and after, just as you would with a
+software routine.</p>
+<p>BASIC 65 programs can reach the accelerator with POKE and PEEK, but
+the real benefit is in machine language, where it replaces some of the
+most frequently written subroutines in 6502 programming with a handful
+of loads and stores.</p>
+<h2 id="summary">Summary</h2>
+<p>The MEGA65 is easiest to understand as layers, each added by a
+different generation and each still active:</p>
+<ul>
+<li><strong>The 45GS02</strong> runs 6502 and 4510 code unchanged, adds
+a Z register, a movable base page, a 16-bit stack, 32-bit pointers and
+the 32-bit Q register, and runs at 1, 2, 3.5 or 40.5 MHz.</li>
+<li><strong>The 28-bit address space</strong> holds 384KB of chip RAM
+that the VIC-IV can see, 8MB of attic RAM that it cannot, 32KB or more
+of 8-bit colour RAM, a 128KB ROM loaded into chip RAM, the I/O
+personalities and the Hypervisor.</li>
+<li><strong>Banking</strong> decides what the CPU sees in its 64KB
+window. <code>$D030</code> and the C64 port at <code>$01</code> decide
+unmapped blocks; MAP takes precedence for the blocks it maps. Flat
+32-bit addressing bypasses all three.</li>
+<li><strong>I/O personalities</strong> present a C64, C65 or MEGA65 view
+of <code>$D000-$DFFF</code>, selected by a knock sequence written to
+<code>$D02F</code>.</li>
+<li><strong>The Hypervisor</strong> boots the machine, provides SD card
+and disk image services through traps at <code>$D640-$D67F</code>, and
+runs the Freezer.</li>
+<li><strong>DMAgic</strong> copies and fills memory anywhere in the
+28-bit space from a list in memory.</li>
+<li><strong>The math accelerator</strong> multiplies and divides 32-bit
+values in hardware.</li>
+</ul>
+<p>With this model in mind, the rest of the book can go into detail.
+Chapter 6 looks at how BASIC 65 uses this memory, and Chapters 7 to 10
+turn to machine language on the 45GS02.</p>
+<nav class="chapnav"><span><a href="ch04-effective-programming-in-basic65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch06-advanced-basic65.html">Next &rarr;</a></span></nav>
+</body>
+</html>

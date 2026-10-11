@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 12: Graphics</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>
+<h1 id="programming-the-mega65--chapter-12-graphics">Programming the
+MEGA65 — Chapter 12: Graphics</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>The VIC-IV is three video chips in one. It behaves as a VIC-II for
+C64 software, adds the C65's VIC-III features of 80 columns, bitplanes
+and a 256-colour palette, and then goes much further with its own modes.
+Like its ancestors it has no frame buffer: it builds each line of the
+display as it is drawn, from screen memory, character data and colour
+RAM. That design is why character graphics remain central on the MEGA65,
+even though it can display far more than a C64.</p>
+<p>The native display is 720 by 576 pixels, and the chip has separate
+256-colour palettes for sprites, bitplanes and character graphics, so
+more than one palette's worth of colours can be on screen at once (<a
+href="https://www.c64-wiki.com/wiki/mega65">C64-Wiki</a>).</p>
+<p>This chapter works from the easiest methods to the most detailed:</p>
+<ul>
+<li>BASIC 65's graphics commands, which need no register knowledge</li>
+<li>The registers that place screens, character sets and colour RAM in
+memory</li>
+<li>Text modes, including the two-byte-per-character mode the MEGA65
+calls SEAM</li>
+<li>Full-colour and nybble-colour characters</li>
+<li>The palette</li>
+<li>Sprites</li>
+<li>Bitplane graphics</li>
+<li>Raster techniques specific to the VIC-IV</li>
+</ul>
+<p>The VIC-II registers at <code>$D000-$D02E</code> work as on the C64,
+and the techniques in any C64 graphics reference still apply. This
+chapter concentrates on what is new. Most of the registers described
+here exist only in the VIC-IV personality, so a program starting in C64
+mode must perform the knock from Chapter 5 first.</p>
+<h2 id="graphics-from-basic-65">Graphics from BASIC 65</h2>
+<p>BASIC 65 has a full set of graphics commands, inherited from the
+C65's BASIC 10 and extended since. They draw on a bitplane screen held
+in banks 4 and 5, which is why Chapter 6 advised reserving those banks
+with MEM before using them for anything else.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Group</th>
+<th>Commands</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Screens</td>
+<td>SCREEN, SCREEN CLOSE</td>
+<td>Open a graphics screen of a given size and colour depth, and close
+it</td>
+</tr>
+<tr class="even">
+<td>Drawing</td>
+<td>PEN, DOT, LINE, BOX, CIRCLE, ELLIPSE, POLYGON, PAINT</td>
+<td>Choose a colour and draw shapes and fills</td>
+</tr>
+<tr class="odd">
+<td>Text and blocks</td>
+<td>CHAR, CUT, PASTE</td>
+<td>Draw text on a graphics screen; copy rectangular areas</td>
+</tr>
+<tr class="even">
+<td>Colour</td>
+<td>PALETTE, PALETTE RESTORE, BACKGROUND, BORDER, FOREGROUND</td>
+<td>Change palette entries and screen colours</td>
+</tr>
+<tr class="odd">
+<td>Sprites</td>
+<td>SPRITE, MOVSPR, SPRCOLOR, SPRSAV</td>
+<td>Enable, move, colour and load sprites</td>
+</tr>
+<tr class="even">
+<td>Registers</td>
+<td>SETBIT, CLRBIT, WPOKE, WPEEK</td>
+<td>Change single bits and 16-bit values directly</td>
+</tr>
+</tbody>
+</table>
+<p>A short program shows the pattern. It opens a 320 by 200 screen,
+draws, waits for a key, and returns to text:</p>
+<pre><code>10 SCREEN 320,200,4
+20 PEN 1
+30 LINE 0,0,319,199
+40 CIRCLE 160,100,50
+50 GETKEY A$
+60 SCREEN CLOSE</code></pre>
+<p>The arguments to SCREEN have changed between ROM versions, so check
+Chapter 3 against the ROM you are using.</p>
+<h3 id="when-to-go-further">When to go further</h3>
+<p>The graphics commands are ideal for charts, diagrams, title screens
+and games where drawing speed is not critical. For fast animation,
+scrolling, or the VIC-IV's character-based colour modes, programs work
+with the registers directly. BASIC 65 makes that practical too: SETBIT,
+CLRBIT, WPOKE and WPEEK change bits and 16-bit registers in one
+statement, and many of the register examples in the rest of this chapter
+can be typed in as BASIC.</p>
+<p>PALETTE RESTORE deserves a mention: it returns the system palette to
+its defaults, so any program that changes the palette can put things
+back before it ends. Every example in this chapter that changes VIC-IV
+state should likewise restore it, or the screen editor may be left
+unusable.</p>
+<h2 id="where-the-display-lives">Where the Display Lives</h2>
+<p>The VIC-II found its screen and character set through a few bits in
+<code>$D018</code> and the bank bits of CIA 2, which restricted them to
+a 16KB window. The VIC-IV replaces that with pointers that can address
+memory directly, at byte granularity, anywhere the chip can see.</p>
+<h3 id="layout-registers">Layout registers</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D058-$D059</code></td>
+<td>LINESTEP</td>
+<td>Bytes of screen and colour memory per character row</td>
+</tr>
+<tr class="even">
+<td><code>$D05E</code></td>
+<td>CHRCOUNT</td>
+<td>Characters drawn per row, low 8 bits; bits 9-8 are in
+<code>$D063</code> bits 4-5</td>
+</tr>
+<tr class="odd">
+<td><code>$D060-$D062</code></td>
+<td>SCRNPTR</td>
+<td>Address of screen memory</td>
+</tr>
+<tr class="even">
+<td><code>$D064-$D065</code></td>
+<td>COLPTR</td>
+<td>Offset of colour memory from <code>$FF80000</code></td>
+</tr>
+<tr class="odd">
+<td><code>$D068-$D06A</code></td>
+<td>CHARPTR</td>
+<td>Address of the character set</td>
+</tr>
+<tr class="even">
+<td><code>$D06C-$D06E</code></td>
+<td>SPRPTRADR</td>
+<td>Address of the sprite pointer list</td>
+</tr>
+<tr class="odd">
+<td><code>$D07B</code></td>
+<td>DISPROWS</td>
+<td>Number of character rows drawn</td>
+</tr>
+</tbody>
+</table>
+<p>LINESTEP, CHRCOUNT, SCRNPTR, COLPTR and the movable sprite pointer
+list are described in Dan Sanderson's and Retrocogs' VIC-IV tutorials;
+check the CHARPTR and DISPROWS addresses against the MEGA65 Book (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>, <a
+href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).</p>
+<p>SCRNPTR can point anywhere with byte precision, which makes coarse
+scrolling trivial: adding one to SCRNPTR scrolls the screen one
+character left. COLPTR is only 16 bits, an offset into colour RAM, so
+colour data is always somewhere in the first 64KB of colour RAM (<a
+href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).</p>
+<p>LINESTEP and CHRCOUNT are separate because they answer different
+questions. CHRCOUNT says how many characters to draw; LINESTEP says how
+far apart rows are in memory. Setting LINESTEP larger than CHRCOUNT
+creates a screen wider than the display, which can then be scrolled
+horizontally by moving SCRNPTR.</p>
+<h3 id="mode-registers">Mode registers</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Bit</th>
+<th>Name</th>
+<th>Effect when set</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D031</code></td>
+<td>7</td>
+<td>H640</td>
+<td>80-column, 640-pixel-wide display</td>
+</tr>
+<tr class="even">
+<td><code>$D031</code></td>
+<td>5</td>
+<td>ATTR</td>
+<td>Enables VIC-III text attributes; clear it to suppress them</td>
+</tr>
+<tr class="odd">
+<td><code>$D031</code></td>
+<td>4</td>
+<td>BPM</td>
+<td>Bitplane mode</td>
+</tr>
+<tr class="even">
+<td><code>$D031</code></td>
+<td>3</td>
+<td>V400</td>
+<td>400-line vertical resolution</td>
+</tr>
+<tr class="odd">
+<td><code>$D054</code></td>
+<td>0</td>
+<td>CHR16</td>
+<td>Two bytes of screen and colour memory per character (SEAM)</td>
+</tr>
+<tr class="even">
+<td><code>$D054</code></td>
+<td>1</td>
+<td>FCLRLO</td>
+<td>Full-colour mode for screen codes 0-255</td>
+</tr>
+<tr class="odd">
+<td><code>$D054</code></td>
+<td>2</td>
+<td>FCLRHI</td>
+<td>Full-colour mode for screen codes 256 and up</td>
+</tr>
+</tbody>
+</table>
+<h3 id="hot-registers">Hot registers</h3>
+<p>When a program writes to the C64-style registers that choose a screen
+or character set location, the VIC-IV calculates the equivalent address
+and updates its own pointers, such as CHARPTR, automatically. Five
+registers behave this way: <code>$D011</code>, <code>$D016</code>,
+<code>$D018</code>, <code>$D031</code>, and the VIC bank bits of
+<code>$DD00</code>. A write to any one of them propagates all five, so a
+program that has set CHARPTR directly can lose that setting simply by
+turning on multicolour mode in <code>$D016</code> (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<p>Programs that manage the VIC-IV pointers themselves should turn this
+off by clearing HOTREG, bit 7 of <code>$D05D</code>:</p>
+<pre><code>CLRBIT $D05D,7</code></pre>
+<p>With HOTREG clear, the C64-style registers no longer update the
+VIC-IV pointers, and the program has full control. One side effect is
+worth knowing: the C65 shifted 80-column text slightly and compensated
+through the horizontal scroll bits, and the MEGA65 reproduces this.
+After clearing HOTREG and choosing a width with H640, set TEXTXPOS at
+<code>$D04C</code> to its standard value of 80 to place the text
+correctly (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<h2 id="text-modes">Text Modes</h2>
+<p>Text is still the VIC-IV's most important mode. The screen editor
+uses it, and most MEGA65 games build their graphics from characters.</p>
+<h3 id="sizes">Sizes</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Columns × rows</th>
+<th>H640</th>
+<th>V400</th>
+<th>Bytes per screen (normal mode)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>40 × 25</td>
+<td>0</td>
+<td>0</td>
+<td>1,000</td>
+</tr>
+<tr class="even">
+<td>80 × 25</td>
+<td>1</td>
+<td>0</td>
+<td>2,000</td>
+</tr>
+<tr class="odd">
+<td>40 × 50</td>
+<td>0</td>
+<td>1</td>
+<td>2,000</td>
+</tr>
+<tr class="even">
+<td>80 × 50</td>
+<td>1</td>
+<td>1</td>
+<td>4,000</td>
+</tr>
+</tbody>
+</table>
+<p>When changing size by hand, set LINESTEP and CHRCOUNT to match, and
+make sure screen memory and colour RAM are large enough. From BASIC, the
+editor's own screen-size commands handle this for you.</p>
+<h3 id="attributes">Attributes</h3>
+<p>In normal text mode, each character has one byte of screen memory,
+its screen code, and one byte of colour RAM. The low four bits of colour
+RAM are the colour. The high four bits are VIC-III attributes: blink
+(bit 4), reverse (bit 5), bold (bit 6) and underline (bit 7), so text
+can be styled without a different character set. Clearing ATTR, bit 5 of
+<code>$D031</code>, switches the attributes off system-wide (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<h3 id="seam-two-bytes-per-character">SEAM: two bytes per character</h3>
+<p>Setting CHR16, bit 0 of <code>$D054</code>, switches the VIC-IV into
+what the MEGA65 calls Super-Extended Attribute Mode, or SEAM. Every
+character now takes two bytes of screen memory and two bytes of colour
+RAM (<a
+href="https://retrocogs.mega65.com/2025/08/13/vic-iv-graphics-setting-up-fcm-and-ncm/">Retrocogs</a>).</p>
+<p>The extra screen byte extends the character number to 13 bits, so a
+screen can use up to 8,192 different characters instead of 256. The
+extra colour byte carries further per-character settings, and the second
+colour byte holds the colour itself. Ordinary monochrome characters can
+then take their foreground from the first 32 palette entries, and the
+full-colour modes below reach the whole palette (<a
+href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>).</p>
+<p>Because each character now takes two bytes, LINESTEP must be twice
+CHRCOUNT: 160 for an 80-column row. The screen editor's memory is not
+laid out for this, so SEAM programs move SCRNPTR to their own area. In
+BASIC:</p>
+<pre><code>100 S1=WPEEK($D060) : S2=WPEEK($D062)  : REM SAVE SCRNPTR
+110 SETBIT $D054,0                      : REM CHR16 ON
+120 WPOKE $D058,160                     : REM LINESTEP 80 X 2
+130 WPOKE $D060,$0000 : WPOKE $D062,$05 : REM SCREEN AT $50000
+...
+900 CLRBIT $D054,0 : WPOKE $D058,80     : REM RESTORE
+910 WPOKE $D060,S1 : WPOKE $D062,S2</code></pre>
+<p>In SEAM, screen memory is written with WPOKE, low byte first. A
+screen code below 256 still refers to the character set at CHARPTR, so
+ordinary PETSCII text continues to work alongside the new modes in the
+next section.</p>
+<h2 id="full-colour-and-nybble-colour-characters">Full-Colour and
+Nybble-Colour Characters</h2>
+<p>A C64 character has one bit per pixel: foreground or background. The
+VIC-IV can give a character one byte per pixel, choosing every pixel's
+colour directly from the palette. This is Full Colour Mode, or FCM.
+Nybble Colour Mode, NCM, is a lighter variant using four bits per pixel.
+Both require SEAM.</p>
+<h3 id="full-colour-mode">Full Colour Mode</h3>
+<p>In FCM each character is 8 by 8 pixels and takes 64 bytes, one per
+pixel. A pixel value of <code>$00</code> shows the background colour,
+<code>$FF</code> shows the character's colour from colour RAM, and
+<code>$01-$FE</code> select palette entries directly (<a
+href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>).</p>
+<p>The most important fact about FCM, and the most common stumbling
+block, is that screen memory no longer holds a screen code. It holds the
+address of the character's 64 bytes of data divided by 64, and CHARPTR
+is ignored. Screen value <code>$1000</code> therefore means the data at
+<code>$1000 × $40 = $40000</code>. With 13 bits available, FCM data can
+lie anywhere in chip RAM, aligned to a 64-byte boundary (<a
+href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>).</p>
+<p>Two bits in <code>$D054</code> decide which screen values are treated
+this way:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Name</th>
+<th>FCM applies to</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>FCLRLO</td>
+<td>Screen values 0-255</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>FCLRHI</td>
+<td>Screen values 256 and above</td>
+</tr>
+</tbody>
+</table>
+<p>The usual choice is FCLRHI alone. Values below 256 remain ordinary
+characters from the character set at CHARPTR, so text and full-colour
+graphics share the screen, while values from 256 up point at FCM data
+from <code>$4000</code> upward. FCLRLO would make the first 16KB of
+memory the only place for full-colour data, at the cost of losing the
+normal font, so it is rarely useful (<a
+href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>).</p>
+<p>A full 80 by 25 screen of unique FCM characters needs 2,000 × 64 =
+128,000 bytes of data, which fits in banks 4 and 5. In return, every
+pixel on the screen can be any palette colour, and scrolling or
+animating still means changing only screen memory.</p>
+<h3 id="setting-up-fcm-in-machine-language">Setting up FCM in machine
+language</h3>
+<pre><code>        lda #%00000001
+        tsb $d054       ; CHR16: SEAM on
+        lda #%00000100
+        tsb $d054       ; FCLRHI: FCM for values 256 and up
+        lda #&lt;160
+        sta $d058
+        lda #&gt;160
+        sta $d059       ; LINESTEP = 80 characters x 2 bytes</code></pre>
+<p>Then point SCRNPTR at a free area, fill it with 16-bit values from
+<code>$0100</code> upward, and place the character data at the matching
+addresses.</p>
+<p>The attribute bits still apply in SEAM, in the high nybble of the
+second colour byte. That does no harm to FCM characters, but in NCM the
+same bits select the sub-palette, so they must not also trigger blinking
+or underlining. Clear ATTR, bit 5 of <code>$D031</code>, to suppress the
+attributes system-wide (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>). Because <code>$D031</code> is a hot register, either
+clear HOTREG first or change <code>$D031</code> before setting the
+VIC-IV pointers.</p>
+<h3 id="nybble-colour-mode">Nybble Colour Mode</h3>
+<p>NCM is not a separate screen mode but a property of individual FCM
+characters, selected by bit 3 of the first byte of the character's
+colour RAM entry (<a
+href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>). Each byte of character data then holds two pixels of
+four bits each, and three details follow from that:</p>
+<ul>
+<li><strong>Pixel order is reversed.</strong> The low nybble is the left
+pixel and the high nybble the right one, the opposite of ordinary
+character data.</li>
+<li><strong>Characters are 16 pixels wide.</strong> The 64 bytes still
+hold 8 rows of 8 bytes, but each byte now covers two pixels, so an NCM
+character is 16 normal-sized pixels across. The next character on the
+row starts where it ends.</li>
+<li><strong>Colours come from a group of 16.</strong> The high nybble of
+the character's colour value supplies the upper four bits of each
+pixel's palette index, and the pixel's nybble supplies the lower four. A
+nybble of <code>$F</code> shows the character's full colour value.</li>
+</ul>
+<p>Because NCM characters are twice as wide, a row of them needs half as
+many characters to fill the screen. A full row of NCM characters is 40
+characters, or 80 bytes, so LINESTEP can be 80 instead of 160. Mixing
+NCM and ordinary characters on one row is allowed, which is the first
+sign that a VIC-IV row is not a fixed grid of cells.</p>
+<h2 id="the-palette">The Palette</h2>
+<p>The C64 had sixteen fixed colours. The MEGA65 has palettes of 256
+entries, each entry an arbitrary colour chosen by its red, green and
+blue values. Every colour number used anywhere on the display, from
+border to sprite pixel, is an index into a palette.</p>
+<h3 id="palette-registers">Palette registers</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Registers</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D100-$D1FF</code></td>
+<td>Red value for entries 0-255</td>
+</tr>
+<tr class="even">
+<td><code>$D200-$D2FF</code></td>
+<td>Green value for entries 0-255</td>
+</tr>
+<tr class="odd">
+<td><code>$D300-$D3FF</code></td>
+<td>Blue value for entries 0-255</td>
+</tr>
+</tbody>
+</table>
+<p>Each value is 8 bits, but with its two nybbles swapped: the high
+nybble of the colour component is stored in the low four bits of the
+register, and the low nybble in the high four bits (<a
+href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>). A red value of <code>$A5</code> is therefore written as
+<code>$5A</code>. Converting at the point of storage keeps source data
+readable:</p>
+<pre><code>10 C=1 : R=255 : G=128 : B=0          : REM ENTRY 1 = ORANGE
+20 POKE $D100+C, ((R AND 15)&lt;&lt;4) OR (R&gt;&gt;4)
+30 POKE $D200+C, ((G AND 15)&lt;&lt;4) OR (G&gt;&gt;4)
+40 POKE $D300+C, ((B AND 15)&lt;&lt;4) OR (B&gt;&gt;4)</code></pre>
+<p>In machine language, a 256-byte lookup table of swapped values, or a
+short shift-and-rotate sequence, does the same job. Tools that convert
+images for the MEGA65 usually swap the nybbles when they write the
+palette file, so the bytes can be copied straight into the
+registers.</p>
+<p>The first 16 entries default to the C64's colours, so programs that
+use only colours 0-15 look as they would on a C64. BASIC 65's PALETTE
+COLOR command changes an entry without any register work, and PALETTE
+RESTORE puts the defaults back.</p>
+<h3 id="several-palettes">Several palettes</h3>
+<p>The VIC-IV keeps more than one palette. Character graphics, sprites
+and bitplanes can each use a different palette, which allows more than
+256 different colours on screen at once without changing the palette
+mid-frame (<a href="https://www.c64-wiki.com/wiki/mega65">C64-Wiki</a>),
+and the sprite system can choose among four palette banks (<a
+href="https://dansanderson.com/mega65/sprite-attack/">Dan
+Sanderson</a>). A palette-selection register decides which bank the
+<code>$D100-$D3FF</code> registers edit and which banks the display
+uses; the MEGA65 Book documents its bits.</p>
+<h3 id="palette-effects">Palette effects</h3>
+<p>Because the display reads the palette as it draws, changing an entry
+changes every pixel of that colour instantly. This makes some effects
+nearly free: fading a screen means adjusting a few dozen palette entries
+rather than rewriting graphics, and colour cycling, the classic
+technique for animating water, fire or conveyor belts, means rotating a
+range of entries each frame. Changing palette entries from a raster
+interrupt partway down the screen gives a different set of colours above
+and below the split.</p>
+<h2 id="sprites">Sprites</h2>
+<p>The VIC-IV keeps the VIC-II's eight hardware sprites and every one of
+their C64 registers, so <code>$D000-$D02E</code> sprite code works
+unchanged. The MEGA65 adds new options on top, all of which can be
+enabled per sprite.</p>
+<h3 id="where-the-pointers-are">Where the pointers are</h3>
+<p>On the C64, the eight sprite pointers sit in the last eight bytes of
+the screen, at <code>$07F8</code> by default. In MEGA65 mode the screen
+is elsewhere, and at power-on the pointers are at <code>$0FF8</code> (<a
+href="https://dansanderson.com/lab-notes/mega65-basic-balloon/">Dan
+Sanderson</a>). C64 type-in programs that POKE pointers at 2040
+therefore need changing, as do programs that put sprite data in memory
+the MEGA65 uses for other things, such as the C64's cassette buffer at
+<code>$0340</code>.</p>
+<p>The VIC-IV can also move the pointer list anywhere:
+<code>$D06C-$D06E</code> hold its address. That is useful when screen
+memory is full of FCM data and the default pointer location falls in the
+middle of a tile (<a
+href="https://c65gs.blogspot.com/2018/01/displaying-256-colour-images-and-16.html">MEGA65
+blog</a>). The VIC-IV also offers 16-bit sprite pointers, so sprite data
+is not confined to one 16KB bank as on the C64.</p>
+<h3 id="new-sprite-features">New sprite features</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Feature</th>
+<th>What it gives</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>16-colour sprites</td>
+<td>15 colours plus transparent, using palette entries chosen per
+sprite</td>
+</tr>
+<tr class="even">
+<td>64-pixel-wide sprites</td>
+<td>Enabled per sprite in SPRX64EN, <code>$D057</code>: 64, 32 and 16
+pixels across for hi-res, multicolour and 16-colour sprites (<a
+href="https://c65gs.blogspot.com/2020/10/sprite-editor-progress-report.html">MEGA65
+blog</a>)</td>
+</tr>
+<tr class="odd">
+<td>Variable height</td>
+<td>Sprites taller or shorter than 21 lines</td>
+</tr>
+<tr class="even">
+<td>High-resolution positioning</td>
+<td>Coordinates and pixel sizes matching the 640-pixel display</td>
+</tr>
+<tr class="odd">
+<td>Palette banks</td>
+<td>A choice of four palette banks for sprite colours (<a
+href="https://dansanderson.com/mega65/sprite-attack/">Dan
+Sanderson</a>)</td>
+</tr>
+<tr class="even">
+<td>Bitplane modification</td>
+<td>A sprite can modify one or more bitplanes of the output rather than
+simply covering it (<a
+href="https://c65gs.blogspot.com/2015/07/more-work-on-sprites.html">MEGA65
+blog</a>)</td>
+</tr>
+</tbody>
+</table>
+<p>The 16-colour mode is the biggest change for game graphics. With the
+64-pixel-wide option enabled, a 16-colour sprite is 16 pixels across,
+each pixel any of 15 colours or transparent. Combined with variable
+height and an eight-sprite multiplexer driven by raster interrupts, it
+gives arcade-quality moving objects.</p>
+<p>The MEGA65 Book lists the enable registers for 16-colour mode, height
+and high-resolution positioning.</p>
+<h3 id="sprites-from-basic">Sprites from BASIC</h3>
+<p>BASIC 65's SPRITE command turns sprites on and sets their colour,
+size and mode; MOVSPR moves them, optionally along a path at a set
+speed; SPRCOLOR sets the shared multicolour registers; and SPRSAV copies
+sprite data to and from strings. SPRITE can switch a sprite between
+monochrome, VIC-II multicolour and VIC-IV multicolour modes, though
+support for the newest modes in BASIC has lagged behind the hardware (<a
+href="https://dansanderson.com/mega65/sprite-attack/">Dan
+Sanderson</a>). For the newer features, BASIC programs set the registers
+directly with SETBIT and POKE.</p>
+<h2 id="bitplanes">Bitplanes</h2>
+<p>The C65 introduced bitplane graphics, the Amiga's way of building a
+colour image: several one-bit-per-pixel images, the bitplanes, are
+overlaid, and the bits at each pixel position combine into a palette
+index. With n bitplanes there are 2ⁿ colours, up to 8 bitplanes and 256
+colours.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th>Options</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Mode</td>
+<td>BPM, bit 4 of <code>$D031</code>, selects bitplane graphics</td>
+</tr>
+<tr class="even">
+<td>Width</td>
+<td>320 or 640 pixels, by H640</td>
+</tr>
+<tr class="odd">
+<td>Height</td>
+<td>200 or 400 lines, by V400</td>
+</tr>
+<tr class="even">
+<td>Depth</td>
+<td>1 to 8 bitplanes</td>
+</tr>
+</tbody>
+</table>
+<p>On the C65, <code>$D032</code> chooses which bitplanes are displayed
+and <code>$D033-$D03A</code> hold their addresses. These are VIC-III
+registers, so they are reached in the VIC-III or VIC-IV personality.</p>
+<h3 id="memory">Memory</h3>
+<p>Each bitplane of a 320 by 200 screen takes 8,000 bytes, and memory
+grows with each step up in size or depth:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Screen</th>
+<th>Bytes per bitplane</th>
+<th>4 bitplanes (16 colours)</th>
+<th>8 bitplanes (256 colours)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>320 × 200</td>
+<td>8,000</td>
+<td>32,000</td>
+<td>64,000</td>
+</tr>
+<tr class="even">
+<td>640 × 200</td>
+<td>16,000</td>
+<td>64,000</td>
+<td>128,000</td>
+</tr>
+<tr class="odd">
+<td>640 × 400</td>
+<td>32,000</td>
+<td>128,000</td>
+<td>256,000</td>
+</tr>
+</tbody>
+</table>
+<p>The larger combinations exceed the 128KB of banks 4 and 5, so high
+resolutions are normally used with fewer colours. BASIC 65's graphics
+commands draw on bitplane screens in banks 4 and 5, which is why SCREEN
+takes a depth argument.</p>
+<h3 id="bitplanes-or-full-colour-characters">Bitplanes or full-colour
+characters?</h3>
+<p>For a static picture, either works. For anything that moves,
+full-colour characters are usually better. Moving an object across a
+bitplane screen means rewriting bits in several planes; moving it across
+a character screen means changing a few screen codes. FCM also lets
+repeated tiles share one copy of their data, while bitplanes store every
+pixel individually. Bitplanes suit drawing programs, line graphics and
+images with no repetition; characters suit games, scrolling and user
+interfaces.</p>
+<h2 id="raster-techniques">Raster Techniques</h2>
+<p>Chapter 8 showed raster interrupts with the VIC-II registers. On the
+MEGA65 they power the same effects as on the C64, such as split screens,
+colour bars and sprite multiplexing, and at 40.5 MHz there is far more
+time to do work between interrupts. The VIC-IV also offers something the
+C64 never had: a way to draw characters on top of other characters, at
+any horizontal position, without using sprites.</p>
+<h3 id="the-raster-rewrite-buffer">The Raster Rewrite Buffer</h3>
+<p>The VIC-IV builds each line of the display in an internal buffer
+before sending it to the screen. The bytes of a row in screen and colour
+memory act as a list of drawing instructions: fetch this character,
+paint its pixels, move right by its width. Usually each instruction
+draws a character. A special instruction instead moves the drawing
+position, and because it can move backwards, later characters can be
+drawn over earlier ones. That buffer is called the Raster Rewrite
+Buffer, or RRB, and it is the basis of layered, parallax and many-object
+graphics on the MEGA65 (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<h3 id="gotox">GOTOX</h3>
+<p>The position-moving instruction is called GOTOX. It occupies one
+character slot in SEAM, two bytes of screen memory and two of colour
+memory, and is marked by bit 4 of its first colour byte:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Byte</th>
+<th>Bits</th>
+<th>Meaning in a GOTOX entry</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Colour byte 0</td>
+<td>4</td>
+<td>GOTOX flag: this entry is an instruction, not a character</td>
+</tr>
+<tr class="even">
+<td>Colour byte 0</td>
+<td>7</td>
+<td>Transparency: colour 0 in following characters does not overwrite
+the buffer</td>
+</tr>
+<tr class="odd">
+<td>Screen byte 0</td>
+<td>7-0</td>
+<td>New X position, bits 7-0, in pixels from the left border</td>
+</tr>
+<tr class="even">
+<td>Screen byte 1</td>
+<td>1-0</td>
+<td>New X position, bits 9-8</td>
+</tr>
+</tbody>
+</table>
+<p>To draw a soldier on a patch of flowers, a row contains three
+entries: the flower character, a GOTOX back to the flower's X position
+with transparency set, and the soldier character. The soldier's colour-0
+pixels let the flowers show through. Transparency stays on for the rest
+of the row, or until another GOTOX changes it (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<h3 id="organising-layers">Organising layers</h3>
+<p>Three ways of arranging a row are common:</p>
+<ol type="1">
+<li><strong>Stacks per position.</strong> At each place on the row, draw
+every layer's character with a GOTOX between them. Compact, but changing
+one object means rebuilding the row.</li>
+<li><strong>Full layers.</strong> Draw a whole row of background, GOTOX
+to 0 with transparency, a whole row of the next layer, and so on. Simple
+to address, since every layer has a fixed offset, but sparse foreground
+layers waste memory on empty characters.</li>
+<li><strong>Background plus draw list.</strong> Draw the full
+background, then a list of GOTOX and character pairs for the objects on
+that row. Economical, at the cost of rebuilding each row's list when
+objects move.</li>
+</ol>
+<p>Whichever is used, the row must end with a GOTOX to the right border
+followed by a character, or the VIC-IV treats the last drawing position
+as the end of the line and leaves the rest of it blank (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<h3 id="sizing-rows">Sizing rows</h3>
+<p>GOTOX entries use character slots, so CHRCOUNT must cover every
+character and every GOTOX in the busiest row, and LINESTEP must be at
+least twice CHRCOUNT in SEAM. Making LINESTEP a power of two, such as
+128 rather than the minimum 124, wastes a few bytes but makes row
+addresses quick to compute in machine language.</p>
+<h3 id="time-limits">Time limits</h3>
+<p>The VIC-IV has only so long to fill the buffer for each line. Its
+"double buffering", which prepares one line while drawing the previous
+one, should be left on by keeping NORRDEL, bit 7 of <code>$D051</code>,
+clear. At 200 lines, the time available can be doubled by setting V400,
+setting CHRYSCL at <code>$D05B</code> to 0, setting DBLRR, bit 6 of
+<code>$D051</code>, and moving TEXTYPOS at <code>$D04E</code> up by two
+pixels. In one test, twelve rows of 20 NCM characters handled 11 full
+layers before lines started to go missing (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<p>The limits differ slightly between real hardware and the Xemu
+emulator, so test RRB-heavy code on both. Bit 5 of <code>$D60F</code>,
+REALHW, reads 1 on a real MEGA65 and 0 in Xemu, if a program needs to
+adjust.</p>
+<h3 id="smooth-scrolling">Smooth scrolling</h3>
+<p>The VIC-IV also scrolls more freely than the VIC-II. Coarse scrolling
+is a matter of changing SCRNPTR and COLPTR, which can point anywhere, so
+a map wider than the screen needs only a larger LINESTEP and a moving
+pointer. Fine scrolling uses the pixel-level text position registers,
+TEXTXPOS at <code>$D04C</code> and TEXTYPOS at <code>$D04E</code>,
+together with one extra character per row so the partly visible column
+at the edge is filled (<a
+href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).
+Parallax layers combine scrolling with the RRB: each layer is a section
+of the row whose GOTOX position is offset by a different amount.</p>
+<h2 id="plotting-pixels-and-drawing-lines">Plotting Pixels and Drawing
+Lines</h2>
+<p>On bitplane screens opened by BASIC 65, DOT plots a pixel and LINE
+draws a line, and nothing more is needed. This section gives
+machine-language equivalents for every mode in this chapter: one plot
+routine per mode, and a single line routine that works with all of them
+by calling the plot routine through a vector.</p>
+<p>The routines favour clarity over speed. Each plot computes its
+address from scratch, using the hardware multiplier from Chapter 5 for
+the row and the Q register from Chapter 7 for the 32-bit sum, then
+writes through a flat <code>[ptr],Z</code> pointer so the bitmap can be
+anywhere in memory. A faster version would precompute a table of row
+addresses.</p>
+<h3 id="address-formulas">Address formulas</h3>
+<p>All of these modes store the screen in 8-line cell rows, so each
+formula has the same shape: a cell-row offset, plus an offset within the
+row. Here cw is the cell width in pixels and rowbytes the bytes per cell
+row.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Mode</th>
+<th>Bits per pixel</th>
+<th>Cell width (cw)</th>
+<th>rowbytes at 320 wide</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>VIC-II hi-res bitmap, bitplane, monochrome SEAM quilt</td>
+<td>1</td>
+<td>8</td>
+<td>320</td>
+</tr>
+<tr class="even">
+<td>VIC-II multicolour bitmap</td>
+<td>2</td>
+<td>4</td>
+<td>320</td>
+</tr>
+<tr class="odd">
+<td>FCM quilt</td>
+<td>8</td>
+<td>8</td>
+<td>2,560</td>
+</tr>
+<tr class="even">
+<td>NCM quilt</td>
+<td>4</td>
+<td>16</td>
+<td>1,280</td>
+</tr>
+</tbody>
+</table>
+<p>The byte offset of pixel (x, y) in each mode:</p>
+<pre><code>1 bit:    (y/8)*rowbytes + (x AND $FFF8) + (y AND 7)
+          bit mask = $80 &gt;&gt; (x AND 7)
+
+2 bits:   (y/8)*rowbytes + (x/4)*8 + (y AND 7)
+          bits 7-6 hold the pixel where x AND 3 = 0
+
+FCM:      (y/8)*rowbytes + (x/8)*64 + (y AND 7)*8 + (x AND 7)
+
+NCM:      (y/8)*rowbytes + (x/16)*64 + (y AND 7)*8 + (x AND 15)/2
+          low nybble for even x, high nybble for odd x</code></pre>
+<p>Bitplanes use the same cell order as the C64 bitmap: the address of a
+320-wide bitplane byte is
+<code>INT(Y/8)*320 + (Y AND 7) + INT(X/8)*8</code> plus the plane's
+start (<a
+href="https://c65gs.blogspot.com/2017/12/preparin-to-implement-vic-iii-dat.html">MEGA65
+blog</a>). At 640 wide, rowbytes doubles. The 400-line interlaced modes
+split even and odd lines between two plane addresses and are not covered
+here.</p>
+<p>A "quilt" is a SEAM screen whose screen memory is filled row by row
+with ascending character values, as in Dan Sanderson's full-screen FCM
+example, so that the character data forms a bitmap in cell order (<a
+href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>). For FCM or NCM data at <code>$40000</code>, the screen
+values run from <code>$1000</code> upward; for a monochrome quilt, they
+run upward from the character at CHARPTR.</p>
+<h3 id="shared-variables-and-row-address">Shared variables and row
+address</h3>
+<p>The routines share these variables. <code>ptr</code> and the line
+variables must be in the base page; the rest can be anywhere. A private
+base page, as in Chapter 9, avoids conflicts with the KERNAL.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Size</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>px</td>
+<td>2</td>
+<td>X coordinate</td>
+</tr>
+<tr class="even">
+<td>py</td>
+<td>1</td>
+<td>Y coordinate</td>
+</tr>
+<tr class="odd">
+<td>pcol</td>
+<td>1</td>
+<td>Colour: 0 or 1, 0-3, 0-255 or 0-15 by mode</td>
+</tr>
+<tr class="even">
+<td>bmbase</td>
+<td>4</td>
+<td>28-bit address of the bitmap or character data</td>
+</tr>
+<tr class="odd">
+<td>rowbytes</td>
+<td>2</td>
+<td>Bytes per cell row, from the table above</td>
+</tr>
+<tr class="even">
+<td>xyoff</td>
+<td>4</td>
+<td>Offset within the cell row, computed by each plot routine</td>
+</tr>
+<tr class="odd">
+<td>ptr</td>
+<td>4</td>
+<td>Flat pointer to the target byte (base page)</td>
+</tr>
+<tr class="even">
+<td>tmp</td>
+<td>1</td>
+<td>Scratch</td>
+</tr>
+</tbody>
+</table>
+<pre><code>; rowaddr: ptr = bmbase + (py / 8) * rowbytes + xyoff
+; Uses the hardware multiplier and Q. Returns with Z = 0.
+rowaddr lda py
+        lsr
+        lsr
+        lsr             ; cell row = py / 8
+        sta $d770       ; MULTINA
+        lda #0
+        sta $d771
+        sta $d772
+        sta $d773
+        sta $d776
+        sta $d777
+        lda rowbytes
+        sta $d774       ; MULTINB = rowbytes
+        lda rowbytes+1
+        sta $d775
+        ldq $d778       ; Q = cell row * rowbytes
+        clc
+        adcq bmbase
+        clc
+        adcq xyoff
+        stq ptr
+        ldz #0
+        rts</code></pre>
+<h3 id="1-bit-per-pixel-hi-res-bitmap-bitplanes-monochrome-quilt">1 bit
+per pixel: hi-res bitmap, bitplanes, monochrome quilt</h3>
+<p>A pcol of 0 clears the pixel; any other value sets it.</p>
+<pre><code>plot1   lda px
+        and #$f8
+        sta xyoff
+        lda py
+        and #$07
+        ora xyoff       ; (x AND $F8) OR (y AND 7)
+        sta xyoff
+        lda px+1
+        sta xyoff+1
+        lda #0
+        sta xyoff+2
+        sta xyoff+3
+        jsr rowaddr
+        lda px
+        and #$07
+        tax
+        lda pcol
+        beq clr1
+        lda [ptr],z
+        ora bit1,x
+        sta [ptr],z
+        rts
+clr1    lda bit1,x
+        eor #$ff
+        and [ptr],z
+        sta [ptr],z
+        rts
+
+bit1    .byte $80, $40, $20, $10, $08, $04, $02, $01</code></pre>
+<p>For a bitplane screen, plot once per plane, passing each bit of the
+colour in turn and each plane's address as bmbase:</p>
+<pre><code>; plotbp: plot colour in pcol on nplanes bitplanes
+; planes: table of 4-byte plane addresses
+plotbp  lda pcol
+        sta cbits
+        lda #0
+        sta plane
+bploop  lda plane
+        asl
+        asl
+        tay             ; 4 bytes per table entry
+        ldx #0
+copy    lda planes,y
+        sta bmbase,x
+        iny
+        inx
+        cpx #4
+        bne copy
+        lda cbits
+        and #1
+        sta pcol        ; this plane&#39;s bit
+        jsr plot1
+        lsr cbits
+        inc plane
+        lda plane
+        cmp #nplanes
+        bne bploop
+        rts</code></pre>
+<p>plotbp uses pcol as working space, so reload pcol before each
+call.</p>
+<h3 id="2-bits-per-pixel-multicolour-bitmap">2 bits per pixel:
+multicolour bitmap</h3>
+<p>Multicolour pixels are twice as wide, so x runs from 0 to 159 and
+four pixels share a byte. pcol is 0 to 3.</p>
+<p>A mask table and a table of pre-shifted colours avoid shifting bits
+at run time:</p>
+<pre><code>plotmc  lda px
+        and #$fc
+        asl             ; (x / 4) * 8 = (x AND $FC) * 2
+        sta xyoff
+        lda #0
+        rol
+        sta xyoff+1
+        lda py
+        and #$07
+        ora xyoff
+        sta xyoff
+        lda #0
+        sta xyoff+2
+        sta xyoff+3
+        jsr rowaddr
+        lda px
+        and #$03
+        asl
+        asl
+        ora pcol        ; index = (x AND 3) * 4 + colour
+        tay
+        lda px
+        and #$03
+        tax
+        lda [ptr],z
+        and mcmask,x    ; clear the pixel&#39;s two bits
+        ora mccol,y     ; insert the colour
+        sta [ptr],z
+        rts
+
+mcmask  .byte $3f, $cf, $f3, $fc
+mccol   .byte $00, $40, $80, $c0   ; x AND 3 = 0
+        .byte $00, $10, $20, $30   ; x AND 3 = 1
+        .byte $00, $04, $08, $0c   ; x AND 3 = 2
+        .byte $00, $01, $02, $03   ; x AND 3 = 3</code></pre>
+<h3 id="8-bits-per-pixel-fcm-quilt">8 bits per pixel: FCM quilt</h3>
+<pre><code>plotfcm lda px
+        and #$f8
+        sta xyoff
+        lda px+1
+        sta xyoff+1
+        lda #0
+        sta xyoff+2
+        sta xyoff+3
+        asl xyoff
+        rol xyoff+1
+        asl xyoff
+        rol xyoff+1
+        asl xyoff
+        rol xyoff+1     ; (x AND $FFF8) * 8 = (x / 8) * 64
+        lda py
+        and #$07
+        asl
+        asl
+        asl
+        sta tmp         ; (y AND 7) * 8
+        lda px
+        and #$07
+        ora tmp
+        ora xyoff       ; low 6 bits of xyoff are zero
+        sta xyoff
+        jsr rowaddr
+        lda pcol
+        sta [ptr],z
+        rts</code></pre>
+<h3 id="4-bits-per-pixel-ncm-quilt">4 bits per pixel: NCM quilt</h3>
+<p>NCM characters are 16 pixels wide; the left pixel of each byte is the
+low nybble. pcol is 0 to 15, the index within the character's 16-colour
+group.</p>
+<pre><code>plotncm lda px
+        and #$f0
+        sta xyoff
+        lda px+1
+        sta xyoff+1
+        lda #0
+        sta xyoff+2
+        sta xyoff+3
+        asl xyoff
+        rol xyoff+1
+        asl xyoff
+        rol xyoff+1     ; (x AND $FFF0) * 4 = (x / 16) * 64
+        lda py
+        and #$07
+        asl
+        asl
+        asl
+        sta tmp         ; (y AND 7) * 8
+        lda px
+        and #$0e
+        lsr             ; (x AND 15) / 2
+        ora tmp
+        ora xyoff
+        sta xyoff
+        jsr rowaddr
+        lda px
+        lsr             ; C = x bit 0
+        bcs ncmr
+        lda [ptr],z     ; even x: low nybble
+        and #$f0
+        ora pcol
+        sta [ptr],z
+        rts
+ncmr    lda pcol        ; odd x: high nybble
+        asl
+        asl
+        asl
+        asl
+        sta tmp
+        lda [ptr],z
+        and #$0f
+        ora tmp
+        sta [ptr],z
+        rts</code></pre>
+<h3 id="drawing-lines">Drawing lines</h3>
+<p>The line routine is Bresenham's algorithm in its all-octant form. It
+works in whole pixels for any slope, calls the plot routine whose
+address is in plotvec for each point, and draws both end points. x0, y0,
+x1, y1, dx, dy, err and e2 are 16-bit base-page variables; sx and sy are
+single bytes holding 1 or -1. Coordinates on the MEGA65 are small enough
+that no intermediate value can overflow 16 bits, so the signed
+comparisons test N alone.</p>
+<pre><code>; line: draw from (x0,y0) to (x1,y1) with the routine in plotvec
+line    sec             ; dx = |x1 - x0|, sx = direction
+        lda x1
+        sbc x0
+        sta dx
+        lda x1+1
+        sbc x0+1
+        sta dx+1
+        lda #1
+        sta sx
+        bit dx+1
+        bpl dxok
+        lda #$ff
+        sta sx
+        sec             ; dx = -dx
+        lda #0
+        sbc dx
+        sta dx
+        lda #0
+        sbc dx+1
+        sta dx+1
+dxok    sec             ; dy = -|y1 - y0|, sy = direction
+        lda y1
+        sbc y0
+        sta dy
+        lda y1+1
+        sbc y0+1
+        sta dy+1
+        lda #$ff
+        sta sy
+        bit dy+1
+        bmi dyok        ; y1 &lt; y0: dy is already negative
+        lda #1
+        sta sy
+        sec             ; dy = -dy
+        lda #0
+        sbc dy
+        sta dy
+        lda #0
+        sbc dy+1
+        sta dy+1
+dyok    clc             ; err = dx + dy
+        lda dx
+        adc dy
+        sta err
+        lda dx+1
+        adc dy+1
+        sta err+1
+
+loop    lda x0          ; plot (x0, y0)
+        sta px
+        lda x0+1
+        sta px+1
+        lda y0
+        sta py
+        jsr plot
+        lda x0          ; done when (x0, y0) = (x1, y1)
+        cmp x1
+        bne step
+        lda x0+1
+        cmp x1+1
+        bne step
+        lda y0
+        cmp y1
+        bne step
+        lda y0+1
+        cmp y1+1
+        bne step
+        rts
+
+step    lda err         ; e2 = 2 * err
+        asl
+        sta e2
+        lda err+1
+        rol
+        sta e2+1
+        sec             ; if e2 &gt;= dy: err += dy, x0 += sx
+        lda e2
+        sbc dy
+        lda e2+1
+        sbc dy+1
+        bmi noxstep
+        clc
+        lda err
+        adc dy
+        sta err
+        lda err+1
+        adc dy+1
+        sta err+1
+        lda sx
+        bmi xdec
+        inw x0
+        bra noxstep
+xdec    dew x0
+noxstep sec             ; if e2 &lt;= dx: err += dx, y0 += sy
+        lda dx
+        sbc e2
+        lda dx+1
+        sbc e2+1
+        bmi loop
+        clc
+        lda err
+        adc dx
+        sta err
+        lda err+1
+        adc dx+1
+        sta err+1
+        lda sy
+        bmi ydec
+        inw y0
+        bra loop
+ydec    dew y0
+        bra loop
+
+plot    jmp (plotvec)</code></pre>
+<p>INW and DEW step the coordinates in one instruction each, which is
+why the line variables live in the base page.</p>
+<h3 id="using-the-routines">Using the routines</h3>
+<p>Select a mode by setting bmbase, rowbytes and plotvec, then draw:</p>
+<pre><code>        lda #&lt;plotfcm
+        sta plotvec
+        lda #&gt;plotfcm
+        sta plotvec+1
+        lda #$00        ; bmbase = $00040000
+        sta bmbase
+        sta bmbase+1
+        sta bmbase+3
+        lda #$04
+        sta bmbase+2
+        lda #&lt;2560      ; 40 FCM characters x 64 bytes
+        sta rowbytes
+        lda #&gt;2560
+        sta rowbytes+1
+        lda #5
+        sta pcol        ; palette entry 5
+        ; set x0, y0, x1, y1 ...
+        jsr line</code></pre>
+<p>The plot routines change A, X, Y and Z, since Q includes all four, so
+a caller must not expect any register to survive. They also leave the
+hardware multiplier holding their last result, which matters only to
+code that uses the multiplier itself from an interrupt.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>BASIC 65</strong> draws on bitplane screens in banks 4 and 5
+with SCREEN, PEN, LINE, CIRCLE and related commands, and reaches the
+registers directly with SETBIT, CLRBIT, WPOKE and WPEEK.</li>
+<li><strong>Pointers</strong> replace the VIC-II's banking: SCRNPTR,
+COLPTR, CHARPTR and the sprite pointer address can point almost
+anywhere, while CHRCOUNT and LINESTEP set how many characters are drawn
+and how far apart rows are.</li>
+<li><strong>Hot registers</strong> <code>$D011</code>,
+<code>$D016</code>, <code>$D018</code>, <code>$D031</code> and
+<code>$DD00</code> overwrite the VIC-IV pointers when written; clear
+HOTREG, bit 7 of <code>$D05D</code>, to take full control.</li>
+<li><strong>SEAM</strong>, enabled by CHR16, gives two bytes per
+character, 8,192 characters, and access to FCM and NCM. LINESTEP must be
+twice CHRCOUNT.</li>
+<li><strong>FCM</strong> stores one byte per pixel; screen memory holds
+the data address divided by 64. <strong>NCM</strong> is a per-character
+option with four bits per pixel, 16-pixel-wide characters and
+sub-palettes of 16. Clear ATTR when using NCM.</li>
+<li><strong>Palettes</strong> have 256 nybble-swapped entries at
+<code>$D100-$D3FF</code>, with separate palettes for characters, sprites
+and bitplanes.</li>
+<li><strong>Sprites</strong> gain 16-colour, 64-pixel-wide,
+variable-height and high-resolution modes, and a movable pointer list at
+<code>$D06C-$D06E</code>.</li>
+<li><strong>Bitplanes</strong> give up to 256 colours at 320 or 640
+pixels wide, at a high memory cost.</li>
+<li><strong>The Raster Rewrite Buffer</strong> uses GOTOX entries to
+place characters at any X position and layer them with transparency, for
+many-object and parallax graphics.</li>
+</ul>
+<p>Chapter 13 turns to sound.</p>
+<nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>
+</body>
+</html>

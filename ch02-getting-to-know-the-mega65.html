@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 2: Getting to Know the
+MEGA65</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch01-introduction.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch03-basic65-reference-guide.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-2-getting-to-know-the-mega65">Programming
+the MEGA65 — Chapter 2: Getting to Know the MEGA65</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>Before programming any computer, it pays to know its everyday tools
+well. On the MEGA65 those tools are richer than on a C64: the keyboard
+has more keys and more combinations, the screen editor has windows, tabs
+and escape sequences, and two utilities, the Freezer and the
+configuration utility, sit outside BASIC altogether.</p>
+<p>This chapter covers:</p>
+<ul>
+<li>Switching on, and what the start-up screen tells you</li>
+<li>The keyboard's special keys and combinations</li>
+<li>The screen editor, including screen sizes, windows and escape
+sequences</li>
+<li>The Freezer, which can pause, save and resume anything</li>
+<li>The configuration utility</li>
+<li>SD cards, disks and disk images in brief</li>
+</ul>
+<p>Most of what follows applies to MEGA65 mode. Where a key or feature
+behaves differently in C64 mode, the text says so.</p>
+<h2 id="switching-on">Switching On</h2>
+<p>The power switch is on the left-hand side of the machine, next to the
+two controller ports and the reset button. The first time a new MEGA65
+is switched on, it shows an "on-boarding" screen for setting the clock,
+the video mode and the audio; every choice there can be changed later in
+the configuration utility. After that, a new machine runs the Intro
+Disk, a menu of community software. Press <code>/</code> to leave it for
+BASIC, or <code>D</code> to stop it starting automatically (MEGA65 Book,
+pp. 2-9 to 2-12).</p>
+<p>With the Intro Disk out of the way, the MEGA65 starts at the BASIC 65
+screen. Besides the familiar READY prompt, it shows:</p>
+<ul>
+<li><strong>Colour bars</strong>, at the top left, for adjusting a
+display's colours</li>
+<li><strong>The system name, copyright and ROM version</strong>, the
+six-digit number that identifies the installed ROM, which matters when a
+program needs a particular feature</li>
+<li><strong>The date and time</strong>, read from the real-time clock at
+power-on</li>
+</ul>
+<p>The flashing square below READY is the cursor. It marks where typed
+characters appear, and its presence means the computer is waiting for
+input (MEGA65 Book, pp. 2-13, 3-8).</p>
+<h3 id="pal-and-ntsc">PAL and NTSC</h3>
+<p>The MEGA65 can produce either 50 Hz "PAL" or 60 Hz "NTSC" video, even
+on a modern digital display. The choice matters to programmers as well
+as to viewers: it sets the frame rate that raster interrupts, music
+players and BASIC's jiffy timer count against, as Chapters 8 and 13
+explain. A program can tell which is in use from bit 7 of
+<code>$D06F</code>, which is set in NTSC mode.</p>
+<h2 id="the-keyboard">The Keyboard</h2>
+<p>The MEGA65 keyboard follows the Commodore layout: letters and numbers
+where a C64 owner expects them, PETSCII graphic symbols on the key
+fronts, and a set of special keys. It also adds keys the C64 lacked. The
+descriptions below follow the Book's keyboard chapter (MEGA65 Book, pp.
+3-3 to 3-7).</p>
+<h3 id="special-keys">Special keys</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Key</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RETURN</td>
+<td>Enters the line: BASIC acts on it, stores it or reports an
+error</td>
+</tr>
+<tr class="even">
+<td>SHIFT, SHIFT LOCK</td>
+<td>Upper-case letters, the right-hand graphic symbol on a key, and the
+even function keys</td>
+</tr>
+<tr class="odd">
+<td>CAPS LOCK</td>
+<td>Shift for letter keys only; in C64 mode, holding it runs the CPU at
+full speed temporarily</td>
+</tr>
+<tr class="even">
+<td>CTRL</td>
+<td>Control functions: colours 1-8, reverse on and off with 9 and 0, and
+slowing a listing</td>
+</tr>
+<tr class="odd">
+<td>MEGA</td>
+<td>Mega functions: colours 9-16, the left-hand graphic symbol on a key,
+and switching upper and lower case with SHIFT</td>
+</tr>
+<tr class="even">
+<td>RUN/STOP</td>
+<td>Stops a running program; SHIFT+RUN/STOP loads and runs the first
+program on disk</td>
+</tr>
+<tr class="odd">
+<td>RESTORE</td>
+<td>With RUN/STOP, resets the screen and system vectors; held alone for
+a second, opens the Freezer</td>
+</tr>
+<tr class="even">
+<td>ESC</td>
+<td>Starts an escape sequence, described below</td>
+</tr>
+<tr class="odd">
+<td>ALT</td>
+<td>Available to software; held at power-on, opens the utility menu</td>
+</tr>
+<tr class="even">
+<td>NO SCROLL</td>
+<td>Pauses a listing until another key is pressed</td>
+</tr>
+<tr class="odd">
+<td>HELP</td>
+<td>Available to software, and acts as F15</td>
+</tr>
+<tr class="even">
+<td>F1-F14</td>
+<td>Seven function keys, with SHIFT giving the even numbers; only F1-F8
+work in C64 mode</td>
+</tr>
+<tr class="odd">
+<td>INST/DEL</td>
+<td>Deletes left; with SHIFT, inserts a space</td>
+</tr>
+<tr class="even">
+<td>CLR/HOME</td>
+<td>Moves the cursor home; with SHIFT, clears the screen</td>
+</tr>
+</tbody>
+</table>
+<p>NO SCROLL, ALT, F9 to F14 and HELP are not available in C64 mode.</p>
+<h3 id="arrow-keys-and-cursor-keys">Arrow keys and cursor keys</h3>
+<p>The four cursor keys at the bottom right move the cursor, and repeat
+when held. SHIFT with the right and down keys moves left and up, as on a
+C64. The two arrow keys, <code>←</code> next to 1 and <code>↑</code>
+next to RESTORE, are different: they are PETSCII characters. In BASIC,
+<code>↑</code> is the power operator, and <code>←</code> is a shortcut
+for SAVE (MEGA65 Book, p. 3-5).</p>
+<h3 id="combinations-worth-knowing">Combinations worth knowing</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Combination</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>MEGA + SHIFT</td>
+<td>Switch the whole display between upper and lower case, even while a
+program runs</td>
+</tr>
+<tr class="even">
+<td>CTRL + 1-8, MEGA + 1-8</td>
+<td>Change the text colour</td>
+</tr>
+<tr class="odd">
+<td>CTRL + 9, CTRL + 0</td>
+<td>Reverse text on and off</td>
+</tr>
+<tr class="even">
+<td>RUN/STOP + RESTORE</td>
+<td>Reset the screen editor and vectors without clearing memory</td>
+</tr>
+<tr class="odd">
+<td>MEGA + TAB</td>
+<td>Open or close Matrix Mode, the Hypervisor's debugger</td>
+</tr>
+<tr class="even">
+<td>Hold RESTORE for a second</td>
+<td>Open the Freezer</td>
+</tr>
+<tr class="odd">
+<td>Hold RUN/STOP, press reset</td>
+<td>Start in the machine-language monitor</td>
+</tr>
+<tr class="even">
+<td>Hold MEGA, press reset or switch on</td>
+<td>Start in C64 mode</td>
+</tr>
+<tr class="odd">
+<td>Hold ALT, switch on</td>
+<td>Open the utility menu</td>
+</tr>
+</tbody>
+</table>
+<p>Some programs take over RUN/STOP and RESTORE, so these combinations
+do not always work. The Freezer and Matrix Mode are handled by the
+Hypervisor, so they work even then. The complete list of control and
+MEGA codes is in the Book (MEGA65 Book, p. E-3).</p>
+<h2 id="the-screen-editor">The Screen Editor</h2>
+<p>The screen editor is the part of the ROM that handles typing. Like
+Commodore editors since the PET, it is a full-screen editor: move the
+cursor anywhere on the screen, change what is there, and press RETURN to
+enter that line. That makes editing a BASIC line as simple as listing
+it, changing it in place and pressing RETURN.</p>
+<h3 id="quote-mode-and-insert-mode">Quote mode and insert mode</h3>
+<p>Two modes surprise newcomers. After typing a quotation mark, the
+editor is in quote mode: cursor movements, colour changes and screen
+clears are recorded inside the string as PETSCII control characters
+instead of happening at once, so a program can PRINT them later. Insert
+mode works the same way for as many characters as spaces were inserted
+with SHIFT+INST/DEL. Typing the closing quotation mark ends quote mode,
+and ESC followed by O cancels either mode (MEGA65 Book, p. 3-9).</p>
+<h3 id="escape-sequences">Escape sequences</h3>
+<p>An escape sequence is ESC pressed and released, then another key.
+They can also be printed from a program with
+<code>PRINT CHR$(27);"X"</code>, which makes them useful for setting up
+a screen. The most useful are listed below; the Book has the full table
+(MEGA65 Book, pp. E-6 to E-10).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Keys</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ESC X</td>
+<td>Clear the screen and toggle between 40 × 25 and 80 × 25</td>
+</tr>
+<tr class="even">
+<td>ESC 4, ESC 8</td>
+<td>Clear and switch to 40 × 25 or 80 × 25</td>
+</tr>
+<tr class="odd">
+<td>ESC 5</td>
+<td>Switch to 80 × 50</td>
+</tr>
+<tr class="even">
+<td>ESC @</td>
+<td>Clear from the cursor to the end of the screen</td>
+</tr>
+<tr class="odd">
+<td>ESC O</td>
+<td>Cancel quote, reverse, underline and flash modes</td>
+</tr>
+<tr class="even">
+<td>ESC I, ESC D</td>
+<td>Insert or delete a line</td>
+</tr>
+<tr class="odd">
+<td>ESC P, ESC Q</td>
+<td>Erase to the start or end of the line</td>
+</tr>
+<tr class="even">
+<td>ESC J, ESC K</td>
+<td>Move to the start of the line, or after its last character</td>
+</tr>
+<tr class="odd">
+<td>ESC V, ESC W</td>
+<td>Scroll the screen up or down one line</td>
+</tr>
+<tr class="even">
+<td>ESC L, ESC M</td>
+<td>Enable or disable scrolling at the bottom of the screen</td>
+</tr>
+<tr class="odd">
+<td>ESC A, ESC C</td>
+<td>Turn auto-insert mode on or off</td>
+</tr>
+<tr class="even">
+<td>ESC E, ESC F</td>
+<td>Steady or flashing cursor</td>
+</tr>
+<tr class="odd">
+<td>ESC T, ESC B</td>
+<td>Set the top-left or bottom-right corner of a window</td>
+</tr>
+<tr class="even">
+<td>ESC U, ESC S</td>
+<td>Use colours 0-15 or the alternate colours 16-31</td>
+</tr>
+<tr class="odd">
+<td>ESC Y</td>
+<td>Restore the default tab stops</td>
+</tr>
+</tbody>
+</table>
+<p>Some programs expect to start in 80 × 25 mode and may not work
+correctly in 80 × 50.</p>
+<h3 id="windows-and-tabs">Windows and tabs</h3>
+<p>The editor can confine all output to a rectangular window. Put the
+cursor at the top-left corner and press ESC T, then at the bottom-right
+corner and press ESC B. Everything typed or printed, including LIST
+output, now stays inside, and pressing CLR/HOME twice returns to the
+full screen. Windows are useful from programs too: a program can print a
+status line, then confine its scrolling output below it.</p>
+<p>Tab stops sit every eight columns by default. CTRL+X sets an extra
+stop at the cursor, CTRL+I moves to the next stop, and CTRL+W jumps to
+the next word (MEGA65 Book, pp. 3-10, 3-11).</p>
+<h3 id="extra-characters">Extra characters</h3>
+<p>The keyboard carries a few ASCII characters that PETSCII lacks, such
+as the backslash, curly brackets and underscore. The command FONT A or
+FONT B replaces some PETSCII characters with them in lower-case mode,
+where they are typed with MEGA and the key; FONT C restores the standard
+set (MEGA65 Book, pp. 3-11, 3-12).</p>
+<h2 id="the-freezer">The Freezer</h2>
+<p>The Freezer is a menu that can interrupt anything the MEGA65 is
+doing. Hold RESTORE for about a second and release it: the border
+flickers, the running program stops where it is, and the Freezer menu
+appears. Because the Freezer runs under the Hypervisor rather than the
+KERNAL, it works even when a program has disabled interrupts or switched
+the ROM out (MEGA65 Book, p. 3-12).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Key in the Freezer</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>F3</td>
+<td>Resume the frozen program, or restore the selected freeze slot</td>
+</tr>
+<tr class="even">
+<td>F5</td>
+<td>Abandon the program and reset</td>
+</tr>
+<tr class="odd">
+<td>F7</td>
+<td>Save the current state to the selected freeze slot</td>
+</tr>
+<tr class="even">
+<td>J</td>
+<td>Swap the joystick port numbers</td>
+</tr>
+<tr class="odd">
+<td>A</td>
+<td>Open the audio mixer</td>
+</tr>
+</tbody>
+</table>
+<p>The Freezer also mounts disks and disk images, shows version
+information through the MEGAINFO utility, and can change the CPU speed
+and video settings for the frozen program.</p>
+<h3 id="freeze-slots">Freeze slots</h3>
+<p>The Freezer can store several complete machine states in freeze
+slots. Move to an unused slot with the cursor-right key and press F7;
+when the border stops blinking, the state is saved. Selecting a slot and
+pressing F3 later restores it exactly (MEGA65 Book, p. 3-13).</p>
+<p>For programmers this is a powerful debugging aid. Freeze a program
+just before the part that crashes, save it to a slot, and every attempt
+to reproduce the bug can start from the same state, with no need to
+reload the program or play a game back to the same point.</p>
+<h3 id="joystick-swap">Joystick swap</h3>
+<p>Many C64 games expect a joystick in port 2, some in port 1. Rather
+than unplugging the joystick, open the Freezer, press J to swap the
+ports, and resume.</p>
+<h2 id="the-configuration-utility">The Configuration Utility</h2>
+<p>The configuration utility holds the settings the MEGA65 keeps between
+sessions. To reach it, switch the MEGA65 off, hold ALT and switch it on
+again; the utility menu appears, and 1 starts the configuration utility.
+The left and right cursor keys move between pages, up and down select a
+setting, and RETURN or SPACE changes it. A 1351 or Amiga mouse in port 1
+also works (MEGA65 Book, p. 4-3).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Page</th>
+<th>Settings</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Input</td>
+<td>Mouse type for each controller port, 1351 de-jitter</td>
+</tr>
+<tr class="even">
+<td>Chipset</td>
+<td>Real-time clock, DMAgic revision, boot disk source and default disk
+image, long file names</td>
+</tr>
+<tr class="odd">
+<td>Video</td>
+<td>PAL or NTSC, audio over digital video, CRT emulation</td>
+</tr>
+<tr class="even">
+<td>Audio</td>
+<td>Stereo or mono, SID generation (6581 or 8580), swap stereo channels,
+headphone amplifier</td>
+</tr>
+<tr class="odd">
+<td>Network</td>
+<td>Ethernet MAC address</td>
+</tr>
+<tr class="even">
+<td>Done</td>
+<td>Save as defaults, abandon changes, or restore factory settings</td>
+</tr>
+</tbody>
+</table>
+<p>The clock is set as soon as RETURN is pressed; everything else is
+saved only from the Done page, and the MEGA65 must then be switched off
+and on again (MEGA65 Book, pp. 4-4 to 4-8).</p>
+<h3 id="settings-that-affect-programs">Settings that affect
+programs</h3>
+<p>Several of these settings change how a program behaves, so a program
+that depends on them should check or set them itself rather than assume
+the user's choice:</p>
+<ul>
+<li><strong>Video mode.</strong> PAL and NTSC change the frame rate and
+the number of raster lines.</li>
+<li><strong>SID generation.</strong> The 6581 and 8580 filters sound
+different. A program can choose for itself through the SIDMODE register,
+as Chapter 13 describes.</li>
+<li><strong>DMAgic revision.</strong> The Book recommends the newer
+F018B setting; F018 exists for compatibility with the C65 ROMs. Chapter
+5 shows how a DMA job can select its list format explicitly, which
+removes the dependency.</li>
+<li><strong>Default disk image.</strong> This decides which D81 image is
+mounted at start-up, including the Intro Disk,
+<code>MEGA65.D81</code>.</li>
+</ul>
+<p>The settings are stored on the SD card, not in the machine. Replacing
+the SD card means setting them again.</p>
+<h2 id="sd-cards-disks-and-disk-images">SD Cards, Disks and Disk
+Images</h2>
+<p>Chapters 14 and 15 cover storage in depth. This section gives just
+enough to load and save programs.</p>
+<h3 id="sd-cards">SD cards</h3>
+<p>The MEGA65 has two SD card slots: a full-size slot inside the case,
+reached from underneath, and a microSD slot at the rear. Only one is
+used at a time: a card in the rear slot takes over, and the internal
+card is ignored. The SD card holds the ROM, the configuration, system
+files and the user's software, normally as D81 disk images. New cards
+should be SDHC, between 4GB and 32GB (MEGA65 Book, pp. 2-3, 4-9).</p>
+<h3 id="disk-images-and-drives">Disk images and drives</h3>
+<p>Most MEGA65 software comes as D81 files: images of 3.5" Commodore
+1581 disks, stored on the SD card. Mounting an image makes it behave
+exactly like a real disk in drive 8. Images are mounted from the
+Freezer, or from BASIC with the MOUNT command. The MEGA65 also has a
+real 3.5" floppy drive, and the IEC serial port accepts Commodore 1541,
+1571 and 1581 drives and modern equivalents such as SD2IEC.</p>
+<h3 id="the-commands-you-need-first">The commands you need first</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>DIR</code></td>
+<td>List the files on the current disk</td>
+</tr>
+<tr class="even">
+<td><code>DLOAD "NAME"</code></td>
+<td>Load a BASIC program</td>
+</tr>
+<tr class="odd">
+<td><code>RUN "NAME"</code></td>
+<td>Load and run a program in one step</td>
+</tr>
+<tr class="even">
+<td><code>DSAVE "NAME"</code></td>
+<td>Save the program in memory</td>
+</tr>
+<tr class="odd">
+<td><code>DSAVE "@NAME"</code></td>
+<td>Save, replacing an existing file of that name</td>
+</tr>
+<tr class="even">
+<td>SHIFT + RUN/STOP</td>
+<td>Load and run the first program on the disk</td>
+</tr>
+</tbody>
+</table>
+<p>The D in DLOAD and DSAVE stands for disk: unlike LOAD and SAVE, they
+default to drive 8 without needing a device number. Chapter 3 describes
+every disk command.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Start-up.</strong> The start-up screen shows the ROM version
+and the time; the Intro Disk can be left with <code>/</code> and
+disabled with <code>D</code>.</li>
+<li><strong>Keyboard.</strong> CTRL and MEGA select colours and special
+functions, ESC starts escape sequences, and RESTORE held alone opens the
+Freezer. ALT at power-on opens the utility menu; MEGA at power-on starts
+C64 mode; RUN/STOP at reset starts the monitor.</li>
+<li><strong>Screen editor.</strong> A full-screen editor with quote
+mode, 40 and 80 columns, 25 and 50 rows, windows set with ESC T and ESC
+B, tab stops and extra ASCII characters through FONT.</li>
+<li><strong>Freezer.</strong> Pauses anything, resumes with F3, resets
+with F5, saves complete machine states to freeze slots with F7, swaps
+joystick ports, and mounts disk images.</li>
+<li><strong>Configuration utility.</strong> Stores the clock, video
+mode, SID model, DMAgic revision, boot disk and network settings on the
+SD card.</li>
+<li><strong>Storage.</strong> Software usually lives in D81 images on
+the SD card; DIR, DLOAD, RUN and DSAVE cover everyday use.</li>
+</ul>
+<p>Chapter 3 is the complete reference to BASIC 65.</p>
+<nav class="chapnav"><span><a href="ch01-introduction.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch03-basic65-reference-guide.html">Next &rarr;</a></span></nav>
+</body>
+</html>

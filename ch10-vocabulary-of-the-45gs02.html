@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 10: Vocabulary of the
+45GS02</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch09-mixing-basic-with-machine-language.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch11-mega65-rom-guide.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-10-vocabulary-of-the-45gs02">Programming
+the MEGA65 — Chapter 10: Vocabulary of the 45GS02</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>This chapter is a reference to every instruction the 45GS02 executes,
+in alphabetical order. Each entry gives the operation, the flags it
+changes, every addressing mode with its opcode, and which processor
+introduced it. The opcodes follow the cc65 project's CPU reference (<a
+href="https://cc65.github.io/doc/cpus.html">ca65/da65 CPU overview</a>),
+which documents the 6502, 65C02, 65CE02, 4510 and 45GS02 instruction
+sets side by side.</p>
+<p>The 65CE02 defines all 256 opcodes, and the 45GS02 builds its
+extensions from prefixes rather than new opcodes, so every byte value is
+a valid instruction or prefix. There are no undocumented opcodes of the
+kind C64 programmers know.</p>
+<p>Cycle counts are not given here. The 45GS02's native timings differ
+from the 6502's, and at 40.5 MHz they also depend on memory type and
+wait states; Chapter 7 discusses timing, and the MEGA65 Book's CPU
+chapter is the authority.</p>
+<h3 id="addressing-mode-abbreviations">Addressing mode
+abbreviations</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Abbreviation</th>
+<th>Mode</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>impl</td>
+<td>Implied</td>
+<td><code>INX</code></td>
+</tr>
+<tr class="even">
+<td>A</td>
+<td>Accumulator</td>
+<td><code>ASL A</code></td>
+</tr>
+<tr class="odd">
+<td>imm</td>
+<td>Immediate byte</td>
+<td><code>LDA #$41</code></td>
+</tr>
+<tr class="even">
+<td>imm16</td>
+<td>Immediate word</td>
+<td><code>PHW #$1234</code></td>
+</tr>
+<tr class="odd">
+<td>bp</td>
+<td>Base page</td>
+<td><code>LDA $10</code></td>
+</tr>
+<tr class="even">
+<td>bp,X / bp,Y</td>
+<td>Base page indexed</td>
+<td><code>LDA $10,X</code></td>
+</tr>
+<tr class="odd">
+<td>abs</td>
+<td>Absolute</td>
+<td><code>LDA $D020</code></td>
+</tr>
+<tr class="even">
+<td>abs,X / abs,Y</td>
+<td>Absolute indexed</td>
+<td><code>LDA $0400,X</code></td>
+</tr>
+<tr class="odd">
+<td>(bp,X)</td>
+<td>Indexed indirect</td>
+<td><code>LDA ($10,X)</code></td>
+</tr>
+<tr class="even">
+<td>(bp),Y</td>
+<td>Indirect indexed by Y</td>
+<td><code>LDA ($10),Y</code></td>
+</tr>
+<tr class="odd">
+<td>(bp),Z</td>
+<td>Indirect indexed by Z</td>
+<td><code>LDA ($10),Z</code></td>
+</tr>
+<tr class="even">
+<td>[bp],Z</td>
+<td>Flat indirect, 32-bit pointer</td>
+<td><code>LDA [$10],Z</code></td>
+</tr>
+<tr class="odd">
+<td>(d,SP),Y</td>
+<td>Stack relative indirect</td>
+<td><code>LDA ($02,SP),Y</code></td>
+</tr>
+<tr class="even">
+<td>(abs)</td>
+<td>Absolute indirect</td>
+<td><code>JMP ($0318)</code></td>
+</tr>
+<tr class="odd">
+<td>(abs,X)</td>
+<td>Absolute indexed indirect</td>
+<td><code>JMP ($1000,X)</code></td>
+</tr>
+<tr class="even">
+<td>rel</td>
+<td>8-bit relative</td>
+<td><code>BNE loop</code></td>
+</tr>
+<tr class="odd">
+<td>rel16</td>
+<td>16-bit relative</td>
+<td><code>LBNE far</code></td>
+</tr>
+</tbody>
+</table>
+<p>In the opcode columns, two-byte sequences such as
+<code>$EA $72</code> are prefixed instructions: the prefix byte comes
+first, then the opcode and its operand.</p>
+<h3 id="flags">Flags</h3>
+<p>The flags column lists the flags an instruction can change, using N,
+V, E, B, D, I, Z and C as in Chapter 7. A dash means no flags are
+affected. The flags column refers to the Z flag, never the Z
+register.</p>
+<h3 id="origin">Origin</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Processor</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>6502</td>
+<td>Original NMOS 6502</td>
+</tr>
+<tr class="even">
+<td>C02</td>
+<td>65C02 family (65SC02)</td>
+</tr>
+<tr class="odd">
+<td>R</td>
+<td>Rockwell 65C02 bit instructions</td>
+</tr>
+<tr class="even">
+<td>CE</td>
+<td>CSG 65CE02</td>
+</tr>
+<tr class="odd">
+<td>4510</td>
+<td>CSG 4510 (C65)</td>
+</tr>
+<tr class="even">
+<td>GS</td>
+<td>45GS02 (MEGA65)</td>
+</tr>
+</tbody>
+</table>
+<p>Assemblers do not all use the same mnemonics for the newer
+instructions. Long branches may be written <code>LBNE</code> or chosen
+automatically from <code>BNE</code>; quad instructions may be written
+<code>ADCQ</code>, <code>ADQ</code> or <code>ADDQ</code>; and bit
+instructions may be written <code>RMB3 $10</code> or
+<code>RMB 3,$10</code>. This chapter uses the forms most common in
+MEGA65 documentation.</p>
+<h2 id="adc-to-bvs">ADC to BVS</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Mnemonic</th>
+<th>Operation</th>
+<th>Flags</th>
+<th>Modes and opcodes</th>
+<th>Origin</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ADC</td>
+<td>A = A + M + C</td>
+<td>N V Z C</td>
+<td><code>imm $69 · bp $65 · bp,X $75 · abs $6D · abs,X $7D · abs,Y $79 · (bp,X) $61 · (bp),Y $71 · (bp),Z $72 · [bp],Z $EA $72</code></td>
+<td>6502; (bp),Z CE; [bp],Z GS</td>
+</tr>
+<tr class="even">
+<td>AND</td>
+<td>A = A AND M</td>
+<td>N Z</td>
+<td><code>imm $29 · bp $25 · bp,X $35 · abs $2D · abs,X $3D · abs,Y $39 · (bp,X) $21 · (bp),Y $31 · (bp),Z $32 · [bp],Z $EA $32</code></td>
+<td>6502; (bp),Z CE; [bp],Z GS</td>
+</tr>
+<tr class="odd">
+<td>ASL</td>
+<td>Shift left; bit 7 to C</td>
+<td>N Z C</td>
+<td><code>A $0A · bp $06 · bp,X $16 · abs $0E · abs,X $1E</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>ASR</td>
+<td>Arithmetic shift right; bit 7 kept, bit 0 to C</td>
+<td>N Z C</td>
+<td><code>A $43 · bp $44 · bp,X $54</code></td>
+<td>CE</td>
+</tr>
+<tr class="odd">
+<td>ASW</td>
+<td>Shift 16-bit word left; bit 15 to C</td>
+<td>N Z C</td>
+<td><code>abs $CB</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>BBR0-7</td>
+<td>Branch if bit n of a base page byte is clear</td>
+<td>-</td>
+<td><code>BBR0 $0F · BBR1 $1F · BBR2 $2F · BBR3 $3F · BBR4 $4F · BBR5 $5F · BBR6 $6F · BBR7 $7F</code></td>
+<td>R</td>
+</tr>
+<tr class="odd">
+<td>BBS0-7</td>
+<td>Branch if bit n of a base page byte is set</td>
+<td>-</td>
+<td><code>BBS0 $8F · BBS1 $9F · BBS2 $AF · BBS3 $BF · BBS4 $CF · BBS5 $DF · BBS6 $EF · BBS7 $FF</code></td>
+<td>R</td>
+</tr>
+<tr class="even">
+<td>BCC</td>
+<td>Branch if C = 0</td>
+<td>-</td>
+<td><code>rel $90 · rel16 $93</code></td>
+<td>6502; rel16 CE</td>
+</tr>
+<tr class="odd">
+<td>BCS</td>
+<td>Branch if C = 1</td>
+<td>-</td>
+<td><code>rel $B0 · rel16 $B3</code></td>
+<td>6502; rel16 CE</td>
+</tr>
+<tr class="even">
+<td>BEQ</td>
+<td>Branch if Z = 1</td>
+<td>-</td>
+<td><code>rel $F0 · rel16 $F3</code></td>
+<td>6502; rel16 CE</td>
+</tr>
+<tr class="odd">
+<td>BIT</td>
+<td>Test A AND M; N and V from M</td>
+<td>N V Z</td>
+<td><code>imm $89 · bp $24 · bp,X $34 · abs $2C · abs,X $3C</code></td>
+<td>6502; imm, indexed C02</td>
+</tr>
+<tr class="even">
+<td>BMI</td>
+<td>Branch if N = 1</td>
+<td>-</td>
+<td><code>rel $30 · rel16 $33</code></td>
+<td>6502; rel16 CE</td>
+</tr>
+<tr class="odd">
+<td>BNE</td>
+<td>Branch if Z = 0</td>
+<td>-</td>
+<td><code>rel $D0 · rel16 $D3</code></td>
+<td>6502; rel16 CE</td>
+</tr>
+<tr class="even">
+<td>BPL</td>
+<td>Branch if N = 0</td>
+<td>-</td>
+<td><code>rel $10 · rel16 $13</code></td>
+<td>6502; rel16 CE</td>
+</tr>
+<tr class="odd">
+<td>BRA</td>
+<td>Branch always</td>
+<td>-</td>
+<td><code>rel $80 · rel16 $83</code></td>
+<td>C02; rel16 CE</td>
+</tr>
+<tr class="even">
+<td>BRK</td>
+<td>Software interrupt through <code>$FFFE</code></td>
+<td>B I</td>
+<td><code>impl $00</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>BSR</td>
+<td>Call subroutine at a 16-bit relative offset</td>
+<td>-</td>
+<td><code>rel16 $63</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>BVC</td>
+<td>Branch if V = 0</td>
+<td>-</td>
+<td><code>rel $50 · rel16 $53</code></td>
+<td>6502; rel16 CE</td>
+</tr>
+<tr class="odd">
+<td>BVS</td>
+<td>Branch if V = 1</td>
+<td>-</td>
+<td><code>rel $70 · rel16 $73</code></td>
+<td>6502; rel16 CE</td>
+</tr>
+</tbody>
+</table>
+<h3 id="notes">Notes</h3>
+<p><strong>ADC and SBC</strong> honour the D flag, working in
+binary-coded decimal when it is set. Clear D with CLD at the start of
+any program that does not set it deliberately.</p>
+<p><strong>BBR and BBS</strong> take two operands: the base page address
+to test and an 8-bit relative branch target, as in
+<code>BBS3 $10,done</code>. They are three-byte instructions.</p>
+<p><strong>BIT immediate</strong> sets only Z. The N and V flags are
+copied from bits 7 and 6 of the operand only in the memory modes.</p>
+<p><strong>BRK</strong> is followed by a padding byte that the CPU skips
+on return, as on the 6502. The return address pushed is that of BRK plus
+two.</p>
+<p><strong>BSR</strong> pushes the return address like JSR, so a
+subroutine called with BSR returns with RTS or RTN. Because the target
+is relative, code built with BSR can run at any address without
+relocation.</p>
+<h2 id="clc-to-eor">CLC to EOR</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Mnemonic</th>
+<th>Operation</th>
+<th>Flags</th>
+<th>Modes and opcodes</th>
+<th>Origin</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>CLC</td>
+<td>C = 0</td>
+<td>C</td>
+<td><code>impl $18</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>CLD</td>
+<td>D = 0: binary arithmetic</td>
+<td>D</td>
+<td><code>impl $D8</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>CLE</td>
+<td>E = 0: enable 16-bit stack pointer</td>
+<td>E</td>
+<td><code>impl $02</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>CLI</td>
+<td>I = 0: allow IRQ</td>
+<td>I</td>
+<td><code>impl $58</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>CLV</td>
+<td>V = 0</td>
+<td>V</td>
+<td><code>impl $B8</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>CMP</td>
+<td>Compare A with M</td>
+<td>N Z C</td>
+<td><code>imm $C9 · bp $C5 · bp,X $D5 · abs $CD · abs,X $DD · abs,Y $D9 · (bp,X) $C1 · (bp),Y $D1 · (bp),Z $D2 · [bp],Z $EA $D2</code></td>
+<td>6502; (bp),Z CE; [bp],Z GS</td>
+</tr>
+<tr class="odd">
+<td>CPX</td>
+<td>Compare X with M</td>
+<td>N Z C</td>
+<td><code>imm $E0 · bp $E4 · abs $EC</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>CPY</td>
+<td>Compare Y with M</td>
+<td>N Z C</td>
+<td><code>imm $C0 · bp $C4 · abs $CC</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>CPZ</td>
+<td>Compare Z with M</td>
+<td>N Z C</td>
+<td><code>imm $C2 · bp $D4 · abs $DC</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>DEC</td>
+<td>M = M - 1, or A = A - 1</td>
+<td>N Z</td>
+<td><code>A $3A · bp $C6 · bp,X $D6 · abs $CE · abs,X $DE</code></td>
+<td>6502; A C02</td>
+</tr>
+<tr class="odd">
+<td>DEW</td>
+<td>16-bit base page word = word - 1</td>
+<td>N Z</td>
+<td><code>bp $C3</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>DEX</td>
+<td>X = X - 1</td>
+<td>N Z</td>
+<td><code>impl $CA</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>DEY</td>
+<td>Y = Y - 1</td>
+<td>N Z</td>
+<td><code>impl $88</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>DEZ</td>
+<td>Z = Z - 1</td>
+<td>N Z</td>
+<td><code>impl $3B</code></td>
+<td>CE</td>
+</tr>
+<tr class="odd">
+<td>EOM</td>
+<td>End of mapping sequence; otherwise no operation</td>
+<td>-</td>
+<td><code>impl $EA</code></td>
+<td>4510</td>
+</tr>
+<tr class="even">
+<td>EOR</td>
+<td>A = A XOR M</td>
+<td>N Z</td>
+<td><code>imm $49 · bp $45 · bp,X $55 · abs $4D · abs,X $5D · abs,Y $59 · (bp,X) $41 · (bp),Y $51 · (bp),Z $52 · [bp],Z $EA $52</code></td>
+<td>6502; (bp),Z CE; [bp],Z GS</td>
+</tr>
+</tbody>
+</table>
+<h3 id="notes-1">Notes</h3>
+<p><strong>CLE</strong> should be used only where the program's stack
+can safely grow beyond page 1. The KERNAL and BASIC expect the 8-bit
+stack, so cooperative routines should leave E set.</p>
+<p><strong>Compare instructions</strong> set C when the register is
+greater than or equal to the operand, treating both as unsigned, and set
+Z when they are equal. N reflects bit 7 of the difference.</p>
+<p><strong>DEW</strong> works on a 16-bit value at a base page address,
+low byte first. Its flags reflect the 16-bit result.</p>
+<p><strong>EOM</strong> is the 6502's NOP, <code>$EA</code>. After MAP
+it ends the interrupt-blocked mapping sequence. Placed before an
+instruction that uses <code>(bp),Z</code>, it acts as the
+flat-addressing prefix described in the last section of this chapter, so
+a stray NOP before such an instruction changes its meaning.</p>
+<h2 id="inc-to-plz">INC to PLZ</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Mnemonic</th>
+<th>Operation</th>
+<th>Flags</th>
+<th>Modes and opcodes</th>
+<th>Origin</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>INC</td>
+<td>M = M + 1, or A = A + 1</td>
+<td>N Z</td>
+<td><code>A $1A · bp $E6 · bp,X $F6 · abs $EE · abs,X $FE</code></td>
+<td>6502; A C02</td>
+</tr>
+<tr class="even">
+<td>INW</td>
+<td>16-bit base page word = word + 1</td>
+<td>N Z</td>
+<td><code>bp $E3</code></td>
+<td>CE</td>
+</tr>
+<tr class="odd">
+<td>INX</td>
+<td>X = X + 1</td>
+<td>N Z</td>
+<td><code>impl $E8</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>INY</td>
+<td>Y = Y + 1</td>
+<td>N Z</td>
+<td><code>impl $C8</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>INZ</td>
+<td>Z = Z + 1</td>
+<td>N Z</td>
+<td><code>impl $1B</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>JMP</td>
+<td>Jump</td>
+<td>-</td>
+<td><code>abs $4C · (abs) $6C · (abs,X) $7C</code></td>
+<td>6502; (abs,X) C02</td>
+</tr>
+<tr class="odd">
+<td>JSR</td>
+<td>Push return address and jump</td>
+<td>-</td>
+<td><code>abs $20 · (abs) $22 · (abs,X) $23</code></td>
+<td>6502; indirect CE</td>
+</tr>
+<tr class="even">
+<td>LDA</td>
+<td>A = M</td>
+<td>N Z</td>
+<td><code>imm $A9 · bp $A5 · bp,X $B5 · abs $AD · abs,X $BD · abs,Y $B9 · (bp,X) $A1 · (bp),Y $B1 · (bp),Z $B2 · [bp],Z $EA $B2 · (d,SP),Y $E2</code></td>
+<td>6502; (bp),Z and (d,SP),Y CE; [bp],Z GS</td>
+</tr>
+<tr class="odd">
+<td>LDX</td>
+<td>X = M</td>
+<td>N Z</td>
+<td><code>imm $A2 · bp $A6 · bp,Y $B6 · abs $AE · abs,Y $BE</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>LDY</td>
+<td>Y = M</td>
+<td>N Z</td>
+<td><code>imm $A0 · bp $A4 · bp,X $B4 · abs $AC · abs,X $BC</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>LDZ</td>
+<td>Z = M</td>
+<td>N Z</td>
+<td><code>imm $A3 · abs $AB · abs,X $BB</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>LSR</td>
+<td>Shift right; 0 into bit 7, bit 0 to C</td>
+<td>N Z C</td>
+<td><code>A $4A · bp $46 · bp,X $56 · abs $4E · abs,X $5E</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>MAP</td>
+<td>Set memory map from A, X, Y, Z; block interrupts until EOM</td>
+<td>-</td>
+<td><code>impl $5C</code></td>
+<td>4510</td>
+</tr>
+<tr class="even">
+<td>NEG</td>
+<td>A = 0 - A</td>
+<td>N Z</td>
+<td><code>impl $42</code></td>
+<td>CE</td>
+</tr>
+<tr class="odd">
+<td>NOP</td>
+<td>See EOM</td>
+<td>-</td>
+<td><code>impl $EA</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>ORA</td>
+<td>A = A OR M</td>
+<td>N Z</td>
+<td><code>imm $09 · bp $05 · bp,X $15 · abs $0D · abs,X $1D · abs,Y $19 · (bp,X) $01 · (bp),Y $11 · (bp),Z $12 · [bp],Z $EA $12</code></td>
+<td>6502; (bp),Z CE; [bp],Z GS</td>
+</tr>
+<tr class="odd">
+<td>PHA</td>
+<td>Push A</td>
+<td>-</td>
+<td><code>impl $48</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>PHP</td>
+<td>Push P</td>
+<td>-</td>
+<td><code>impl $08</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>PHW</td>
+<td>Push a 16-bit value, high byte first</td>
+<td>-</td>
+<td><code>imm16 $F4 · abs $FC</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>PHX</td>
+<td>Push X</td>
+<td>-</td>
+<td><code>impl $DA</code></td>
+<td>C02</td>
+</tr>
+<tr class="odd">
+<td>PHY</td>
+<td>Push Y</td>
+<td>-</td>
+<td><code>impl $5A</code></td>
+<td>C02</td>
+</tr>
+<tr class="even">
+<td>PHZ</td>
+<td>Push Z</td>
+<td>-</td>
+<td><code>impl $DB</code></td>
+<td>CE</td>
+</tr>
+<tr class="odd">
+<td>PLA</td>
+<td>Pull A</td>
+<td>N Z</td>
+<td><code>impl $68</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>PLP</td>
+<td>Pull P</td>
+<td>all</td>
+<td><code>impl $28</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>PLX</td>
+<td>Pull X</td>
+<td>N Z</td>
+<td><code>impl $FA</code></td>
+<td>C02</td>
+</tr>
+<tr class="even">
+<td>PLY</td>
+<td>Pull Y</td>
+<td>N Z</td>
+<td><code>impl $7A</code></td>
+<td>C02</td>
+</tr>
+<tr class="odd">
+<td>PLZ</td>
+<td>Pull Z</td>
+<td>N Z</td>
+<td><code>impl $FB</code></td>
+<td>CE</td>
+</tr>
+</tbody>
+</table>
+<h3 id="notes-2">Notes</h3>
+<p><strong>INW</strong> increments a 16-bit value at a base page
+address, low byte first. It is the 45GS02's most common way to advance a
+pointer.</p>
+<p><strong>JMP (abs)</strong> with a vector at an address ending in
+<code>$FF</code> behaves differently on the NMOS 6502, which fetches the
+high byte from the start of the same page. Avoid placing vectors at
+<code>$xxFF</code>, and code will behave the same on every member of the
+family.</p>
+<p><strong>JSR (abs,X)</strong> calls through a table of 16-bit
+addresses. With X holding twice a command number, it dispatches commands
+in one instruction.</p>
+<p><strong>LDZ</strong> has no base page modes. To load Z from base
+page, use LDA and TAZ.</p>
+<p><strong>MAP</strong> reads its arguments from all four registers; see
+Chapters 5 and 8. It also gives the megabyte selector when X or Z holds
+<code>$0F</code>.</p>
+<p><strong>PHW</strong> pushes the high byte first, so the word sits on
+the stack low byte first, ready for use as a pointer with stack-relative
+addressing. PHW abs pushes the 16-bit contents of the address, not the
+address itself.</p>
+<h2 id="rmb-to-stz">RMB to STZ</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Mnemonic</th>
+<th>Operation</th>
+<th>Flags</th>
+<th>Modes and opcodes</th>
+<th>Origin</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RMB0-7</td>
+<td>Clear bit n of a base page byte</td>
+<td>-</td>
+<td><code>RMB0 $07 · RMB1 $17 · RMB2 $27 · RMB3 $37 · RMB4 $47 · RMB5 $57 · RMB6 $67 · RMB7 $77</code></td>
+<td>R</td>
+</tr>
+<tr class="even">
+<td>ROL</td>
+<td>Rotate left through C</td>
+<td>N Z C</td>
+<td><code>A $2A · bp $26 · bp,X $36 · abs $2E · abs,X $3E</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>ROR</td>
+<td>Rotate right through C</td>
+<td>N Z C</td>
+<td><code>A $6A · bp $66 · bp,X $76 · abs $6E · abs,X $7E</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>ROW</td>
+<td>Rotate 16-bit word left through C</td>
+<td>N Z C</td>
+<td><code>abs $EB</code></td>
+<td>CE</td>
+</tr>
+<tr class="odd">
+<td>RTI</td>
+<td>Pull P and PC; return from interrupt</td>
+<td>all</td>
+<td><code>impl $40</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>RTN</td>
+<td>Return from subroutine, then drop n bytes from the stack</td>
+<td>-</td>
+<td><code>imm $62</code></td>
+<td>CE</td>
+</tr>
+<tr class="odd">
+<td>RTS</td>
+<td>Pull PC; return from subroutine</td>
+<td>-</td>
+<td><code>impl $60</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>SBC</td>
+<td>A = A - M - (1 - C)</td>
+<td>N V Z C</td>
+<td><code>imm $E9 · bp $E5 · bp,X $F5 · abs $ED · abs,X $FD · abs,Y $F9 · (bp,X) $E1 · (bp),Y $F1 · (bp),Z $F2 · [bp],Z $EA $F2</code></td>
+<td>6502; (bp),Z CE; [bp],Z GS</td>
+</tr>
+<tr class="odd">
+<td>SEC</td>
+<td>C = 1</td>
+<td>C</td>
+<td><code>impl $38</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>SED</td>
+<td>D = 1: decimal arithmetic</td>
+<td>D</td>
+<td><code>impl $F8</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>SEE</td>
+<td>E = 1: 8-bit stack pointer</td>
+<td>E</td>
+<td><code>impl $03</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>SEI</td>
+<td>I = 1: block IRQ</td>
+<td>I</td>
+<td><code>impl $78</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>SMB0-7</td>
+<td>Set bit n of a base page byte</td>
+<td>-</td>
+<td><code>SMB0 $87 · SMB1 $97 · SMB2 $A7 · SMB3 $B7 · SMB4 $C7 · SMB5 $D7 · SMB6 $E7 · SMB7 $F7</code></td>
+<td>R</td>
+</tr>
+<tr class="even">
+<td>STA</td>
+<td>M = A</td>
+<td>-</td>
+<td><code>bp $85 · bp,X $95 · abs $8D · abs,X $9D · abs,Y $99 · (bp,X) $81 · (bp),Y $91 · (bp),Z $92 · [bp],Z $EA $92 · (d,SP),Y $82</code></td>
+<td>6502; (bp),Z and (d,SP),Y CE; [bp],Z GS</td>
+</tr>
+<tr class="odd">
+<td>STX</td>
+<td>M = X</td>
+<td>-</td>
+<td><code>bp $86 · bp,Y $96 · abs $8E · abs,Y $9B</code></td>
+<td>6502; abs,Y CE</td>
+</tr>
+<tr class="even">
+<td>STY</td>
+<td>M = Y</td>
+<td>-</td>
+<td><code>bp $84 · bp,X $94 · abs $8C · abs,X $8B</code></td>
+<td>6502; abs,X CE</td>
+</tr>
+<tr class="odd">
+<td>STZ</td>
+<td>M = Z register</td>
+<td>-</td>
+<td><code>bp $64 · bp,X $74 · abs $9C · abs,X $9E</code></td>
+<td>CE (65C02 opcodes, new meaning)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="notes-3">Notes</h3>
+<p><strong>RMB and SMB</strong> are two-byte instructions that change
+one bit without affecting the others or the flags. They are ideal for
+flag bytes shared between a main program and an interrupt handler, since
+each is a single uninterruptible instruction.</p>
+<p><strong>RTN #n</strong> pops the return address as RTS does, then
+discards n further bytes, cleaning up parameters the caller pushed
+before the call.</p>
+<p><strong>SBC</strong> needs C set before a subtraction without borrow,
+as on the 6502.</p>
+<p><strong>STX abs,Y</strong> and <strong>STY abs,X</strong> fill gaps
+in the 6502's instruction set, which had only base page forms of indexed
+STX and STY.</p>
+<p><strong>STZ</strong> uses the same opcodes as the 65C02's "store
+zero" but stores the Z register. While Z is zero the result is
+identical; once a program uses Z for anything else, 65C02 code that
+relies on STZ to clear memory breaks. See Chapter 7.</p>
+<h2 id="tab-to-tza">TAB to TZA</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Mnemonic</th>
+<th>Operation</th>
+<th>Flags</th>
+<th>Modes and opcodes</th>
+<th>Origin</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>TAB</td>
+<td>B = A: move the base page</td>
+<td>-</td>
+<td><code>impl $5B</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>TAX</td>
+<td>X = A</td>
+<td>N Z</td>
+<td><code>impl $AA</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>TAY</td>
+<td>Y = A</td>
+<td>N Z</td>
+<td><code>impl $A8</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>TAZ</td>
+<td>Z = A</td>
+<td>N Z</td>
+<td><code>impl $4B</code></td>
+<td>CE</td>
+</tr>
+<tr class="odd">
+<td>TBA</td>
+<td>A = B</td>
+<td>N Z</td>
+<td><code>impl $7B</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>TRB</td>
+<td>M = M AND NOT A; Z from A AND M</td>
+<td>Z</td>
+<td><code>bp $14 · abs $1C</code></td>
+<td>C02</td>
+</tr>
+<tr class="odd">
+<td>TSB</td>
+<td>M = M OR A; Z from A AND M</td>
+<td>Z</td>
+<td><code>bp $04 · abs $0C</code></td>
+<td>C02</td>
+</tr>
+<tr class="even">
+<td>TSX</td>
+<td>X = low byte of SP</td>
+<td>N Z</td>
+<td><code>impl $BA</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>TSY</td>
+<td>Y = high byte of SP</td>
+<td>N Z</td>
+<td><code>impl $0B</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>TXA</td>
+<td>A = X</td>
+<td>N Z</td>
+<td><code>impl $8A</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>TXS</td>
+<td>Low byte of SP = X</td>
+<td>-</td>
+<td><code>impl $9A</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>TYA</td>
+<td>A = Y</td>
+<td>N Z</td>
+<td><code>impl $98</code></td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>TYS</td>
+<td>High byte of SP = Y</td>
+<td>-</td>
+<td><code>impl $2B</code></td>
+<td>CE</td>
+</tr>
+<tr class="even">
+<td>TZA</td>
+<td>A = Z</td>
+<td>N Z</td>
+<td><code>impl $6B</code></td>
+<td>CE</td>
+</tr>
+</tbody>
+</table>
+<h3 id="notes-4">Notes</h3>
+<p><strong>TAB</strong> takes effect immediately: the very next base
+page instruction uses the new page. Set B back to zero before calling
+the KERNAL or returning to BASIC.</p>
+<p><strong>TRB and TSB</strong> set or clear, in memory, the bits that
+are set in A, and set the Z flag from the bits that were already common
+to both. They are the natural way to change single bits of hardware
+registers, such as <code>LDA #$40 : TSB $D031</code>, and they leave A
+unchanged.</p>
+<p><strong>TSY and TYS</strong> reach the high byte of the stack
+pointer. With E set, the stack is 8 bits wide and wraps within a single
+256-byte page, the page given by the high byte; it is page 1 after
+reset, and TYS can move it elsewhere. With E clear, the stack pointer is
+a full 16-bit value.</p>
+<p><strong>TXS</strong> sets only the low byte of SP. With the 16-bit
+stack enabled, set the high byte with TYS as well.</p>
+<h2 id="the-quad-instructions">The Quad Instructions</h2>
+<p>The quad instructions operate on the 32-bit Q register, formed from A
+(bits 7-0), X (15-8), Y (23-16) and Z (31-24). Each is an ordinary 8-bit
+instruction preceded by the prefix <code>$42 $42</code>; the opcodes
+below give the full sequence. Flat indirect forms add the
+<code>$EA</code> prefix after it.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Mnemonic</th>
+<th>Operation</th>
+<th>Flags</th>
+<th>Modes and opcodes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ADCQ</td>
+<td>Q = Q + M + C</td>
+<td>N V Z C</td>
+<td><code>bp $42 $42 $65 · abs $42 $42 $6D · (bp) $42 $42 $72 · [bp] $42 $42 $EA $72</code></td>
+</tr>
+<tr class="even">
+<td>ANDQ</td>
+<td>Q = Q AND M</td>
+<td>N Z</td>
+<td><code>bp $42 $42 $25 · abs $42 $42 $2D · (bp) $42 $42 $32 · [bp] $42 $42 $EA $32</code></td>
+</tr>
+<tr class="odd">
+<td>ASLQ</td>
+<td>Shift Q or M left</td>
+<td>N Z C</td>
+<td><code>Q $42 $42 $0A · bp $42 $42 $06 · bp,X $42 $42 $16 · abs $42 $42 $0E · abs,X $42 $42 $1E</code></td>
+</tr>
+<tr class="even">
+<td>ASRQ</td>
+<td>Arithmetic shift right</td>
+<td>N Z C</td>
+<td><code>Q $42 $42 $43 · bp $42 $42 $44 · bp,X $42 $42 $54</code></td>
+</tr>
+<tr class="odd">
+<td>BITQ</td>
+<td>Test Q AND M</td>
+<td>N V Z</td>
+<td><code>bp $42 $42 $24 · abs $42 $42 $2C</code></td>
+</tr>
+<tr class="even">
+<td>CMPQ</td>
+<td>Compare Q with M</td>
+<td>N Z C</td>
+<td><code>bp $42 $42 $C5 · abs $42 $42 $CD · (bp) $42 $42 $D2 · [bp] $42 $42 $EA $D2</code></td>
+</tr>
+<tr class="odd">
+<td>DEQ</td>
+<td>Q or M = value - 1</td>
+<td>N Z</td>
+<td><code>Q $42 $42 $3A · bp $42 $42 $C6 · bp,X $42 $42 $D6 · abs $42 $42 $CE · abs,X $42 $42 $DE</code></td>
+</tr>
+<tr class="even">
+<td>EORQ</td>
+<td>Q = Q XOR M</td>
+<td>N Z</td>
+<td><code>bp $42 $42 $45 · abs $42 $42 $4D · (bp) $42 $42 $52 · [bp] $42 $42 $EA $52</code></td>
+</tr>
+<tr class="odd">
+<td>INQ</td>
+<td>Q or M = value + 1</td>
+<td>N Z</td>
+<td><code>Q $42 $42 $1A · bp $42 $42 $E6 · bp,X $42 $42 $F6 · abs $42 $42 $EE · abs,X $42 $42 $FE</code></td>
+</tr>
+<tr class="even">
+<td>LDQ</td>
+<td>Q = M</td>
+<td>N Z</td>
+<td><code>bp $42 $42 $A5 · abs $42 $42 $AD · (bp),Z $42 $42 $B2 · [bp],Z $42 $42 $EA $B2</code></td>
+</tr>
+<tr class="odd">
+<td>LSRQ</td>
+<td>Shift Q or M right</td>
+<td>N Z C</td>
+<td><code>Q $42 $42 $4A · bp $42 $42 $46 · bp,X $42 $42 $56 · abs $42 $42 $4E · abs,X $42 $42 $5E</code></td>
+</tr>
+<tr class="even">
+<td>ORQ</td>
+<td>Q = Q OR M</td>
+<td>N Z</td>
+<td><code>bp $42 $42 $05 · abs $42 $42 $0D · (bp) $42 $42 $12 · [bp] $42 $42 $EA $12</code></td>
+</tr>
+<tr class="odd">
+<td>ROLQ</td>
+<td>Rotate Q or M left through C</td>
+<td>N Z C</td>
+<td><code>Q $42 $42 $2A · bp $42 $42 $26 · bp,X $42 $42 $36 · abs $42 $42 $2E · abs,X $42 $42 $3E</code></td>
+</tr>
+<tr class="even">
+<td>RORQ</td>
+<td>Rotate Q or M right through C</td>
+<td>N Z C</td>
+<td><code>Q $42 $42 $6A · bp $42 $42 $66 · bp,X $42 $42 $76 · abs $42 $42 $6E · abs,X $42 $42 $7E</code></td>
+</tr>
+<tr class="odd">
+<td>SBCQ</td>
+<td>Q = Q - M - (1 - C)</td>
+<td>N V Z C</td>
+<td><code>bp $42 $42 $E5 · abs $42 $42 $ED · (bp) $42 $42 $F2 · [bp] $42 $42 $EA $F2</code></td>
+</tr>
+<tr class="even">
+<td>STQ</td>
+<td>M = Q</td>
+<td>-</td>
+<td><code>bp $42 $42 $85 · abs $42 $42 $8D · (bp) $42 $42 $92 · [bp] $42 $42 $EA $92</code></td>
+</tr>
+</tbody>
+</table>
+<p>The mode list follows the cc65 assembler's 45GS02 table. Other
+assemblers name some of these differently: 64tass, for example, writes
+ADQ and LDQ as forms of its own mnemonics, and treats INQ and DEQ as
+implied-only, using other names for the memory forms. Check your
+assembler's documentation for the spelling it expects.</p>
+<h3 id="notes-5">Notes</h3>
+<p><strong>Indirect quad modes</strong> are written <code>(bp)</code>
+and <code>[bp]</code> for every instruction except LDQ, which cc65
+writes <code>(bp),Z</code> and <code>[bp],Z</code>. Because Z is part of
+Q, a quad instruction's use of Z as an index is unusual; for predictable
+results, set Z to zero before an indirect quad access, or use the base
+page and absolute modes.</p>
+<p><strong>Flags</strong> reflect the whole 32-bit result: N is bit 31,
+and Z is set only if all 32 bits are zero.</p>
+<p><strong>Every quad instruction that changes Q changes A, X, Y and
+Z.</strong> Save any of them that hold values you still need.</p>
+<h2 id="prefixes-and-encoding-notes">Prefixes and Encoding Notes</h2>
+<p>The 45GS02 adds its extensions without new opcodes. Instead it gives
+special meaning to sequences of existing one-byte instructions placed in
+front of an ordinary instruction.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Prefix</th>
+<th>Bytes</th>
+<th>Effect on the following instruction</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NOP (EOM)</td>
+<td><code>$EA</code></td>
+<td>A <code>(bp),Z</code> instruction uses a 32-bit pointer: flat
+<code>[bp],Z</code> addressing</td>
+</tr>
+<tr class="even">
+<td>NEG NEG</td>
+<td><code>$42 $42</code></td>
+<td>The instruction operates on Q instead of A</td>
+</tr>
+<tr class="odd">
+<td>NEG NEG NOP</td>
+<td><code>$42 $42 $EA</code></td>
+<td>Both: a quad instruction with flat addressing</td>
+</tr>
+</tbody>
+</table>
+<p>NEG and NOP were chosen because they are single-cycle instructions on
+the C65's CPU, and the 65CE02 does not take an interrupt immediately
+after a one-cycle instruction. An interrupt therefore cannot arrive
+between a prefix and the instruction it modifies (<a
+href="https://github.com/lgblgblgb/xemu/issues/202">Xemu issue
+#202</a>).</p>
+<h3 id="consequences-for-programmers">Consequences for programmers</h3>
+<p><strong>Disassembly.</strong> A disassembler that does not know the
+45GS02 shows prefixes as separate NEG and NOP instructions. Reading
+<code>NEG</code>, <code>NEG</code>, <code>LDA $10</code> as three
+instructions gives the wrong meaning: it is a single
+<code>LDQ $10</code>.</p>
+<p><strong>Self-modifying code.</strong> Code that patches an
+instruction must patch the whole prefixed sequence, and branch targets
+must point at the first prefix byte, not into the middle of the
+sequence.</p>
+<p><strong>Unintended prefixes.</strong> A NOP placed for timing or
+padding immediately before a <code>(bp),Z</code> instruction turns it
+into a flat access, and a NEG of A immediately followed by another NEG
+creates a quad prefix. Place padding NOPs elsewhere, and do not negate A
+twice in a row.</p>
+<h3 id="differences-from-the-65c02">Differences from the 65C02</h3>
+<p>Code written for the 65C02 mostly runs unchanged, but four
+differences can catch it out:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Opcode</th>
+<th>65C02</th>
+<th>45GS02</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$64 $74 $9C $9E</code></td>
+<td>STZ: store zero</td>
+<td>STZ: store the Z register</td>
+</tr>
+<tr class="even">
+<td><code>$12 $32 $52 $72 $92 $B2 $D2 $F2</code></td>
+<td><code>(zp)</code> indirect</td>
+<td><code>(bp),Z</code>: the same while Z is zero</td>
+</tr>
+<tr class="odd">
+<td><code>$CB</code></td>
+<td>WAI on WDC parts</td>
+<td>ASW abs</td>
+</tr>
+<tr class="even">
+<td><code>$DB</code></td>
+<td>STP on WDC parts</td>
+<td>PHZ</td>
+</tr>
+</tbody>
+</table>
+<p>With Z held at zero, the first two differences disappear. The last
+two matter only for code written for WDC's 65C02 variant, which the
+MEGA65 has never needed to run.</p>
+<nav class="chapnav"><span><a href="ch09-mixing-basic-with-machine-language.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch11-mega65-rom-guide.html">Next &rarr;</a></span></nav>
+</body>
+</html>

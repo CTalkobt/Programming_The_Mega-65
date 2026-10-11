@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 15: Using the Disk
+Drive</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch14-sd-card-and-mass-storage.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch16-control-ports.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-15-using-the-disk-drive">Programming
+the MEGA65 — Chapter 15: Using the Disk Drive</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>Everything in this chapter applies equally to a disk image on the SD
+card, the MEGA65's internal 3.5" drive and a Commodore drive on the IEC
+port. All three speak the same Commodore DOS, so a program written for
+one works on the others. Chapter 14 explained images and unit numbers;
+this chapter covers the drive itself, files of each type, the drive's
+status, and disk access from machine language.</p>
+<h2 id="drives-units-and-drive-numbers">Drives, Units and Drive
+Numbers</h2>
+<p>Every drive is reached through a unit number. Units 8 to 11 are
+reserved for disk drives, and BASIC 65's disk commands use unit 8 unless
+given a U argument. A unit assigned to a disk image or to the internal
+drive is handled inside the MEGA65; any other unit number is sent to the
+IEC port, where the device with that number answers (MEGA65 Book, p.
+6-3).</p>
+<p>The D argument selects a drive within a unit. It is needed only for
+old dual-drive units such as the Commodore 4040 or 8050, where the
+second drive is drive 1; every other drive is drive 0.</p>
+<h3 id="the-internal-35-drive">The internal 3.5" drive</h3>
+<p>The internal drive behaves as a Commodore 1581 and reads and writes
+1581-format disks. It must be mounted before use: in the Freezer, choose
+the first managed drive and select INTERNAL 3.5", or type MOUNT with no
+arguments in BASIC to mount it as unit 8 (MEGA65 Book, pp. 6-6,
+6-7).</p>
+<p>The drive expects Double Density (DD) disks. High Density disks work
+if both sides of the density hole, top left when viewed from the front,
+are covered with tape, which makes the drive treat them as DD (MEGA65
+Book, pp. 6-7, 6-8).</p>
+<p>To format a disk, mount the drive as unit 8, insert the disk and give
+it a name and a two-character ID:</p>
+<pre><code>FORMAT &quot;MYDISK&quot;, IXX</code></pre>
+<p>Formatting takes about a minute; afterwards, DIR shows an empty
+directory with the new name and ID.</p>
+<h3 id="iec-drives">IEC drives</h3>
+<p>External drives such as the 1541, 1571 and 1581, and modern devices
+such as SD2IEC and Pi1541, plug into the IEC port and need no mounting.
+If one needs a unit number the MEGA65 has given to a managed drive, use
+the Freezer's 8 and 9 keys to move the managed drive to 10 or 11 (MEGA65
+Book, p. 6-9).</p>
+<h2 id="files">Files</h2>
+<h3 id="file-types">File types</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Contents</th>
+<th>Used with</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PRG</td>
+<td>A program or memory block, starting with a two-byte load
+address</td>
+<td>DLOAD, DSAVE, BLOAD, BSAVE, RUN</td>
+</tr>
+<tr class="even">
+<td>SEQ</td>
+<td>Sequential data, read and written from start to end</td>
+<td>DOPEN, PRINT#, INPUT#, APPEND</td>
+</tr>
+<tr class="odd">
+<td>USR</td>
+<td>Like SEQ, but marked for application-specific use</td>
+<td>DOPEN, APPEND</td>
+</tr>
+<tr class="even">
+<td>REL</td>
+<td>Relative file of fixed-length records, read in any order</td>
+<td>DOPEN with L, RECORD</td>
+</tr>
+<tr class="odd">
+<td>CBM</td>
+<td>A 1581 partition, used for subdirectories</td>
+<td>MKDIR, CHDIR</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sequential-files">Sequential files</h3>
+<p>A sequential file is written with PRINT# and read back with INPUT# or
+LINE INPUT#, in the same order. Separate fields with commas, or write
+each on its own line, so INPUT# can tell where one ends:</p>
+<pre><code>10 DOPEN#2, &quot;SCORES&quot;, W
+20 IF DS THEN PRINT DS$ : STOP
+30 FOR I = 1 TO 3 : READ N$, S : PRINT#2, N$ &quot;,&quot; S : NEXT
+40 DCLOSE#2
+50 DATA ALICE, 1200, BOB, 900, CAROL, 1500
+100 DOPEN#2, &quot;SCORES&quot;
+110 DO : INPUT#2, N$, S : PRINT N$, S : LOOP UNTIL ST
+120 DCLOSE#2</code></pre>
+<p>ST becomes non-zero when the last item has been read. Adding to an
+existing file uses APPEND# instead of DOPEN#, and replacing a file needs
+it to be scratched first, or an <code>@</code> before the name when
+saving a program.</p>
+<h3 id="relative-files">Relative files</h3>
+<p>A relative file holds numbered records of a fixed length, given with
+L when the file is first created. RECORD moves to any record directly,
+which suits indexes, high-score tables and small databases where a
+sequential file would have to be read from the start:</p>
+<pre><code>10 DOPEN#3, &quot;PLAYERS&quot;, L20
+20 RECORD#3, 5 : PRINT#3, &quot;PLAYER FIVE&quot;
+30 RECORD#3, 2 : PRINT#3, &quot;PLAYER TWO&quot;
+40 RECORD#3, 5 : INPUT#3, A$ : PRINT A$
+50 DCLOSE#3</code></pre>
+<p>Each record must fit its length, including the carriage return PRINT#
+adds.</p>
+<h3 id="drive-status">Drive status</h3>
+<p>Every disk operation leaves a status in the drive, which BASIC 65
+reads into DS and <code>DS$</code>. <code>DS$</code> has the form
+<code>code, message, track, sector</code>. Codes below 20 mean success;
+the common ones are:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>00</td>
+<td>OK</td>
+</tr>
+<tr class="even">
+<td>01</td>
+<td>Files scratched (the track value gives how many)</td>
+</tr>
+<tr class="odd">
+<td>20-29</td>
+<td>Read errors: the disk is damaged or unformatted</td>
+</tr>
+<tr class="even">
+<td>26</td>
+<td>Write protect on</td>
+</tr>
+<tr class="odd">
+<td>62</td>
+<td>File not found</td>
+</tr>
+<tr class="even">
+<td>63</td>
+<td>File exists</td>
+</tr>
+<tr class="odd">
+<td>72</td>
+<td>Disk full</td>
+</tr>
+<tr class="even">
+<td>74</td>
+<td>Drive not ready: no disk</td>
+</tr>
+</tbody>
+</table>
+<p>These are the standard Commodore DOS codes, which the MEGA65's drives
+share with the 1581. Checking DS after each DOPEN and save is the single
+most effective way to make a program that uses disks reliable.</p>
+<h2 id="booting-disks">Booting Disks</h2>
+<p>There are three ways to start software from a disk (MEGA65 Book, pp.
+6-9, 6-10):</p>
+<ul>
+<li><strong>SHIFT+RUN/STOP</strong> runs <code>RUN "*"</code>, loading
+and running the first program on the disk, the convention most C64
+software follows.</li>
+<li><strong>BOOT</strong> loads and runs a program named
+<code>AUTOBOOT.C65</code>, the C65's convention.</li>
+<li><strong>Automatic booting.</strong> If the image or drive mounted at
+power-on has an <code>AUTOBOOT.C65</code>, it runs straight away.</li>
+</ul>
+<p>To make a disk of your own bootable, save its starting program as
+<code>AUTOBOOT.C65</code>. A machine-language program saved there runs
+with BOOT just as well as a BASIC one.</p>
+<h2 id="disk-access-from-machine-language">Disk Access from Machine
+Language</h2>
+<p>Machine language reaches the drive through the KERNAL jump table from
+Chapter 11, exactly as on a C64. This routine prints the first line of a
+sequential file:</p>
+<pre><code>        lda #0          ; data and file name in bank 0
+        ldx #0
+        jsr $ff6b       ; SETBNK
+        lda #2          ; logical file 2
+        ldx #8          ; unit 8
+        ldy #2          ; secondary address 2
+        jsr $ffba       ; SETLFS
+        lda #namelen
+        ldx #&lt;name
+        ldy #&gt;name
+        jsr $ffbd       ; SETNAM
+        jsr $ffc0       ; OPEN
+        bcs error
+        ldx #2
+        jsr $ffc6       ; CHKIN: read from file 2
+loop    jsr $ffcf       ; BASIN: read a byte
+        cmp #13
+        beq done        ; stop at the end of the line
+        jsr $ffd2       ; BSOUT: print it
+        jsr $ffb7       ; READST
+        beq loop        ; continue while status is 0
+done    jsr $ffcc       ; CLRCHN
+        lda #2
+        jsr $ffc3       ; CLOSE
+        rts
+error   rts
+
+name    .text &quot;SCORES,S,R&quot;
+namelen = * - name</code></pre>
+<p>The secondary address 2 to 14 opens a data channel; 0 and 1 are
+reserved for loading and saving, and 15 is the command channel, through
+which a program sends DOS commands and reads the status, as DISK and DS
+do in BASIC. SETBNK, from the C65 extensions, tells the KERNAL which
+bank the file name and data are in; check its argument order against the
+documentation for your ROM, as Chapter 11 advises.</p>
+<p>For files on the SD card outside disk images, and for loading large
+files into attic RAM, use the Hypervisor services described in Chapters
+8 and 14 instead.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Units and drives.</strong> Units 8 to 11 are disk drives;
+managed drives handle images and the internal drive, and other units go
+to the IEC port. D selects the second drive of a dual unit.</li>
+<li><strong>Internal drive.</strong> A 1581-compatible 3.5" drive,
+mounted with MOUNT or the Freezer, using DD disks or taped HD disks,
+formatted with FORMAT.</li>
+<li><strong>Files.</strong> PRG for programs, SEQ and USR for sequential
+data, REL for random-access records, CBM for subdirectories.</li>
+<li><strong>Status.</strong> DS and <code>DS$</code> report every
+operation; codes below 20 mean success.</li>
+<li><strong>Booting.</strong> SHIFT+RUN/STOP, BOOT and
+<code>AUTOBOOT.C65</code>.</li>
+<li><strong>Machine language.</strong> SETBNK, SETLFS, SETNAM, OPEN,
+CHKIN, BASIN and CLOSE work as on a C64.</li>
+</ul>
+<p>Chapter 16 covers the control ports.</p>
+<nav class="chapnav"><span><a href="ch14-sd-card-and-mass-storage.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch16-control-ports.html">Next &rarr;</a></span></nav>
+</body>
+</html>

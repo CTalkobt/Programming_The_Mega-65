@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 7: 45GS02 Machine
+Language</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch06-advanced-basic65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch08-ml-methods-specific-to-the-mega65.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-7-45gs02-machine-language">Programming
+the MEGA65 — Chapter 7: 45GS02 Machine Language</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>Machine language is the processor's own language: the bytes the
+45GS02 fetches and executes. Every BASIC statement eventually becomes
+machine language, run by the BASIC 65 interpreter in ROM. Writing
+machine language yourself removes the interpreter from the middle, which
+is why it is so much faster and why it can do things BASIC cannot.</p>
+<p>On the MEGA65 the speed argument is weaker than it was on the C64. At
+40.5 MHz, BASIC 65 is fast enough for many jobs that once demanded
+machine language. The remaining reasons are still strong: raster
+interrupts and other precisely timed code, full control of the hardware,
+efficient use of memory beyond the 64KB window, and routines that are
+simply too slow when interpreted.</p>
+<p>This chapter introduces the 45GS02 as a programmer sees it. It
+covers:</p>
+<ul>
+<li>Binary and hexadecimal, as used throughout the rest of the book</li>
+<li>The registers and status flags</li>
+<li>The addressing modes, including the 65CE02 and 45GS02 additions</li>
+<li>The main groups of instructions</li>
+<li>32-bit operations with the Q register</li>
+<li>The stack, subroutines and interrupts</li>
+<li>Entering and running a first program with the built-in monitor</li>
+</ul>
+<p>The chapters that follow build on it. Chapter 8 covers techniques
+specific to the MEGA65, Chapter 9 combines machine language with BASIC,
+and Chapter 10 is a complete reference to every instruction. Readers who
+already know 6502 machine language can skim the first sections and
+concentrate on what is new: the Z and B registers, the extra addressing
+modes, the word and quad instructions, and the change in meaning of
+STZ.</p>
+<h2 id="numbers-for-machine-language">Numbers for Machine Language</h2>
+<p>The 45GS02 works in binary, eight bits at a time. Programmers write
+those bits in hexadecimal, because each hex digit stands for exactly
+four bits and a byte is always two digits.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Decimal</th>
+<th>Binary</th>
+<th>Hex</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td><code>%00000000</code></td>
+<td><code>$00</code></td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td><code>%00001001</code></td>
+<td><code>$09</code></td>
+</tr>
+<tr class="odd">
+<td>10</td>
+<td><code>%00001010</code></td>
+<td><code>$0A</code></td>
+</tr>
+<tr class="even">
+<td>15</td>
+<td><code>%00001111</code></td>
+<td><code>$0F</code></td>
+</tr>
+<tr class="odd">
+<td>16</td>
+<td><code>%00010000</code></td>
+<td><code>$10</code></td>
+</tr>
+<tr class="even">
+<td>127</td>
+<td><code>%01111111</code></td>
+<td><code>$7F</code></td>
+</tr>
+<tr class="odd">
+<td>128</td>
+<td><code>%10000000</code></td>
+<td><code>$80</code></td>
+</tr>
+<tr class="even">
+<td>255</td>
+<td><code>%11111111</code></td>
+<td><code>$FF</code></td>
+</tr>
+</tbody>
+</table>
+<p>This book follows the Commodore convention: <code>$</code> marks
+hexadecimal and <code>%</code> marks binary. Bits are numbered 0 to 7
+from the right, so bit 7 is the leftmost and most significant. BASIC 65
+understands <code>$</code> constants directly, and HEX$ and DEC convert
+between the two forms.</p>
+<h3 id="sizes">Sizes</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Size</th>
+<th>Range</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Byte</td>
+<td>8 bits</td>
+<td><code>$00-$FF</code></td>
+<td>Registers, characters, colours</td>
+</tr>
+<tr class="even">
+<td>Word</td>
+<td>16 bits</td>
+<td><code>$0000-$FFFF</code></td>
+<td>CPU addresses, counters</td>
+</tr>
+<tr class="odd">
+<td>Quad</td>
+<td>32 bits</td>
+<td><code>$00000000-$FFFFFFFF</code></td>
+<td>28-bit addresses, large counters, Q register</td>
+</tr>
+</tbody>
+</table>
+<p>Words and quads are stored little-endian, low byte first. The address
+<code>$D020</code> appears in memory as <code>$20 $D0</code>, and the
+28-bit address <code>$0FF80000</code> as <code>$00 $00 $F8 $0F</code>.
+This order is used everywhere on the 45GS02: in instruction operands, in
+pointers, in vectors, and in the Q register.</p>
+<h3 id="signed-numbers">Signed numbers</h3>
+<p>The same eight bits can be read as unsigned, 0 to 255, or as signed
+two's complement, -128 to 127. In the signed reading, bit 7 is the sign:
+<code>$7F</code> is 127, <code>$80</code> is -128, and <code>$FF</code>
+is -1. To negate a value, invert every bit and add one.</p>
+<p>The processor does not know which reading you intend. Addition and
+subtraction produce the right bit pattern either way; only the flags you
+test afterwards differ. Carry signals unsigned overflow, and the V flag
+signals signed overflow. The 65CE02's NEG instruction performs the
+invert-and-add-one in a single step.</p>
+<h2 id="registers-and-flags">Registers and Flags</h2>
+<p>Chapter 5 introduced the 45GS02's registers. Here is how each is used
+in practice.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Width</th>
+<th>Role in programs</th>
+<th>Transfers</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>8 bits</td>
+<td>Arithmetic, logic, most loads and stores</td>
+<td>TAX, TAY, TAZ, TAB and their reverses</td>
+</tr>
+<tr class="even">
+<td>X</td>
+<td>8 bits</td>
+<td>Index, loop counter</td>
+<td>TXA, TXS, TSX</td>
+</tr>
+<tr class="odd">
+<td>Y</td>
+<td>8 bits</td>
+<td>Index, loop counter, indirect indexing</td>
+<td>TYA, TYS, TSY</td>
+</tr>
+<tr class="even">
+<td>Z</td>
+<td>8 bits</td>
+<td>Third index, the index for <code>(zp),Z</code> and
+<code>[zp],Z</code></td>
+<td>TZA</td>
+</tr>
+<tr class="odd">
+<td>B</td>
+<td>8 bits</td>
+<td>Base page: which page acts as zero page</td>
+<td>TBA</td>
+</tr>
+<tr class="even">
+<td>SP</td>
+<td>8 or 16 bits</td>
+<td>Stack pointer</td>
+<td>TSX, TXS for the low byte; TSY, TYS for the high byte</td>
+</tr>
+<tr class="odd">
+<td>PC</td>
+<td>16 bits</td>
+<td>Address of the next instruction</td>
+<td>Changed by jumps, branches, calls, returns</td>
+</tr>
+</tbody>
+</table>
+<p>The Z register is the 65CE02's main gift to programmers. Many loops
+that needed both X and Y on a 6502, one as a counter and one as an
+index, can now keep both and still have a register free. Z also replaces
+the 65C02's plain <code>(zp)</code> mode: <code>LDA ($10),Z</code> with
+Z set to zero behaves exactly like the 65C02's
+<code>LDA ($10)</code>.</p>
+<p>The B register makes zero page movable. Zero-page instructions are
+shorter and faster than absolute ones, so a routine with many variables
+can point B at its own page and use zero-page addressing for all of
+them. B must be restored before calling the KERNAL or returning to
+BASIC, both of which expect B to be zero.</p>
+<h3 id="status-flags">Status flags</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Flag</th>
+<th>Set when</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>7</td>
+<td>N, negative</td>
+<td>The result has bit 7 set</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>V, overflow</td>
+<td>A signed addition or subtraction overflowed</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>E, extend disable</td>
+<td>The stack is limited to 8 bits, as on a 6502</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>B, break</td>
+<td>Only meaningful in a copy of P pushed by BRK</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>D, decimal</td>
+<td>Addition and subtraction work in binary-coded decimal</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>I, interrupt disable</td>
+<td>IRQ interrupts are blocked</td>
+</tr>
+<tr class="odd">
+<td>1</td>
+<td>Z, zero</td>
+<td>The result was zero</td>
+</tr>
+<tr class="even">
+<td>0</td>
+<td>C, carry</td>
+<td>Unsigned overflow from addition or a shift, or no borrow from
+subtraction</td>
+</tr>
+</tbody>
+</table>
+<p>The E flag is new. It occupies the bit that is unused on the 6502 and
+is set at reset, so the stack starts out 6502-compatible. CLE clears it
+to enable the 16-bit stack pointer; SEE sets it again. Code that pushes
+P and inspects it, as some 6502 tricks do, should not assume bit 5 is
+always set.</p>
+<p>Note also that the Z flag and the Z register are unrelated. The flag
+records whether a result was zero; the register is a general index.
+Assemblers and this book keep them apart by context: BEQ and BNE test
+the flag, while LDZ, STZ and <code>,Z</code> refer to the register.</p>
+<h2 id="addressing-modes">Addressing Modes</h2>
+<p>An addressing mode is the way an instruction finds its operand. The
+45GS02 has every 6502 mode, most 65C02 modes, the 65CE02's additions,
+and one mode of its own.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Mode</th>
+<th>Example</th>
+<th>Operand</th>
+<th>Origin</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Implied</td>
+<td><code>INX</code></td>
+<td>None; the register is part of the instruction</td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>Accumulator</td>
+<td><code>ASL A</code></td>
+<td>The A register</td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>Immediate</td>
+<td><code>LDA #$41</code></td>
+<td>The byte following the opcode</td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>Immediate word</td>
+<td><code>PHW #$1234</code></td>
+<td>The 16-bit value following the opcode</td>
+<td>65CE02</td>
+</tr>
+<tr class="odd">
+<td>Base page</td>
+<td><code>LDA $10</code></td>
+<td>Byte at offset <code>$10</code> in the base page</td>
+<td>6502 (zero page)</td>
+</tr>
+<tr class="even">
+<td>Base page indexed</td>
+<td><code>LDA $10,X</code></td>
+<td>Base page offset plus X, or plus Y for LDX and STX</td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>Absolute</td>
+<td><code>LDA $D020</code></td>
+<td>Byte at a 16-bit address</td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>Absolute indexed</td>
+<td><code>LDA $0400,X</code></td>
+<td>16-bit address plus X or Y</td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>Indexed indirect</td>
+<td><code>LDA ($10,X)</code></td>
+<td>Pointer at base page <code>$10+X</code></td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>Indirect indexed</td>
+<td><code>LDA ($10),Y</code></td>
+<td>Pointer at base page <code>$10</code>, plus Y</td>
+<td>6502</td>
+</tr>
+<tr class="odd">
+<td>Indirect indexed by Z</td>
+<td><code>LDA ($10),Z</code></td>
+<td>Pointer at base page <code>$10</code>, plus Z</td>
+<td>65CE02</td>
+</tr>
+<tr class="even">
+<td>Stack relative</td>
+<td><code>LDA ($02,SP),Y</code></td>
+<td>Pointer on the stack at SP+2, plus Y</td>
+<td>65CE02</td>
+</tr>
+<tr class="odd">
+<td>Indirect</td>
+<td><code>JMP ($0318)</code></td>
+<td>Jump through a 16-bit vector</td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>Indexed indirect jump</td>
+<td><code>JSR ($1000,X)</code></td>
+<td>Jump or call through a table of vectors</td>
+<td>65C02 and 65CE02</td>
+</tr>
+<tr class="odd">
+<td>Relative</td>
+<td><code>BNE loop</code></td>
+<td>8-bit signed offset, -128 to +127</td>
+<td>6502</td>
+</tr>
+<tr class="even">
+<td>Long relative</td>
+<td><code>LBNE far</code></td>
+<td>16-bit signed offset, anywhere in 64KB</td>
+<td>65CE02</td>
+</tr>
+<tr class="odd">
+<td>Bit relative</td>
+<td><code>BBS3 $10,done</code></td>
+<td>Tests one bit of a base page byte and branches</td>
+<td>R65C02</td>
+</tr>
+<tr class="even">
+<td>Flat indirect</td>
+<td><code>LDA [$10],Z</code></td>
+<td>32-bit pointer at base page <code>$10</code>, plus Z</td>
+<td>45GS02</td>
+</tr>
+</tbody>
+</table>
+<p>The term "base page" replaces "zero page" because of the B register.
+With B at zero the two are identical, and most assemblers accept either
+name.</p>
+<h3 id="the-new-modes-in-practice">The new modes in practice</h3>
+<p><strong>Indirect indexed by Z</strong> lets a routine walk through a
+buffer with Z while X and Y keep other jobs. It is the mode most 45GS02
+programs use most often after the 6502 basics.</p>
+<p><strong>Stack relative</strong> reads data that a caller pushed onto
+the stack. A routine can receive a pointer as a parameter on the stack
+and use it directly, without first copying it to the base page. This
+makes re-entrant and recursive routines practical.</p>
+<p><strong>Long relative</strong> branches remove the 6502's 128-byte
+branch limit. Assemblers differ in how they write them: some use
+separate mnemonics such as LBNE, others choose the long form
+automatically when the target is too far away. The long forms are one
+byte longer, so short branches remain the default. When encoding a long
+branch by hand, note that its 16-bit offset is counted from the
+instruction's second byte, not from the next instruction:
+<code>BNE $3000</code> at <code>$2002</code> encodes as
+<code>$D3 $FC $0F</code> (MEGA65 Book, p. L-13).</p>
+<p><strong>Flat indirect</strong> is the 45GS02's own mode, covered in
+Chapter 5. The instruction is an ordinary <code>(zp),Z</code>
+instruction preceded by a NOP prefix, <code>$EA</code>. The prefix tells
+the CPU to read four bytes from the base page instead of two and to
+treat them as a 28-bit address. Any instruction that supports
+<code>(zp),Z</code> also supports <code>[zp],Z</code>.</p>
+<h2 id="instruction-groups">Instruction Groups</h2>
+<p>The 45GS02 has far more instructions than the 6502's 56, but they
+fall into the same handful of families. This section surveys them;
+Chapter 10 gives every opcode, mode, flag effect and timing.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Group</th>
+<th>Instructions</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Load and store</td>
+<td>LDA LDX LDY LDZ, STA STX STY STZ</td>
+<td>STZ stores the Z register</td>
+</tr>
+<tr class="even">
+<td>Transfer</td>
+<td>TAX TXA TAY TYA TAZ TZA TAB TBA TSX TXS TSY TYS</td>
+<td>Moves between registers</td>
+</tr>
+<tr class="odd">
+<td>Arithmetic</td>
+<td>ADC SBC NEG, CMP CPX CPY CPZ</td>
+<td>NEG negates A</td>
+</tr>
+<tr class="even">
+<td>Logic</td>
+<td>AND ORA EOR BIT, TSB TRB</td>
+<td>TSB and TRB set or clear bits in memory</td>
+</tr>
+<tr class="odd">
+<td>Shifts</td>
+<td>ASL LSR ROL ROR ASR</td>
+<td>ASR is an arithmetic shift right, keeping the sign</td>
+</tr>
+<tr class="even">
+<td>Increment</td>
+<td>INC DEC INX DEX INY DEY INZ DEZ</td>
+<td>INC A and DEC A work on the accumulator</td>
+</tr>
+<tr class="odd">
+<td>Word operations</td>
+<td>INW DEW ASW ROW PHW</td>
+<td>16-bit operations on memory</td>
+</tr>
+<tr class="even">
+<td>Single bits</td>
+<td>RMB SMB BBR BBS</td>
+<td>Clear, set or test one bit of a base page byte</td>
+</tr>
+<tr class="odd">
+<td>Branches</td>
+<td>BEQ BNE BCC BCS BMI BPL BVC BVS BRA, and long forms</td>
+<td>BRA always branches</td>
+</tr>
+<tr class="even">
+<td>Jumps and calls</td>
+<td>JMP JSR BSR RTS RTN</td>
+<td>BSR is a relative call; RTN #n also drops n bytes of parameters</td>
+</tr>
+<tr class="odd">
+<td>Stack</td>
+<td>PHA PLA PHX PLX PHY PLY PHZ PLZ PHP PLP PHW</td>
+<td>Push and pull</td>
+</tr>
+<tr class="even">
+<td>Flags</td>
+<td>CLC SEC CLI SEI CLD SED CLV CLE SEE</td>
+<td>CLE and SEE control the stack width</td>
+</tr>
+<tr class="odd">
+<td>System</td>
+<td>BRK RTI MAP EOM</td>
+<td>MAP and EOM control memory mapping</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-stz-trap">The STZ trap</h3>
+<p>One difference catches nearly every programmer who has used a 65C02.
+On the 65C02, STZ means "store zero". On the 65CE02, and therefore the
+45GS02, the same opcodes mean "store the Z register". Code written for a
+65C02 that uses STZ to clear memory works only while Z happens to be
+zero. When moving 65C02 code to the MEGA65, either keep Z at zero or
+replace each STZ with a load and store of A.</p>
+<h3 id="timing">Timing</h3>
+<p>The 45GS02's instruction timing depends on its speed (MEGA65 Book, p.
+K-5):</p>
+<ul>
+<li><strong>At 1, 2 and 3.5 MHz</strong>, each instruction takes the
+same number of cycles as on a 6502, so programs run at the expected
+speed. The individual memory accesses inside an instruction are not
+guaranteed to fall on the same cycles as on a 6502, however; the
+instruction usually finishes early and the CPU then idles. Timing can be
+off by up to about 7 microseconds, which is harmless for nearly all
+software, including most fast loaders, but defeats tricks such as VIC-II
+variable screen positioning that depend on exact write cycles.</li>
+<li><strong>At 40.5 MHz</strong>, instructions take as few cycles as
+they can. Most are faster than on a 6502, branches especially, but LDA,
+LDX, LDY and LDZ usually take one extra cycle. Chapter 10 does not list
+cycle counts for this reason; the MEGA65 Book's instruction appendix
+gives them, with footnotes for each speed.</li>
+</ul>
+<p>Prefix bytes cost time too: a quad or flat instruction must also
+execute its prefix bytes, so <code>LDQ</code> takes longer than
+<code>LDA</code> even though it moves four bytes.</p>
+<p>The 45GS02 can also switch to a 6502 personality, in which the new
+opcodes are replaced by the NMOS 6502's undocumented instructions. The
+Book warns that this mode is incomplete and that most undocumented
+opcodes do not yet behave correctly (MEGA65 Book, p. K-4).</p>
+<h3 id="word-operations">Word operations</h3>
+<p>The word instructions handle 16-bit values in one step. On a 6502,
+incrementing a 16-bit pointer takes several instructions:</p>
+<pre><code>        inc ptr
+        bne skip
+        inc ptr+1
+skip</code></pre>
+<p>On the 45GS02 a single instruction does it:</p>
+<pre><code>        inw ptr</code></pre>
+<p>INW and DEW increment and decrement a base page word, setting N from
+bit 15 and Z if the whole word becomes zero (MEGA65 Book, pp. L-82,
+L-86). ASW and ROW shift a 16-bit value in memory left. PHW pushes a
+16-bit value, either an immediate constant or the contents of a memory
+word, which is useful for passing parameters on the stack.</p>
+<h3 id="bit-instructions">Bit instructions</h3>
+<p>RMB and SMB clear or set one bit of a base page byte, and BBR and BBS
+branch on whether one bit is clear or set. The bit number is part of the
+instruction, written as <code>SMB3 $10</code> or, in some assemblers,
+<code>SMB 3,$10</code>. They are ideal for flags packed into a single
+byte, such as the state of several game objects.</p>
+<h2 id="32-bit-operations">32-Bit Operations</h2>
+<p>The 45GS02 can treat A, X, Y and Z together as a single 32-bit
+register called Q. Q is not a separate register: loading Q loads all
+four, and changing any one of them changes Q.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bits</th>
+<th>31-24</th>
+<th>23-16</th>
+<th>15-8</th>
+<th>7-0</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Register</td>
+<td>Z</td>
+<td>Y</td>
+<td>X</td>
+<td>A</td>
+</tr>
+</tbody>
+</table>
+<p>The byte order matches memory: A holds the low byte, just as the
+lowest address of a 32-bit value holds its low byte. A quad stored with
+STQ at <code>$10</code> places A at <code>$10</code>, X at
+<code>$11</code>, Y at <code>$12</code> and Z at <code>$13</code>.</p>
+<h3 id="quad-instructions">Quad instructions</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Instruction</th>
+<th>Operation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>LDQ, STQ</td>
+<td>Load and store Q</td>
+</tr>
+<tr class="even">
+<td>ADCQ, SBCQ</td>
+<td>32-bit add and subtract with carry</td>
+</tr>
+<tr class="odd">
+<td>CMPQ</td>
+<td>32-bit compare</td>
+</tr>
+<tr class="even">
+<td>ANDQ, ORQ, EORQ, BITQ</td>
+<td>32-bit logic</td>
+</tr>
+<tr class="odd">
+<td>ASLQ, LSRQ, ROLQ, RORQ, ASRQ</td>
+<td>32-bit shifts</td>
+</tr>
+<tr class="even">
+<td>INQ, DEQ</td>
+<td>32-bit increment and decrement</td>
+</tr>
+</tbody>
+</table>
+<p>The usual addressing modes are base page, absolute, base page
+indirect and flat indirect. Not every instruction supports every mode;
+Chapter 10 has the details. Assembler mnemonics vary slightly, so some
+assemblers write ADDQ or ADQ, or LDQ as LDR Q.</p>
+<h3 id="how-the-prefix-works">How the prefix works</h3>
+<p>The quad instructions are ordinary 8-bit instructions preceded by two
+NEG opcodes, <code>$42 $42</code>. The prefix tells the CPU to apply the
+next instruction to Q instead of A. <code>$42 $42 $A5 $10</code> is
+<code>LDQ $10</code>, the quad form of <code>LDA $10</code>. For flat
+indirect, the NOP prefix follows the NEG prefix:
+<code>$42 $42 $EA $B2 $10</code> is <code>LDQ [$10],Z</code>.</p>
+<h3 id="example-adding-two-32-bit-values">Example: adding two 32-bit
+values</h3>
+<p>On a 6502, adding two 32-bit numbers takes a loop or four ADC
+instructions with their loads and stores. With Q it takes four
+instructions:</p>
+<pre><code>        clc
+        ldq num1        ; Q = num1
+        adcq num2       ; Q = num1 + num2 + carry
+        stq result</code></pre>
+<p>The flags reflect the full 32-bit result: N comes from bit 31, Z is
+set only if all 32 bits are zero, and C holds the carry out of bit 31.
+That means 32-bit values can be compared and tested with ordinary
+branches.</p>
+<h3 id="pitfalls">Pitfalls</h3>
+<p>Because Q includes Z, any quad instruction that loads or changes Q
+also changes the Z register. Code that uses Z as an index must save it,
+or set it again, after a quad operation. In the indirect quad modes,
+only LDQ adds Z to the pointer, as in <code>LDQ ($10),Z</code> and
+<code>LDQ [$10],Z</code>; the other quad instructions ignore Z as an
+index (MEGA65 Book, p. L-12), since Z is itself part of the value being
+loaded or stored.</p>
+<p>The quad instructions are 45GS02-specific. Code that uses them will
+not run on a C65 or in an emulator that lacks them, so a program that
+may run elsewhere should check the CPU first.</p>
+<h2 id="the-stack-subroutines-and-interrupts">The Stack, Subroutines and
+Interrupts</h2>
+<p>The stack is a last-in, first-out area of memory used for return
+addresses, saved registers and, on the 45GS02, parameters. The stack
+pointer holds the address of the next free byte; a push stores there and
+moves SP down, and a pull moves SP up and reads.</p>
+<h3 id="8-bit-and-16-bit-stacks">8-bit and 16-bit stacks</h3>
+<p>With the E flag set, the stack works as on a 6502: the stack
+pointer's low byte wraps within a single 256-byte page. That page is
+normally page 1, <code>$0100-$01FF</code>, but it is set by the stack
+pointer's high byte, so TYS can move the 8-bit stack to any page.
+Clearing E with CLE makes SP 16 bits wide, so the stack can be any size
+and anywhere in the 64KB window. TYS sets the high byte of SP from Y,
+and TSY reads it back (MEGA65 Book, pp. L-78, L-105, L-116).</p>
+<p>Most programs that call the KERNAL or return to BASIC should leave E
+set. A larger stack is useful for a self-contained program, such as a
+game that takes over the machine, or for deeply recursive code.</p>
+<h3 id="subroutines">Subroutines</h3>
+<p>JSR pushes the return address and jumps; RTS pulls it and returns.
+The 45GS02 adds three useful relatives:</p>
+<ul>
+<li><strong>BSR</strong> calls a subroutine using a 16-bit relative
+offset instead of an absolute address. Code built only with BSR,
+relative branches and relative data access can run unchanged at any
+address.</li>
+<li><strong>JSR (abs)</strong> and <strong>JSR (abs,X)</strong> call
+through a vector or a table of vectors, ideal for dispatching commands
+by number.</li>
+<li><strong>RTN #n</strong> returns like RTS and then discards n further
+bytes from the stack. A routine that takes parameters on the stack can
+clean them up as it returns.</li>
+</ul>
+<p>Together with PHW and stack-relative addressing, these make it
+practical to pass parameters on the stack, as compilers for larger
+processors do:</p>
+<pre><code>        phw #message    ; push the address of the text
+        jsr print
+        rts
+
+print   ldy #$00
+loop    lda ($03,sp),y  ; SP+1/SP+2 hold the return address,
+        beq done        ; SP+3/SP+4 hold the pushed pointer
+        jsr $ffd2       ; KERNAL CHROUT
+        iny
+        bne loop
+done    rtn #2          ; return and drop the 2-byte parameter
+
+message .text &quot;HELLO&quot;, 0</code></pre>
+<p>PHW pushes the high byte first, so the word lies on the stack low
+byte first and can be used directly as a pointer.</p>
+<h3 id="interrupts">Interrupts</h3>
+<p>An interrupt makes the CPU stop what it is doing, push the program
+counter and status, and run a handler. RTI returns to the interrupted
+code. There are three sources:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Source</th>
+<th>Vector</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>IRQ</td>
+<td><code>$FFFE</code></td>
+<td>Raster interrupts, timers, keyboard scanning; blocked while I is
+set</td>
+</tr>
+<tr class="even">
+<td>NMI</td>
+<td><code>$FFFA</code></td>
+<td>The RESTORE key and CIA 2 timers; cannot be blocked with SEI</td>
+</tr>
+<tr class="odd">
+<td>BRK</td>
+<td><code>$FFFE</code></td>
+<td>A software interrupt, used by monitors as a breakpoint</td>
+</tr>
+</tbody>
+</table>
+<p>The vectors are read from whatever is mapped at
+<code>$FFFA-$FFFF</code>, usually the KERNAL ROM. The KERNAL handlers
+jump through RAM vectors that programs can change; in C64 mode the IRQ
+vector is at <code>$0314</code>, as on a C64. Chapter 11 lists the
+MEGA65-mode vectors, and Chapter 8 shows how to write raster interrupt
+handlers.</p>
+<p>Two 45GS02 details matter here. First, MAP blocks interrupts until
+the next EOM, so a mapping change is never interrupted halfway. Second,
+a handler must restore every register it changes, and on the 45GS02 that
+includes Z and B as well as A, X and Y.</p>
+<h3 id="acknowledging-vic-interrupts">Acknowledging VIC interrupts</h3>
+<p>Many C64 programs acknowledge a raster interrupt with a
+read-modify-write instruction such as <code>INC $D019</code> or
+<code>ASL $D019</code>. This works on a 6502 because such instructions
+write the original value back before writing the new one, and that extra
+write clears the interrupt. The 65CE02 dropped the redundant write to
+save a cycle, which is why much C64 software failed on the C65. The
+45GS02 restores the extra write, but only when the target is
+<code>$D019</code>, so the C64 idiom works while every other
+read-modify-write instruction keeps the faster timing (MEGA65 Book, p.
+K-4). New code can use either the idiom or an explicit
+<code>LDA #$01 : STA $D019</code>.</p>
+<h2 id="a-first-program">A First Program</h2>
+<p>The MEGA65 has a machine-language monitor built in, so a first
+program needs no other software. Type MONITOR at the BASIC prompt to
+enter it; it also opens when a program executes a BRK instruction, or at
+start-up if RUN/STOP is held. It shows the registers on entry, including
+Z, the base page and the full 16-bit stack pointer, and it uses 32-bit
+addresses, so it can reach attic RAM and the rest of the 28-bit space
+(MEGA65 Book, pp. O-3, O-5).</p>
+<p>The monitor assumes hexadecimal for every number it reads, including
+operands in instructions: <code>LDA #10</code> loads <code>$10</code>,
+not decimal 10. Use a prefix whenever there is any doubt: <code>$</code>
+hexadecimal, <code>+</code> decimal, <code>&amp;</code> octal,
+<code>%</code> binary, or <code>'</code> for a PETSCII character (MEGA65
+Book, p. O-4).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>A</code> address instruction</td>
+<td>Assemble an instruction; the monitor then offers the next
+address</td>
+</tr>
+<tr class="even">
+<td><code>D</code> [from [to]]</td>
+<td>Disassemble memory</td>
+</tr>
+<tr class="odd">
+<td><code>M</code> address</td>
+<td>Display memory as bytes</td>
+</tr>
+<tr class="even">
+<td><code>R</code></td>
+<td>Display the registers</td>
+</tr>
+<tr class="odd">
+<td><code>G</code> [address]</td>
+<td>Jump to an address, like JMP</td>
+</tr>
+<tr class="even">
+<td><code>J</code> address</td>
+<td>Call a subroutine, like JSR</td>
+</tr>
+<tr class="odd">
+<td><code>C</code> <code>F</code> <code>H</code> <code>T</code></td>
+<td>Compare, fill, hunt and transfer memory</td>
+</tr>
+<tr class="even">
+<td><code>L</code> <code>S</code> <code>V</code></td>
+<td>Load, save and verify memory to disk</td>
+</tr>
+<tr class="odd">
+<td><code>B</code> address</td>
+<td>Show memory as 8×8 character bitmaps</td>
+</tr>
+<tr class="even">
+<td><code>@</code></td>
+<td>Disk command, directory or status</td>
+</tr>
+<tr class="odd">
+<td><code>X</code></td>
+<td>Exit to BASIC</td>
+</tr>
+</tbody>
+</table>
+<p>The full command reference is in the MEGA65 Book (p. O-6 onward).</p>
+<p>The program below puts the border through every colour many times
+over. It uses Z and Y as nested loop counters, so it also exercises one
+of the 45GS02's new registers. It is placed at <code>$42000</code>, in
+bank 4, which is free as long as no graphics commands are used.</p>
+<p>Enter the first line, then type each following instruction at the
+address the monitor offers:</p>
+<pre><code>A 42000 LDZ #$00
+A 42002 LDY #$00
+A 42004 INC $D020
+A 42007 DEY
+A 42008 BNE $42004
+A 4200A DEZ
+A 4200B BNE $42002
+A 4200D RTS</code></pre>
+<p>Branches are relative, so the code works wherever it is mapped:
+assembled at $42000, it runs correctly when SYS maps it at $2000. Check
+the result with <code>D 42000</code>, then leave the monitor with X and
+run the program from BASIC:</p>
+<pre><code>BANK 4 : SYS $2000</code></pre>
+<p>Recall from Chapter 6 that during SYS, <code>$2000-$7FFF</code> comes
+from the selected bank, which is why the code at <code>$42000</code>
+runs at <code>$2000</code>, and that <code>$8000-$FFFF</code> always has
+the system view with I/O mapped, which is why <code>INC $D020</code>
+reaches the VIC-IV.</p>
+<p>The border flickers with horizontal bands of colour rather than
+changing as a whole. At 40.5 MHz the inner loop runs many times during
+each scan line, so the colour changes partway across the screen. This is
+the basis of the raster effects covered in Chapters 8 and 12. Type
+<code>BANK 128</code> afterwards to return BASIC to the system view.</p>
+<p>The monitor is fine for experiments and for examining memory, but it
+has no labels, comments or source files. For anything larger, use a
+cross-assembler on a PC or an on-device assembler. The examples in the
+rest of this book use assembler syntax with labels.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Numbers.</strong> Hex is written with <code>$</code> and
+binary with <code>%</code>. Words and quads are stored low byte first,
+everywhere.</li>
+<li><strong>Registers.</strong> A, X, Y and Z are 8-bit; B moves the
+base page; SP is 8 or 16 bits depending on the E flag. The Z flag and
+the Z register are unrelated.</li>
+<li><strong>Addressing modes.</strong> All 6502 modes are present, plus
+<code>(zp),Z</code>, stack-relative, long branches, bit-relative and the
+45GS02's flat <code>[zp],Z</code>.</li>
+<li><strong>Instructions.</strong> New families cover the Z and B
+registers, word operations, single-bit operations, relative calls and
+parameter-dropping returns. STZ stores the Z register, not zero.</li>
+<li><strong>Q register.</strong> A, X, Y and Z form a 32-bit register
+for loads, stores, arithmetic, logic and shifts, using the
+<code>$42 $42</code> prefix.</li>
+<li><strong>Stack and interrupts.</strong> PHW, stack-relative
+addressing and RTN make stack parameters practical. Interrupt handlers
+must also preserve Z and B.</li>
+<li><strong>Tools.</strong> The built-in MONITOR assembles, disassembles
+and examines memory anywhere in the 28-bit space.</li>
+</ul>
+<p>Chapter 8 applies these to the MEGA65's hardware: banking, DMA,
+interrupts and speed control from machine language.</p>
+<nav class="chapnav"><span><a href="ch06-advanced-basic65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch08-ml-methods-specific-to-the-mega65.html">Next &rarr;</a></span></nav>
+</body>
+</html>

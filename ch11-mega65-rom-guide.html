@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 11: MEGA65 ROM Guide</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
+<h1 id="programming-the-mega65--chapter-11-mega65-rom-guide">Programming
+the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
+DOS, the monitor, the character sets, and a complete set of C64 ROMs for
+C64 mode. It is the largest system ROM Commodore ever designed, and
+unlike the C64's it is still changing: new releases appear regularly,
+fixing bugs and adding features.</p>
+<p>That makes the question "which parts can I call?" more important than
+it was on the C64. On a C64, programmers called almost any ROM routine
+they found, because the ROM never changed. On the MEGA65, a routine that
+is not part of an official interface may move in the next release. The
+MEGA65 team treats the KERNAL jump table as officially supported, along
+with certain documented facts about the memory layout such as
+<code>$2001</code> being the start of BASIC (<a
+href="https://m65digest.substack.com/p/robotfindskitten-part-2">Dan
+Sanderson, MEGA65 Digest</a>). Almost everything else is internal.</p>
+<p>This chapter therefore concentrates on the stable interfaces:</p>
+<ul>
+<li>How the ROM is organised and how to tell which version is
+installed</li>
+<li>The KERNAL jump table, including the C65 additions</li>
+<li>The RAM vectors for interrupts and I/O</li>
+<li>The Hypervisor's DOS functions</li>
+<li>Practices for writing code that survives ROM updates</li>
+</ul>
+<p>There is no complete map of BASIC 65's internal routines here, of the
+kind West gave for the C64's BASIC. Such a map would be out of date
+within months, and code built on it would break with it. Where earlier
+chapters needed BASIC internals, such as the USR function's conversion
+routines, the safest course is to check the documentation for the ROM
+version in use.</p>
+<h2 id="rom-layout-and-versions">ROM Layout and Versions</h2>
+<p>The ROM is a single 128KB image, loaded from the SD card into chip
+RAM at <code>$20000-$3FFFF</code> and write-protected, as Chapter 5
+described. Because it is an ordinary file, the installed version is
+simply whichever image the SD card holds, and different machines may run
+different versions.</p>
+<h3 id="where-things-are">Where things are</h3>
+<p>The MEGA65 ROM inherits its overall arrangement from the C65's. The
+C65 brings its system ROM into the CPU's window using both banking
+mechanisms: <code>$D030</code> for the editor at <code>$C000</code>, and
+MAP for the rest (<a
+href="https://github.com/MEGA65/mega65-rom-public/issues/62">MEGA65 ROM
+issue #62</a>). The original C65 ROM boots with a mapping that implies
+this layout:</p>
+<table>
+<thead>
+<tr class="header">
+<th>ROM address</th>
+<th>Seen by the CPU at</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$2C000-$2CFFF</code></td>
+<td><code>$C000-$CFFF</code>, through <code>$D030</code></td>
+<td>Interface and screen editor</td>
+</tr>
+<tr class="even">
+<td><code>$32000-$37FFF</code></td>
+<td><code>$2000-$7FFF</code>, through MAP</td>
+<td>Further system and BASIC code</td>
+</tr>
+<tr class="odd">
+<td><code>$38000-$3BFFF</code></td>
+<td><code>$8000-$BFFF</code>, through MAP</td>
+<td>BASIC</td>
+</tr>
+<tr class="even">
+<td><code>$3E000-$3FFFF</code></td>
+<td><code>$E000-$FFFF</code>, through MAP</td>
+<td>KERNAL, including the jump table and hardware vectors</td>
+</tr>
+</tbody>
+</table>
+<p>The rest of the image holds the DOS, the monitor, the character sets
+and the C64-mode BASIC and KERNAL. Treat this table as orientation only.
+The ROM's internal arrangement is not an interface, MEGA65 releases have
+reorganised it, and code should reach the ROM only through the jump
+table and vectors described in the following sections.</p>
+<h3 id="identifying-the-version">Identifying the version</h3>
+<p>MEGA65 ROM versions are six-digit numbers such as 920379, shown in
+the start-up banner. They fall into two series. The 92xxxx releases were
+the long-running first series; the 99xxxx releases followed with
+substantial changes, enough that tools written for one series do not
+always work with the other (<a
+href="https://github.com/MEGA65/eleven">Eleven IDE</a>).</p>
+<p>The ROM version matters most to programs that depend on behaviour
+added in a particular release, such as the BASIC 65 features dated in
+Chapter 6. Such programs should say which version they need. Programs
+that keep to the interfaces in this chapter rarely need to check at
+all.</p>
+<p>As on every Commodore machine since the C64, the byte at
+<code>$FF80</code> holds a KERNAL version number (<a
+href="https://www.pagetable.com/?p=926">pagetable.com</a>). It
+distinguishes KERNAL revisions, but it is not the six-digit ROM version
+shown in the banner.</p>
+<h2 id="the-kernal-jump-table">The KERNAL Jump Table</h2>
+<p>The jump table is a list of JMP instructions at the top of the
+KERNAL, each at a fixed address. Programs call the fixed address, and
+the JMP there leads to wherever the routine currently lives. When a new
+ROM moves a routine, only the JMP changes.</p>
+<p>The MEGA65-mode KERNAL derives from the C65's, which in turn derives
+from the C128's. Its table has two parts: the standard entries shared
+with the C64, and an extended block below them inherited from the C128
+by way of the C65.</p>
+<h3 id="standard-entries">Standard entries</h3>
+<p>These 39 entries occupy the same addresses as on the C64 and do the
+same jobs (<a
+href="https://www.pagetable.com/?p=926">pagetable.com</a>).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$FF81</code></td>
+<td>CINT</td>
+<td>Initialise screen editor and video</td>
+</tr>
+<tr class="even">
+<td><code>$FF84</code></td>
+<td>IOINIT</td>
+<td>Initialise I/O devices and the timer interrupt</td>
+</tr>
+<tr class="odd">
+<td><code>$FF87</code></td>
+<td>RAMTAS</td>
+<td>Test and initialise RAM</td>
+</tr>
+<tr class="even">
+<td><code>$FF8A</code></td>
+<td>RESTOR</td>
+<td>Restore the default KERNAL vectors</td>
+</tr>
+<tr class="odd">
+<td><code>$FF8D</code></td>
+<td>VECTOR</td>
+<td>Read or set the KERNAL vectors</td>
+</tr>
+<tr class="even">
+<td><code>$FF90</code></td>
+<td>SETMSG</td>
+<td>Enable or disable KERNAL messages</td>
+</tr>
+<tr class="odd">
+<td><code>$FF93</code></td>
+<td>SECOND</td>
+<td>Send a secondary address after LISTEN</td>
+</tr>
+<tr class="even">
+<td><code>$FF96</code></td>
+<td>TKSA</td>
+<td>Send a secondary address after TALK</td>
+</tr>
+<tr class="odd">
+<td><code>$FF99</code></td>
+<td>MEMTOP</td>
+<td>Read or set the top of memory</td>
+</tr>
+<tr class="even">
+<td><code>$FF9C</code></td>
+<td>MEMBOT</td>
+<td>Read or set the bottom of memory</td>
+</tr>
+<tr class="odd">
+<td><code>$FF9F</code></td>
+<td>SCNKEY</td>
+<td>Scan the keyboard</td>
+</tr>
+<tr class="even">
+<td><code>$FFA2</code></td>
+<td>SETTMO</td>
+<td>Set IEEE timeout (no effect)</td>
+</tr>
+<tr class="odd">
+<td><code>$FFA5</code></td>
+<td>ACPTR</td>
+<td>Read a byte from the serial bus</td>
+</tr>
+<tr class="even">
+<td><code>$FFA8</code></td>
+<td>CIOUT</td>
+<td>Send a byte to the serial bus</td>
+</tr>
+<tr class="odd">
+<td><code>$FFAB</code></td>
+<td>UNTLK</td>
+<td>Send UNTALK</td>
+</tr>
+<tr class="even">
+<td><code>$FFAE</code></td>
+<td>UNLSN</td>
+<td>Send UNLISTEN</td>
+</tr>
+<tr class="odd">
+<td><code>$FFB1</code></td>
+<td>LISTEN</td>
+<td>Send LISTEN</td>
+</tr>
+<tr class="even">
+<td><code>$FFB4</code></td>
+<td>TALK</td>
+<td>Send TALK</td>
+</tr>
+<tr class="odd">
+<td><code>$FFB7</code></td>
+<td>READST</td>
+<td>Read the I/O status byte</td>
+</tr>
+<tr class="even">
+<td><code>$FFBA</code></td>
+<td>SETLFS</td>
+<td>Set logical file, device and secondary address</td>
+</tr>
+<tr class="odd">
+<td><code>$FFBD</code></td>
+<td>SETNAM</td>
+<td>Set the file name</td>
+</tr>
+<tr class="even">
+<td><code>$FFC0</code></td>
+<td>OPEN</td>
+<td>Open a logical file</td>
+</tr>
+<tr class="odd">
+<td><code>$FFC3</code></td>
+<td>CLOSE</td>
+<td>Close a logical file</td>
+</tr>
+<tr class="even">
+<td><code>$FFC6</code></td>
+<td>CHKIN</td>
+<td>Set the input channel</td>
+</tr>
+<tr class="odd">
+<td><code>$FFC9</code></td>
+<td>CHKOUT</td>
+<td>Set the output channel</td>
+</tr>
+<tr class="even">
+<td><code>$FFCC</code></td>
+<td>CLRCHN</td>
+<td>Restore default channels</td>
+</tr>
+<tr class="odd">
+<td><code>$FFCF</code></td>
+<td>BASIN</td>
+<td>Input a character (CHRIN)</td>
+</tr>
+<tr class="even">
+<td><code>$FFD2</code></td>
+<td>BSOUT</td>
+<td>Output a character (CHROUT)</td>
+</tr>
+<tr class="odd">
+<td><code>$FFD5</code></td>
+<td>LOAD</td>
+<td>Load or verify a file</td>
+</tr>
+<tr class="even">
+<td><code>$FFD8</code></td>
+<td>SAVE</td>
+<td>Save memory to a file</td>
+</tr>
+<tr class="odd">
+<td><code>$FFDB</code></td>
+<td>SETTIM</td>
+<td>Set the system clock</td>
+</tr>
+<tr class="even">
+<td><code>$FFDE</code></td>
+<td>RDTIM</td>
+<td>Read the system clock</td>
+</tr>
+<tr class="odd">
+<td><code>$FFE1</code></td>
+<td>STOP</td>
+<td>Test the STOP key</td>
+</tr>
+<tr class="even">
+<td><code>$FFE4</code></td>
+<td>GETIN</td>
+<td>Get a character from the keyboard buffer</td>
+</tr>
+<tr class="odd">
+<td><code>$FFE7</code></td>
+<td>CLALL</td>
+<td>Close all files</td>
+</tr>
+<tr class="even">
+<td><code>$FFEA</code></td>
+<td>UDTIM</td>
+<td>Advance the system clock</td>
+</tr>
+<tr class="odd">
+<td><code>$FFED</code></td>
+<td>SCREEN</td>
+<td>Return the screen size in columns and rows</td>
+</tr>
+<tr class="even">
+<td><code>$FFF0</code></td>
+<td>PLOT</td>
+<td>Read or set the cursor position</td>
+</tr>
+<tr class="odd">
+<td><code>$FFF3</code></td>
+<td>IOBASE</td>
+<td>Return the base address of the I/O area</td>
+</tr>
+</tbody>
+</table>
+<p>SCREEN is worth using on the MEGA65, where the text screen may be 40
+or 80 columns wide and 25 or 50 rows high. A program that asks SCREEN
+for its dimensions works in every mode.</p>
+<h3 id="extended-entries">Extended entries</h3>
+<p>The C65 kept most of the C128's additions, dropped three that made
+sense only on a C128 (DMA_CALL, DLCHR and GETCFG), and added
+MONITOR_CALL. The removals moved many entries to new addresses, so they
+do not match the C128 (<a
+href="https://www.pagetable.com/?p=926">pagetable.com</a>).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$FF4D</code></td>
+<td>SPIN_SPOUT</td>
+<td>Set up fast serial for I/O</td>
+</tr>
+<tr class="even">
+<td><code>$FF50</code></td>
+<td>CLOSE_ALL</td>
+<td>Close all files on a device</td>
+</tr>
+<tr class="odd">
+<td><code>$FF53</code></td>
+<td>C64MODE</td>
+<td>Switch to C64 mode</td>
+</tr>
+<tr class="even">
+<td><code>$FF56</code></td>
+<td>MONITOR_CALL</td>
+<td>Enter the machine-language monitor</td>
+</tr>
+<tr class="odd">
+<td><code>$FF59</code></td>
+<td>BOOT_CALL</td>
+<td>Boot a program from disk</td>
+</tr>
+<tr class="even">
+<td><code>$FF5C</code></td>
+<td>PHOENIX</td>
+<td>Initialise function cartridges</td>
+</tr>
+<tr class="odd">
+<td><code>$FF5F</code></td>
+<td>LKUPLA</td>
+<td>Find a free logical file number</td>
+</tr>
+<tr class="even">
+<td><code>$FF62</code></td>
+<td>LKUPSA</td>
+<td>Find a free secondary address</td>
+</tr>
+<tr class="odd">
+<td><code>$FF65</code></td>
+<td>SWAPPER</td>
+<td>Switch screen width</td>
+</tr>
+<tr class="even">
+<td><code>$FF68</code></td>
+<td>PFKEY</td>
+<td>Program a function key</td>
+</tr>
+<tr class="odd">
+<td><code>$FF6B</code></td>
+<td>SETBNK</td>
+<td>Set the banks for LOAD and SAVE data and the file name</td>
+</tr>
+<tr class="even">
+<td><code>$FF6E</code></td>
+<td>JSRFAR</td>
+<td>Call a routine in another bank</td>
+</tr>
+<tr class="odd">
+<td><code>$FF71</code></td>
+<td>JMPFAR</td>
+<td>Jump to a routine in another bank</td>
+</tr>
+<tr class="even">
+<td><code>$FF74</code></td>
+<td>LDA_FAR</td>
+<td>Load a byte from another bank</td>
+</tr>
+<tr class="odd">
+<td><code>$FF77</code></td>
+<td>STA_FAR</td>
+<td>Store a byte in another bank</td>
+</tr>
+<tr class="even">
+<td><code>$FF7A</code></td>
+<td>CMP_FAR</td>
+<td>Compare A with a byte in another bank</td>
+</tr>
+<tr class="odd">
+<td><code>$FF7D</code></td>
+<td>PRIMM</td>
+<td>Print the zero-terminated string that follows the JSR</td>
+</tr>
+</tbody>
+</table>
+<p>The last six are not among the entries the C65 moved, so they keep
+their C128 addresses. PRIMM at <code>$FF7D</code> is confirmed on the
+MEGA65 (<a
+href="https://m65digest.substack.com/p/robotfindskitten-part-2">MEGA65
+Digest</a>). The far-memory calls do not take the same arguments as on
+the C128: the C65 versions pass the bank in the Z register. Check the
+arguments for these calls against the documentation for your ROM before
+relying on them, since the MEGA65 team has said the extended entries
+carry over "with some changes".</p>
+<h3 id="example-printing-with-primm">Example: printing with PRIMM</h3>
+<p>PRIMM reads the bytes after the JSR as a string, prints them, and
+returns to the instruction after the terminating zero:</p>
+<pre><code>        jsr $ff7d       ; PRIMM
+        .text &quot;HELLO, MEGA65&quot;, 13, 0
+        rts             ; execution continues here</code></pre>
+<p>It is the shortest way to print a fixed message from machine
+language, and it needs no pointer setup.</p>
+<h2 id="ram-vectors">RAM Vectors</h2>
+<p>The jump table lets programs call the KERNAL. The RAM vectors let
+programs change what the KERNAL does. Each is a two-byte address in RAM
+that the KERNAL jumps through at a key moment, such as handling an
+interrupt or outputting a character. Pointing a vector at your own
+routine inserts that routine into the KERNAL's work.</p>
+<h3 id="the-standard-vector-table">The standard vector table</h3>
+<p>The C65's vector table at <code>$0314-$0333</code> follows the C64
+and C128 layout, with the vector the C64 left unused now serving the
+monitor (<a href="https://www.pagetable.com/?p=926">pagetable.com</a>).
+The MEGA65 KERNAL inherits it from the C65.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Name</th>
+<th>Jumped through for</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0314</code></td>
+<td>CINV</td>
+<td>IRQ handler</td>
+</tr>
+<tr class="even">
+<td><code>$0316</code></td>
+<td>CBINV</td>
+<td>BRK handler</td>
+</tr>
+<tr class="odd">
+<td><code>$0318</code></td>
+<td>NMINV</td>
+<td>NMI handler</td>
+</tr>
+<tr class="even">
+<td><code>$031A</code></td>
+<td>IOPEN</td>
+<td>OPEN</td>
+</tr>
+<tr class="odd">
+<td><code>$031C</code></td>
+<td>ICLOSE</td>
+<td>CLOSE</td>
+</tr>
+<tr class="even">
+<td><code>$031E</code></td>
+<td>ICHKIN</td>
+<td>CHKIN</td>
+</tr>
+<tr class="odd">
+<td><code>$0320</code></td>
+<td>ICKOUT</td>
+<td>CHKOUT</td>
+</tr>
+<tr class="even">
+<td><code>$0322</code></td>
+<td>ICLRCH</td>
+<td>CLRCHN</td>
+</tr>
+<tr class="odd">
+<td><code>$0324</code></td>
+<td>IBASIN</td>
+<td>BASIN</td>
+</tr>
+<tr class="even">
+<td><code>$0326</code></td>
+<td>IBSOUT</td>
+<td>BSOUT</td>
+</tr>
+<tr class="odd">
+<td><code>$0328</code></td>
+<td>ISTOP</td>
+<td>STOP</td>
+</tr>
+<tr class="even">
+<td><code>$032A</code></td>
+<td>IGETIN</td>
+<td>GETIN</td>
+</tr>
+<tr class="odd">
+<td><code>$032C</code></td>
+<td>ICLALL</td>
+<td>CLALL</td>
+</tr>
+<tr class="even">
+<td><code>$032E</code></td>
+<td>EXMON</td>
+<td>Monitor command input</td>
+</tr>
+<tr class="odd">
+<td><code>$0330</code></td>
+<td>ILOAD</td>
+<td>LOAD</td>
+</tr>
+<tr class="even">
+<td><code>$0332</code></td>
+<td>ISAVE</td>
+<td>SAVE</td>
+</tr>
+</tbody>
+</table>
+<p>The VECTOR call at <code>$FF8D</code> copies this whole table to or
+from memory, and RESTOR at <code>$FF8A</code> resets it to the defaults.
+Using VECTOR to save the table before changing it, and to put it back
+afterwards, is safer than editing individual entries.</p>
+<p>The C65 also added vectors for the low-level serial bus routines,
+from <code>$0335</code> upward: TALK, LISTEN, TKSA, SECOND, ACPTR,
+CIOUT, UNTLK and UNLSN. They are spaced three bytes apart rather than
+two, and they are not part of the table VECTOR copies.</p>
+<h3 id="chaining-into-the-irq">Chaining into the IRQ</h3>
+<p>A cooperative program that wants code to run on every system
+interrupt, such as a background music player, points CINV at its own
+routine and ends that routine by jumping to the old handler, so that
+keyboard scanning and the clock keep working:</p>
+<pre><code>install sei
+        lda $0314
+        sta oldirq
+        lda $0315
+        sta oldirq+1
+        lda #&lt;myirq
+        sta $0314
+        lda #&gt;myirq
+        sta $0315
+        cli
+        rts
+
+myirq   inc $d020       ; the routine&#39;s own work
+        jmp (oldirq)    ; continue with the KERNAL handler
+
+oldirq  .word 0</code></pre>
+<p>The KERNAL saves A, X and Y before jumping through CINV, as on the
+C64. Do not assume it also saves Z or B: a routine that changes them
+must restore them itself. Changing the vector inside SEI and CLI
+prevents an interrupt from arriving when only one byte has been
+written.</p>
+<h3 id="hardware-vectors">Hardware vectors</h3>
+<p>Separate from the RAM vectors are the CPU's own vectors at the top of
+the KERNAL ROM: NMI at <code>$FFFA</code>, RESET at <code>$FFFC</code>
+and IRQ/BRK at <code>$FFFE</code>. They point into the KERNAL, which
+then jumps through the RAM vectors. A takeover program that switches the
+KERNAL out replaces them with its own, as shown in Chapter 8.</p>
+<h3 id="basic-vectors-and-usr">BASIC vectors and USR</h3>
+<p>BASIC 65 has its own vectors, which belong to BASIC rather than the
+KERNAL. The one programs most often need is the USR vector, two bytes at
+<code>$02F8</code>, low byte first, read in the system bank:
+<code>BANK 128 : WPOKE $02F8, $1800</code> points USR at a routine at
+<code>$1800</code> (MEGA65 Book, p. B-285). Chapter 9 describes writing
+USR routines. Other BASIC vectors and work areas are internal and should
+not be assumed from the C64 or C128.</p>
+<h2 id="hypervisor-services">Hypervisor Services</h2>
+<p>The Hypervisor's services, documented by the MEGA65 Book for Hyppo
+version 1.2, are reached through trap registers at
+<code>$D640-$D67F</code>. The service number goes in A, other inputs in
+X, Y and Z, and the write is followed by CLV, because the CPU may or may
+not execute the byte after the trap when the service returns. On return,
+carry set means success; carry clear means failure, with an error code
+in A. Registers not used for results are preserved, and the trap
+registers exist only in the MEGA65 I/O personality (MEGA65 Book, pp.
+N-4, N-5).</p>
+<p>Most services use <code>$D640</code>. A few use other trap registers:
+<code>$D641</code> for ROM write-protection, <code>$D642</code> for
+configuration and freeze-slot services, <code>$D643</code> for serial
+monitor output, and <code>$D67F</code> for a program to freeze itself
+(MEGA65 Book, Appendix N).</p>
+<h3 id="services-at-d640">Services at <code>$D640</code></h3>
+<p>The table lists the services the Book documents. "Not in 1.2" marks
+services the Book defines but describes as not implemented in Hyppo 1.2;
+they return error <code>$82</code> there.</p>
+<table>
+<thead>
+<tr class="header">
+<th>A</th>
+<th>Service</th>
+<th>Status in 1.2</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$00</code></td>
+<td>getversion</td>
+<td>Yes</td>
+<td>Hyppo version in A.X, HDOS version in Y.Z</td>
+</tr>
+<tr class="even">
+<td><code>$02</code></td>
+<td>getdefaultdrive</td>
+<td>Yes</td>
+<td>SD card partition selected at boot</td>
+</tr>
+<tr class="odd">
+<td><code>$04</code></td>
+<td>getcurrentdrive</td>
+<td>Yes</td>
+<td>Current drive</td>
+</tr>
+<tr class="even">
+<td><code>$06</code></td>
+<td>selectdrive</td>
+<td>Yes</td>
+<td>Select a drive (SD card partition)</td>
+</tr>
+<tr class="odd">
+<td><code>$08</code></td>
+<td>getdrivesize</td>
+<td>Not in 1.2</td>
+<td>Size of a drive</td>
+</tr>
+<tr class="even">
+<td><code>$0A</code></td>
+<td>getcwd</td>
+<td>Not in 1.2</td>
+<td>Current directory</td>
+</tr>
+<tr class="odd">
+<td><code>$0C</code></td>
+<td>chdir</td>
+<td>Yes</td>
+<td>Change directory</td>
+</tr>
+<tr class="even">
+<td><code>$0E</code></td>
+<td>mkdir</td>
+<td>Not in 1.2</td>
+<td>Create a directory</td>
+</tr>
+<tr class="odd">
+<td><code>$10</code></td>
+<td>rmdir</td>
+<td>Not in 1.2</td>
+<td>Remove a directory</td>
+</tr>
+<tr class="even">
+<td><code>$12</code></td>
+<td>opendir</td>
+<td>Yes</td>
+<td>Open a directory for reading</td>
+</tr>
+<tr class="odd">
+<td><code>$14</code></td>
+<td>readdir</td>
+<td>Yes</td>
+<td>Read the next directory entry</td>
+</tr>
+<tr class="even">
+<td><code>$16</code></td>
+<td>closedir</td>
+<td>Yes</td>
+<td>Close a directory</td>
+</tr>
+<tr class="odd">
+<td><code>$18</code></td>
+<td>openfile</td>
+<td>Yes</td>
+<td>Open a file</td>
+</tr>
+<tr class="even">
+<td><code>$1A</code></td>
+<td>readfile</td>
+<td>Yes</td>
+<td>Read a sector of the open file</td>
+</tr>
+<tr class="odd">
+<td><code>$1C</code></td>
+<td>writefile</td>
+<td>Yes</td>
+<td>Write a sector to the open file</td>
+</tr>
+<tr class="even">
+<td><code>$1E</code></td>
+<td>mkfile</td>
+<td>Not in 1.2</td>
+<td>Create a file</td>
+</tr>
+<tr class="odd">
+<td><code>$20</code></td>
+<td>closefile</td>
+<td>Yes</td>
+<td>Close a file</td>
+</tr>
+<tr class="even">
+<td><code>$22</code></td>
+<td>closeall</td>
+<td>Yes</td>
+<td>Close all files and directories</td>
+</tr>
+<tr class="odd">
+<td><code>$24</code></td>
+<td>seekfile</td>
+<td>Not in 1.2</td>
+<td>Seek within a file</td>
+</tr>
+<tr class="even">
+<td><code>$26</code></td>
+<td>rmfile</td>
+<td>Yes</td>
+<td>Delete a file</td>
+</tr>
+<tr class="odd">
+<td><code>$28</code></td>
+<td>fstat</td>
+<td>Not in 1.2</td>
+<td>File information</td>
+</tr>
+<tr class="even">
+<td><code>$2A</code></td>
+<td>rename</td>
+<td>Not in 1.2</td>
+<td>Rename a file</td>
+</tr>
+<tr class="odd">
+<td><code>$2C</code></td>
+<td>filedate</td>
+<td>Not in 1.2</td>
+<td>File date</td>
+</tr>
+<tr class="even">
+<td><code>$2E</code></td>
+<td>setname</td>
+<td>Yes</td>
+<td>Set the current file name; Y = page of a page-aligned ASCII
+name</td>
+</tr>
+<tr class="odd">
+<td><code>$30</code></td>
+<td>findfirst</td>
+<td>Yes</td>
+<td>Find the first file matching the name</td>
+</tr>
+<tr class="even">
+<td><code>$32</code></td>
+<td>findnext</td>
+<td>Yes</td>
+<td>Find the next matching file</td>
+</tr>
+<tr class="odd">
+<td><code>$34</code></td>
+<td>findfile</td>
+<td>Yes</td>
+<td>Find a file by name</td>
+</tr>
+<tr class="even">
+<td><code>$36</code></td>
+<td>loadfile</td>
+<td>Yes</td>
+<td>Load the named file to <code>$00ZZYYXX</code></td>
+</tr>
+<tr class="odd">
+<td><code>$38</code></td>
+<td>geterrorcode</td>
+<td>Yes</td>
+<td>Error code of the last failed service</td>
+</tr>
+<tr class="even">
+<td><code>$3A</code></td>
+<td>setup_transfer_area</td>
+<td>Yes</td>
+<td>Y = page used to pass data</td>
+</tr>
+<tr class="odd">
+<td><code>$3C</code></td>
+<td>cdrootdir</td>
+<td>Yes</td>
+<td>Change to the root directory</td>
+</tr>
+<tr class="even">
+<td><code>$3E</code></td>
+<td>loadfile_attic</td>
+<td>Yes</td>
+<td>Load the named file to <code>$08ZZYYXX</code></td>
+</tr>
+<tr class="odd">
+<td><code>$40</code></td>
+<td>d81attach0</td>
+<td>Yes</td>
+<td>Attach a D81 image as drive 0</td>
+</tr>
+<tr class="even">
+<td><code>$42</code></td>
+<td>d81detach</td>
+<td>Yes</td>
+<td>Detach disk images</td>
+</tr>
+<tr class="odd">
+<td><code>$44</code></td>
+<td>d81write_en</td>
+<td>Yes</td>
+<td>Allow writing to attached images</td>
+</tr>
+<tr class="even">
+<td><code>$46</code></td>
+<td>d81attach1</td>
+<td>Yes</td>
+<td>Attach a D81 image as drive 1</td>
+</tr>
+<tr class="odd">
+<td><code>$48</code></td>
+<td>get_proc_desc</td>
+<td>Yes</td>
+<td>Read the process descriptor</td>
+</tr>
+<tr class="even">
+<td><code>$4A</code></td>
+<td>attach</td>
+<td>Yes</td>
+<td>Attach a disk image</td>
+</tr>
+<tr class="odd">
+<td><code>$50</code>-<code>$6E</code></td>
+<td>task and message services</td>
+<td>Not in 1.2</td>
+<td>Create, switch and exit tasks; send and receive messages</td>
+</tr>
+<tr class="even">
+<td><code>$70</code></td>
+<td>toggle_rom_writeprotect</td>
+<td>Yes</td>
+<td>Toggle write-protection of the ROM in banks 2 and 3</td>
+</tr>
+<tr class="odd">
+<td><code>$72</code></td>
+<td>toggle_force_4502</td>
+<td>Yes</td>
+<td>Toggle the CPU's 6502 personality</td>
+</tr>
+<tr class="even">
+<td><code>$74</code></td>
+<td>get_mapping</td>
+<td>Yes</td>
+<td>Copy the MAP state to six bytes at page Y</td>
+</tr>
+<tr class="odd">
+<td><code>$76</code></td>
+<td>set_mapping</td>
+<td>Yes</td>
+<td>Set the MAP state from memory</td>
+</tr>
+<tr class="even">
+<td><code>$7C</code></td>
+<td>serial_monitor_write</td>
+<td>Yes</td>
+<td>Write to the serial monitor</td>
+</tr>
+<tr class="odd">
+<td><code>$7E</code></td>
+<td>reset</td>
+<td>Yes</td>
+<td>Warm boot the MEGA65</td>
+</tr>
+</tbody>
+</table>
+<p>Several services have extra requirements. setname needs the name to
+start on a page boundary between <code>$0000</code> and
+<code>$7E00</code>, be shorter than 63 characters and end with a zero
+byte; it is ASCII, and Hyppo does not convert from PETSCII. Services
+that pass data use the transfer area, which setname also sets to the
+name's page. The file services work on the FAT32 file system of the SD
+cards, not on floppy disks or disk images (MEGA65 Book, pp. N-10,
+N-38).</p>
+<h3 id="versions">Versions</h3>
+<p>Hyppo is updated with the MEGA65 core, independently of the ROM. In
+August 2026, for example, a mega65-core pull request filled in
+getdisksize, getcwd, mkdir, rmdir, seekfile and rename, finished fstat,
+and added long file name support to mkfile (<a
+href="https://github.com/MEGA65/mega65-core/pull/946">mega65-core PR
+#946</a>). A program should therefore call getversion first and treat
+error <code>$82</code>, not implemented, as an expected result for newer
+services rather than as a failure of the program.</p>
+<h3 id="error-codes">Error codes</h3>
+<p>The Book lists these error codes (MEGA65 Book, pp. N-7, N-8). The
+core sources also define lower-numbered codes, such as <code>$10</code>
+for an invalid address, which setname returns when Y is above
+<code>$7E</code>.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$80</code></td>
+<td>No such drive</td>
+</tr>
+<tr class="even">
+<td><code>$81</code></td>
+<td>Name too long</td>
+</tr>
+<tr class="odd">
+<td><code>$82</code></td>
+<td>Service not implemented</td>
+</tr>
+<tr class="even">
+<td><code>$83</code></td>
+<td>File larger than 16MB</td>
+</tr>
+<tr class="odd">
+<td><code>$84</code></td>
+<td>Too many open files</td>
+</tr>
+<tr class="even">
+<td><code>$85</code></td>
+<td>Invalid cluster</td>
+</tr>
+<tr class="odd">
+<td><code>$86</code></td>
+<td>Is a directory</td>
+</tr>
+<tr class="even">
+<td><code>$87</code></td>
+<td>Not a directory</td>
+</tr>
+<tr class="odd">
+<td><code>$88</code></td>
+<td>File not found</td>
+</tr>
+<tr class="even">
+<td><code>$89</code></td>
+<td>Invalid or closed file descriptor</td>
+</tr>
+<tr class="odd">
+<td><code>$8A</code></td>
+<td>Disk image has the wrong length</td>
+</tr>
+<tr class="even">
+<td><code>$8B</code></td>
+<td>Disk image is fragmented on the SD card</td>
+</tr>
+<tr class="odd">
+<td><code>$8C</code></td>
+<td>No space on the SD card</td>
+</tr>
+<tr class="even">
+<td><code>$8D</code></td>
+<td>File already exists</td>
+</tr>
+<tr class="odd">
+<td><code>$8E</code></td>
+<td>Directory full</td>
+</tr>
+<tr class="even">
+<td><code>$8F</code></td>
+<td>Image already attached to the other drive</td>
+</tr>
+<tr class="odd">
+<td><code>$FF</code></td>
+<td>End of file or directory, or no such trap</td>
+</tr>
+</tbody>
+</table>
+<h2 id="writing-rom-independent-code">Writing ROM-Independent Code</h2>
+<p>A MEGA65 program may be run on a ROM newer, or older, than the one it
+was written on. The habits below keep it working across versions.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Practice</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Call the KERNAL only through the jump table</td>
+<td>Routine addresses move between releases; jump table addresses do
+not</td>
+</tr>
+<tr class="even">
+<td>Change KERNAL behaviour through RAM vectors, using VECTOR and
+RESTOR</td>
+<td>The vector table is an interface; patching ROM code is not</td>
+</tr>
+<tr class="odd">
+<td>Avoid BASIC 65 internals</td>
+<td>BASIC's routines, work areas and token handling change from release
+to release</td>
+</tr>
+<tr class="even">
+<td>Use the Hypervisor for SD card files</td>
+<td>Its function numbers are stable and its version can be checked</td>
+</tr>
+<tr class="odd">
+<td>Check versions only where a feature demands it</td>
+<td>Version checks for features you do not use only add ways to
+fail</td>
+</tr>
+<tr class="even">
+<td>Use a private base page, as in Chapter 9</td>
+<td>BASIC 65 and KERNAL zero-page usage is private to the ROM</td>
+</tr>
+<tr class="odd">
+<td>Prefer flat addressing and DMA to MAP in cooperative code</td>
+<td>The ROM's map settings are internal and cannot be read back</td>
+</tr>
+</tbody>
+</table>
+<h3 id="zero-page-and-system-ram">Zero page and system RAM</h3>
+<p>The C64's zero page was so well documented that programmers routinely
+borrowed its locations. On the MEGA65 that is risky. The MEGA65 team
+keeps what it calls a private API contract over the KERNAL's zero page,
+so its use can change (<a
+href="https://github.com/MEGA65/mega65-rom-public/issues/80">MEGA65 ROM
+issue #80</a>). The same issue records a ROM release that began using a
+zero-page location in C64 mode that third-party software also used,
+breaking that software.</p>
+<p>A routine that needs base page storage should therefore bring its
+own, by pointing B at a page it owns. A routine that must share zero
+page should restrict itself to locations the ROM documentation for its
+target version describes as free.</p>
+<h3 id="when-a-rom-routine-is-unavoidable">When a ROM routine is
+unavoidable</h3>
+<p>Sometimes a program genuinely needs an internal ROM routine, such as
+BASIC's floating-point conversion for USR. In that case:</p>
+<ol type="1">
+<li>Keep every such address in one place in the source, labelled with
+the ROM version it was taken from.</li>
+<li>Have the program check the ROM version at start-up and refuse to
+run, with a clear message, on a version it was not tested with.</li>
+<li>Note the dependency in the program's documentation, so users know to
+look for an update after upgrading their ROM.</li>
+</ol>
+<p>This turns a silent crash after a ROM update into a clear message,
+which is the best that can be done for code outside the official
+interfaces.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Stability.</strong> The KERNAL jump table is the officially
+supported ROM interface. BASIC 65 internals, ROM layout and KERNAL zero
+page are private and change between releases.</li>
+<li><strong>Layout and versions.</strong> The 128KB ROM lives at
+<code>$20000-$3FFFF</code>. Versions are six-digit numbers in two
+series, 92xxxx and 99xxxx; <code>$FF80</code> holds a separate KERNAL
+version byte.</li>
+<li><strong>Jump table.</strong> The 39 C64 entries at
+<code>$FF81-$FFF3</code> are unchanged. The C65-derived extended block
+runs from SPIN_SPOUT at <code>$FF4D</code> to PRIMM at
+<code>$FF7D</code>, with C128-style calls at C65 addresses and bank
+numbers passed in Z.</li>
+<li><strong>RAM vectors.</strong> CINV, CBINV and NMINV at
+<code>$0314-$0319</code> and the I/O vectors up to <code>$0333</code>
+follow the C64 layout; VECTOR and RESTOR manage them safely. Interrupt
+routines chained through CINV must preserve Z and B themselves.</li>
+<li><strong>Hypervisor.</strong> Even-numbered functions in A, a write
+to <code>$D640</code>, CLV, and carry for success. Hyppo 1.2 leaves
+directory creation, renaming, seeking and all task services
+unimplemented; check the version before relying on newer services, and
+treat error <code>$82</code> as "not available".</li>
+<li><strong>Portability.</strong> Use interfaces, bring your own base
+page, and confine any unavoidable ROM dependency to one labelled place
+with a version check.</li>
+</ul>
+<p>Chapter 12 turns to the VIC-IV and graphics.</p>
+<nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
+</body>
+</html>

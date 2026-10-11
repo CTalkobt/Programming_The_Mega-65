@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 14: The SD Card and Mass
+Storage</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch13-sound.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch15-using-the-disk-drive.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-14-the-sd-card-and-mass-storage">Programming
+the MEGA65 — Chapter 14: The SD Card and Mass Storage</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>In West's book this chapter covered the C64's cassette tape. The
+MEGA65 has no cassette port. Its everyday mass storage is the SD card,
+which holds the system itself, the configuration, and the user's
+software and data, mostly in the form of disk images. This chapter
+covers the SD card as storage: how it is organised, how disk images on
+it are used, how BASIC and machine language reach its files directly,
+and how files get onto it. Chapter 15 then covers the disk commands that
+work on images and real drives alike.</p>
+<h2 id="sd-cards">SD Cards</h2>
+<p>The MEGA65 has two SD card slots: a full-size slot inside the case,
+reached from underneath, and a microSD slot at the rear. Only one is
+used at a time; a card in the rear slot takes over, and the internal
+card is ignored. The rear slot is the more convenient for moving a card
+between the MEGA65 and a PC (MEGA65 Book, p. 4-9).</p>
+<p>The MEGA65 supports SDHC cards between 4GB and 32GB. Smaller cards
+and larger SDXC cards are not expected to work.</p>
+<h3 id="partitions">Partitions</h3>
+<p>An SD card must be prepared by the MEGA65's own SD Card Utility; a
+card formatted by a PC will not work, even if only its FAT32 partition
+is changed. The utility creates two partitions (MEGA65 Book, pp. 4-9,
+4-10):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Partition</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Hidden</td>
+<td>Configuration settings and freeze states</td>
+</tr>
+<tr class="even">
+<td>FAT32</td>
+<td>System files, disk images and other files, readable by a PC</td>
+</tr>
+</tbody>
+</table>
+<p>A backup that copies only the files on the FAT32 partition misses the
+configuration and freeze states; a complete backup needs a tool that
+copies whole partitions.</p>
+<h3 id="preparing-a-card">Preparing a card</h3>
+<p>Switch the MEGA65 off, hold ALT and switch it on to open the utility
+menu, then choose 2, the SD card utility. Choose the card to prepare, 0
+for internal and 1 for the rear microSD, and confirm by typing DELETE
+EVERYTHING. The utility partitions the card and then copies the system
+files, the ROM and Hypervisor files, from the core. Formatting cannot be
+undone, and the Book advises not erasing the internal card that came
+with the machine (MEGA65 Book, pp. 4-10, 4-11).</p>
+<h3 id="what-is-on-the-fat32-partition">What is on the FAT32
+partition</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Files</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>MEGA65.ROM</code></td>
+<td>The ROM image loaded at power-on</td>
+</tr>
+<tr class="even">
+<td><code>.M65</code> files</td>
+<td>System files used by the Hypervisor and utilities</td>
+</tr>
+<tr class="odd">
+<td><code>MEGA65.D81</code></td>
+<td>The Intro Disk, mounted at start-up by default</td>
+</tr>
+<tr class="even">
+<td>Other <code>.D81</code> and <code>.D64</code> files</td>
+<td>Disk images of software and data</td>
+</tr>
+<tr class="odd">
+<td><code>.PRG</code> and other files</td>
+<td>Programs and data stored directly on the card</td>
+</tr>
+</tbody>
+</table>
+<p>Files can be organised into subdirectories, which the Freezer's file
+browser and BASIC's CHDIR command understand.</p>
+<h2 id="disk-images">Disk Images</h2>
+<p>Most MEGA65 software is distributed as D81 files: images of 3.5"
+Commodore 1581 disks. A mounted image behaves exactly like a real disk
+in a drive, so every disk command in Chapter 15 works on it. The MEGA65
+also mounts D64 images of 1541 disks.</p>
+<h3 id="managed-drives-and-unit-numbers">Managed drives and unit
+numbers</h3>
+<p>The MEGA65 provides two managed drives alongside anything on the IEC
+port (MEGA65 Book, pp. 6-3, 6-4):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Managed drive</th>
+<th>Can hold</th>
+<th>Unit number</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>First</td>
+<td>A D81 or D64 image, or the internal 3.5" drive</td>
+<td>8 or 10</td>
+</tr>
+<tr class="even">
+<td>Second</td>
+<td>A D81 or D64 image</td>
+<td>9 or 11</td>
+</tr>
+</tbody>
+</table>
+<p>Commands addressed to these units are handled by the MEGA65; any
+other unit number goes to the IEC port. The unit assignments are
+temporary and return to their defaults at power-on.</p>
+<h3 id="mounting">Mounting</h3>
+<p>In the Freezer, press 0 or 1 to choose a managed drive, pick an image
+from the file browser, and press 8 or 9 to change its unit number. From
+BASIC, MOUNT does the same, using the current directory on the card:</p>
+<pre><code>MOUNT &quot;MEGA65.D81&quot;
+MOUNT &quot;GAMES.D81&quot;, U9</code></pre>
+<p>The Freezer can also create a new, formatted D81 image: choose the
+first managed drive and select NEW D81 DD IMAGE at the top of the file
+list (MEGA65 Book, pp. 6-5, 6-6).</p>
+<h3 id="the-sd-card-as-unit-12">The SD card as unit 12</h3>
+<p>A few BASIC commands can reach files on the card directly, outside
+any disk image, by using unit 12 (MEGA65 Book, pp. 6-10, 6-11):</p>
+<pre><code>10 DIR U12, P                  : REM LIST THE CARD, A PAGE AT A TIME
+20 DLOAD &quot;MYPROGRAM.PRG&quot;, U12  : REM NOTE THE .PRG SUFFIX
+30 CHDIR &quot;DEMOS&quot;, U12          : REM CHANGE THE CURRENT DIRECTORY
+40 CHDIR &quot;..&quot;, U12             : REM BACK TO THE PARENT</code></pre>
+<p>Unit 12 is not a full disk drive: only these operations work on it.
+MOUNT does not take U12, because its U argument chooses the unit to
+mount the image on, but it does use the directory set by CHDIR. Support
+for subdirectories is still developing; for example, changing the
+current directory unmounts an image that was mounted from a subdirectory
+(MEGA65 Book, p. 6-6).</p>
+<h3 id="booting-from-an-image">Booting from an image</h3>
+<p>The configuration utility chooses an image to mount at power-on. If
+that image holds a program named <code>AUTOBOOT.C65</code>, it runs
+automatically; this is how the Intro Disk starts. Saving a short program
+under that name, perhaps one that sets a font, colours and KEY macros,
+gives a personal start-up routine (MEGA65 Book, p. 6-10).</p>
+<h2 id="sd-card-files-from-machine-language">SD Card Files from Machine
+Language</h2>
+<p>The KERNAL reaches disk images through the usual OPEN, LOAD and SAVE
+calls. For files on the card itself, machine language uses the
+Hypervisor's file services, which work even when a program has switched
+the KERNAL out:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Service</th>
+<th>A</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>setname</td>
+<td><code>$2E</code></td>
+<td>Set the file name: a page-aligned ASCII name, page in Y</td>
+</tr>
+<tr class="even">
+<td>loadfile</td>
+<td><code>$36</code></td>
+<td>Load the whole file to chip RAM</td>
+</tr>
+<tr class="odd">
+<td>loadfile_attic</td>
+<td><code>$3E</code></td>
+<td>Load the whole file to attic RAM</td>
+</tr>
+<tr class="even">
+<td>findfirst, findnext</td>
+<td><code>$30</code>, <code>$32</code></td>
+<td>Search the current directory</td>
+</tr>
+<tr class="odd">
+<td>openfile, readfile, closefile</td>
+<td><code>$18</code>, <code>$1A</code>, <code>$20</code></td>
+<td>Read a file a sector at a time</td>
+</tr>
+<tr class="even">
+<td>chdir, cdrootdir</td>
+<td><code>$0C</code>, <code>$3C</code></td>
+<td>Change directory</td>
+</tr>
+<tr class="odd">
+<td>d81attach0, d81attach1</td>
+<td><code>$40</code>, <code>$46</code></td>
+<td>Mount a disk image</td>
+</tr>
+</tbody>
+</table>
+<p>Chapter 8 gives a complete loading example, and Chapter 11 lists
+every service and which ones the current Hypervisor implements. Loading
+large files straight into attic RAM with loadfile_attic is the usual way
+for a game to bring in all its levels or music at start-up.</p>
+<h2 id="getting-files-onto-the-card">Getting Files onto the Card</h2>
+<p>There are three ways to move files between a PC and the MEGA65's SD
+card:</p>
+<ul>
+<li><strong>Move the card.</strong> Switch off, take the microSD card
+out of the rear slot, copy files on a PC, and put it back. Simple, but
+slow for frequent changes.</li>
+<li><strong>Ethernet.</strong> With the MEGA65 on a network, the
+M65Connect application and the mega65_ftp command-line tool transfer
+files to and from the active card while the card stays in place. This is
+the fastest method for development (MEGA65 Book, Chapter 7).</li>
+<li><strong>Download.</strong> The MEGA65 Filehost website,
+files.mega65.org, hosts a library of community software as D81 images,
+which can be copied to the card by either method.</li>
+</ul>
+<p>Cross-development tools, covered in the Book's development chapters,
+can also load and run a program in memory over USB serial without
+writing it to the card at all.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Cards.</strong> SDHC, 4 to 32GB, in the internal or rear
+slot; the rear card takes precedence. Cards must be prepared with the
+MEGA65's SD Card Utility, which creates a hidden configuration partition
+and a FAT32 partition.</li>
+<li><strong>Disk images.</strong> D81 and D64 images are mounted from
+the Freezer or with MOUNT to two managed drives, units 8 or 10 and 9 or
+11. The Freezer can create new images.</li>
+<li><strong>Unit 12.</strong> DIR, DLOAD, DSAVE and CHDIR can reach
+files on the card directly.</li>
+<li><strong>Machine language.</strong> Hypervisor services load, read
+and search card files, and mount images, independent of the KERNAL.</li>
+<li><strong>Transfer.</strong> Move the card, or use M65Connect or
+mega65_ftp over Ethernet.</li>
+</ul>
+<p>Chapter 15 covers the disk commands themselves.</p>
+<nav class="chapnav"><span><a href="ch13-sound.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch15-using-the-disk-drive.html">Next &rarr;</a></span></nav>
+</body>
+</html>

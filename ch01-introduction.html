@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 1: Introduction</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span></span><a href="index.html">Contents</a><span><a href="ch02-getting-to-know-the-mega65.html">Next &rarr;</a></span></nav>
+<h1 id="programming-the-mega65--chapter-1-introduction">Programming the
+MEGA65 — Chapter 1: Introduction</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="what-the-mega65-is">What the MEGA65 Is</h2>
+<p>The MEGA65 is an 8-bit home computer, built in the 2020s to the
+design of a machine Commodore never released. It looks and feels like a
+classic Commodore: a full-size keyboard with a built-in 3.5" floppy
+drive, a BASIC prompt at power-on, and a built-in machine-language
+monitor. Underneath, it is something no 1980s machine could be: a single
+FPGA chip that implements the processor, video, sound and memory in
+reconfigurable logic, running at speeds and with memory sizes far beyond
+its ancestors.</p>
+<p>It is designed to be understood. Every register is documented, the
+schematics are published, and the documentation is freely licensed. A
+programmer can reach any part of the machine directly, from BASIC with
+POKE or from machine language, and nothing sits between the program and
+the hardware except what the program chooses to use.</p>
+<p>The MEGA65 is also three computers in one:</p>
+<ul>
+<li><strong>A MEGA65</strong>, with BASIC 65, 40.5 MHz processing,
+256-colour graphics, four SIDs and digital audio.</li>
+<li><strong>A Commodore 65</strong>, the never-released successor to the
+C64, with its BASIC 10 when the original C65 ROM is installed.</li>
+<li><strong>A Commodore 64</strong>, able to run thousands of existing
+C64 games, utilities and applications.</li>
+</ul>
+<p>This book is about programming the first of these, and about using
+the other two where they help. It follows the plan of Raeto Colin West's
+<em>Programming the Commodore 64</em>: it starts with the machine and
+its BASIC, moves through machine language, and then covers graphics,
+sound, storage and peripherals in turn.</p>
+<h2 id="from-the-c65-to-the-mega65">From the C65 to the MEGA65</h2>
+<p>In 1989 Commodore designed a successor to the C64: the Commodore 65,
+intended for release in 1990 (MEGA65 Book, p. 1-3). It combined a faster
+4510 processor, a new VIC-III video chip with 80 columns and bitplane
+graphics, two SIDs, a built-in 3.5" floppy drive and BASIC 10, while
+keeping a C64 mode for compatibility. The machine never shipped.
+Prototypes and development units survived, but the C65 remained a
+collector's curiosity with an unfinished ROM.</p>
+<p>The MEGA65 project set out to finish it. Led by Paul Gardner-Stephen
+and the MEGA Museum of Electronic Games &amp; Art e.V. in Germany, a
+community of volunteers re-implemented the C65's custom chips in an
+FPGA, completed and extended the ROM, and designed a new case, keyboard
+and main board. Along the way the design grew: the 4510 became the
+45GS02 with 32-bit operations and a 40.5 MHz top speed, the VIC-III
+became the VIC-IV, the SIDs became four, and attic RAM, digital audio
+and Ethernet were added.</p>
+<p>Production machines have shipped in several board revisions. The R3A
+boards were made in 2022 and the R6 boards in 2024; the differences that
+matter to programmers, such as the audio output on older boards, are
+noted where they arise (MEGA65 Book, pp. 2-7, V-26).</p>
+<p>Because the hardware is implemented in an FPGA, the MEGA65 can be
+upgraded by loading a new "core", the FPGA configuration, from its SD
+card. Cores, the ROM and the Hypervisor are updated separately and
+regularly. Throughout this book, details that depend on a particular
+version say so, and Chapter 11 explains how a program can find out what
+it is running on.</p>
+<h2 id="the-three-modes">The Three Modes</h2>
+<p>Which machine the MEGA65 becomes at power-on depends on the ROM file
+on its SD card, and from there it can switch modes on request (MEGA65
+Book, p. 11-3):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Mode</th>
+<th>ROM</th>
+<th>BASIC</th>
+<th>Prompt shows</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>MEGA65</td>
+<td>MEGA65 ROM (versions 92xxxx and later)</td>
+<td>BASIC 65</td>
+<td>MEGA65 start-up screen</td>
+</tr>
+<tr class="even">
+<td>C65</td>
+<td>Original Commodore 65 ROM (versions 91xxxx)</td>
+<td>BASIC 10</td>
+<td>C65 start-up screen</td>
+</tr>
+<tr class="odd">
+<td>C64</td>
+<td>Built into either ROM</td>
+<td>BASIC 2</td>
+<td>C64 start-up screen</td>
+</tr>
+</tbody>
+</table>
+<p>The usual configuration is the MEGA65 ROM, which starts in MEGA65
+mode, and that is the mode this book is written for. C65 mode is mainly
+of historical interest; almost everything BASIC 10 can do, BASIC 65 does
+better.</p>
+<h3 id="switching-modes">Switching modes</h3>
+<table>
+<thead>
+<tr class="header">
+<th>To</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C64 mode</td>
+<td>Type <code>GO64</code> and answer the confirmation; or hold MEGA
+while switching on or pressing reset</td>
+</tr>
+<tr class="even">
+<td>MEGA65 mode from C64 mode</td>
+<td>Type <code>SYS 58552</code>, which does not ask for confirmation; or
+press reset; or hold RESTORE briefly and press F5 in the Freezer</td>
+</tr>
+<tr class="odd">
+<td>The machine-language monitor</td>
+<td>Type <code>MONITOR</code> in BASIC 65; or hold RUN/STOP while
+pressing reset</td>
+</tr>
+</tbody>
+</table>
+<p>Any program in memory is lost when switching between MEGA65 and C64
+modes, as on a C128 (MEGA65 Book, pp. 11-3, 11-4). Plugging a C64
+cartridge into the expansion port before switching on also starts the
+machine in C64 mode (MEGA65 Book, p. 3-13).</p>
+<h3 id="how-compatible-is-c64-mode">How compatible is C64 mode?</h3>
+<p>C64 mode, often called GO64 mode, is a temporary reconfiguration of
+the MEGA65, not a separate computer. It inherits the C65's design,
+including its different CPU, and some C64 software does not run in it.
+All the MEGA65's own features remain present, including the Freezer,
+which can mount disk images. For the highest compatibility there is a
+separate option: the "C64 for MEGA65" FPGA core, which replaces the
+whole MEGA65 design with an accurate re-creation of the C64's chips
+(MEGA65 Book, pp. 3-13, 3-14). It is a different machine altogether, so
+nothing in this book applies to it.</p>
+<p>For programmers, the important point is the reverse: the MEGA65's
+features are not locked to MEGA65 mode. A program running in C64 mode
+can unlock the VIC-IV, use DMA or switch the CPU to full speed, using
+the techniques in Chapters 5 and 8.</p>
+<h2 id="the-hardware-at-a-glance">The Hardware at a Glance</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>MEGA65</th>
+<th>Covered in</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Processor</td>
+<td>45GS02, at 1, 2, 3.5 or 40.5 MHz</td>
+<td>Chapters 5, 7, 10</td>
+</tr>
+<tr class="even">
+<td>Chip RAM</td>
+<td>384KB, visible to the video chip</td>
+<td>Chapter 5</td>
+</tr>
+<tr class="odd">
+<td>Attic RAM</td>
+<td>8MB or more of external RAM</td>
+<td>Chapters 5, 8</td>
+</tr>
+<tr class="even">
+<td>Colour RAM</td>
+<td>32KB or more</td>
+<td>Chapters 5, 12</td>
+</tr>
+<tr class="odd">
+<td>ROM</td>
+<td>128KB image loaded from the SD card</td>
+<td>Chapter 11</td>
+</tr>
+<tr class="even">
+<td>Video</td>
+<td>VIC-IV; VGA and digital video outputs at 720×480 (60 Hz) or 720×576
+(50 Hz)</td>
+<td>Chapter 12</td>
+</tr>
+<tr class="odd">
+<td>Sound</td>
+<td>Four SIDs, four audio DMA channels, stereo mixer; 3.5mm jack with
+headphone amplifier, and audio over digital video</td>
+<td>Chapter 13</td>
+</tr>
+<tr class="even">
+<td>Storage</td>
+<td>Internal 3.5" floppy drive; internal and external microSD card
+slots; IEC serial bus for Commodore drives</td>
+<td>Chapters 14, 15</td>
+</tr>
+<tr class="odd">
+<td>Ports</td>
+<td>Two controller ports, cartridge expansion port, Ethernet</td>
+<td>Chapters 16, 17</td>
+</tr>
+<tr class="even">
+<td>Clock</td>
+<td>Real-time clock, readable as DT$ and TI$</td>
+<td>Chapter 17</td>
+</tr>
+</tbody>
+</table>
+<p>The display requirements, connectors and RTC details come from the
+Book's set-up chapter (MEGA65 Book, pp. 2-3 to 2-7). The controller
+ports accept Commodore-compatible joysticks, paddles, the 1351 mouse and
+Amiga mice, and the IEC port accepts drives such as the 1541, 1571 and
+1581, as well as SD2IEC and Pi1541 devices.</p>
+<p>Not everything the C64 had is here. There is no cassette port, so
+Chapter 14, which in West's book covered tape storage, covers the SD
+card instead. Nor is there a user port or a direct RS-232 interface in
+the C64 style; Chapter 17 covers the alternatives.</p>
+<h2 id="how-to-use-this-book">How to Use This Book</h2>
+<p>The chapters build on each other, but each can be read on its own
+once the basics are familiar.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Chapter</th>
+<th>Subject</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Introduction: this chapter</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Getting to know the MEGA65: keyboard, screen editor, Freezer and
+configuration</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>BASIC 65 reference: every keyword, with its format and token</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Effective programming in BASIC 65</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>MEGA65 architecture: memory, banking, I/O, Hypervisor, DMA</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Advanced BASIC 65: how BASIC stores programs and data</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>45GS02 machine language</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>Machine-language methods specific to the MEGA65</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td>Mixing BASIC with machine language</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>The 45GS02 instruction set reference</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td>The ROM: KERNAL jump table, vectors, Hypervisor services</td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td>Graphics</td>
+</tr>
+<tr class="odd">
+<td>13</td>
+<td>Sound</td>
+</tr>
+<tr class="even">
+<td>14</td>
+<td>The SD card and mass storage</td>
+</tr>
+<tr class="odd">
+<td>15</td>
+<td>Disk drives</td>
+</tr>
+<tr class="even">
+<td>16</td>
+<td>The controller ports</td>
+</tr>
+<tr class="odd">
+<td>17</td>
+<td>Major peripherals</td>
+</tr>
+</tbody>
+</table>
+<p>Readers new to programming should start with Chapters 2 to 4.
+Experienced 6502 programmers can go straight to Chapter 5 and use
+Chapter 3 as a reference. Chapters 5, 10 and 11 are reference material
+that later chapters rely on.</p>
+<h3 id="conventions">Conventions</h3>
+<ul>
+<li><strong>Numbers.</strong> <code>$</code> marks hexadecimal and
+<code>%</code> binary, as in Commodore BASIC and most assemblers.
+Numbers without a prefix are decimal.</li>
+<li><strong>Addresses.</strong> Addresses the CPU sees directly have
+four hex digits, such as <code>$D020</code>. Full 28-bit addresses have
+seven, such as <code>$FF80000</code>.</li>
+<li><strong>Keys.</strong> Key names are written in capitals: RETURN,
+RUN/STOP, RESTORE, MEGA, HELP.</li>
+<li><strong>BASIC listings</strong> are shown in capitals, as the MEGA65
+displays them.</li>
+<li><strong>Machine-language examples</strong> use a common assembler
+syntax: <code>;</code> for comments, <code>.byte</code> and
+<code>.word</code> for data, and <code>[zp],Z</code> for 45GS02 flat
+addressing. Other assemblers differ in details, such as KickAssembler's
+<code>//</code> comments and <code>((zp)),z</code> for flat addressing;
+adjust as needed.</li>
+<li><strong>Sources.</strong> Technical details are checked against the
+official MEGA65 documentation, the MEGA65 Book (the Complete Compendium,
+August 2025 edition), and are cited as "MEGA65 Book, p. B-256". Where
+the MEGA65 has changed since that edition, the newer source is cited
+instead.</li>
+</ul>
+<h3 id="typing-in-programs">Typing in programs</h3>
+<p>BASIC listings can be typed in exactly as shown. Programs that load
+machine language from DATA statements include a checksum, so a mistyped
+number is reported instead of crashing the machine. Save your work
+often: DSAVE writes to the current disk or disk image, and the Freezer
+can save the complete machine state at any moment.</p>
+<h3 id="versions">Versions</h3>
+<p>The MEGA65's ROM, core and Hypervisor are all updated over time,
+independently of each other. This book describes current releases. Where
+a feature arrived in a particular version, the text says so, and Chapter
+11 shows how a program can check what it is running on. If an example
+behaves differently on your machine, check for an update before assuming
+the example is wrong.</p>
+<nav class="chapnav"><span></span><a href="index.html">Contents</a><span><a href="ch02-getting-to-know-the-mega65.html">Next &rarr;</a></span></nav>
+</body>
+</html>

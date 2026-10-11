@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 8: ML Methods Specific to
+the MEGA65</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch07-45gs02-machine-language.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch09-mixing-basic-with-machine-language.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-8-ml-methods-specific-to-the-mega65">Programming
+the MEGA65 — Chapter 8: ML Methods Specific to the MEGA65</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>Chapter 7 described the 45GS02 in isolation. Real programs run on a
+machine full of state that someone else set up: the KERNAL's memory map,
+BASIC's choice of bank, the current I/O personality, the CPU speed, and
+interrupt handlers already installed. MEGA65 machine language is largely
+the craft of taking control of that state, changing it deliberately, and
+handing it back intact.</p>
+<p>This chapter collects the techniques that are specific to the MEGA65
+rather than to the 6502 family in general:</p>
+<ul>
+<li>A program skeleton that puts the machine into a known state</li>
+<li>Controlling CPU speed</li>
+<li>Using MAP to open windows into memory beyond the first 64KB</li>
+<li>DMA beyond simple copies and fills</li>
+<li>Raster interrupts</li>
+<li>Loading files through the Hypervisor</li>
+<li>Debugging with the monitor</li>
+</ul>
+<p>Two styles of program appear here. A cooperative program runs
+alongside BASIC and the KERNAL, called with SYS and returning with RTS;
+it must leave everything as it found it. A takeover program, such as a
+game or demo, replaces the system's map and interrupt handlers entirely
+and never returns. Most techniques apply to both, but where they differ
+the text says so.</p>
+<p>The examples use the same assembler syntax as Chapter 7:
+<code>.byte</code> and <code>.word</code> for data, <code>[zp],Z</code>
+for flat indirect addressing, and labels throughout.</p>
+<h2 id="taking-control">Taking Control</h2>
+<p>A cooperative routine called by SYS starts in a known state: the
+mapping described in Chapter 6, with bank 0 low memory, the selected
+bank in the middle, and the KERNAL and I/O on top. Its only obligation
+is to restore anything it changes, including B, Z and the E flag, before
+RTS.</p>
+<p>A takeover program cannot rely on whatever state it inherits. Its
+first job is to set every banking mechanism, the I/O personality and the
+CPU state to values it chooses. The following skeleton does that,
+leaving all of bank 0 visible as RAM with I/O at <code>$D000</code>:</p>
+<pre><code>start   sei             ; no interrupts while the machine changes
+        lda #$35
+        sta $01         ; C64 port: RAM everywhere except I/O
+
+        lda #$00
+        tax
+        tay
+        taz
+        map             ; MAP: no offsets, nothing mapped
+        eom
+
+        lda #$47
+        sta $d02f
+        lda #$53
+        sta $d02f       ; VIC-IV I/O personality
+
+        lda #$00
+        sta $d030       ; no C65 ROM banking
+        tab             ; base page = page 0
+        see             ; 8-bit stack in page 1
+        cld
+
+        lda #65
+        sta $00         ; full CPU speed
+
+        lda #$7f
+        sta $dc0d       ; disable CIA 1 interrupts
+        sta $dd0d       ; disable CIA 2 interrupts
+        lda $dc0d       ; acknowledge any pending
+        lda $dd0d</code></pre>
+<p>The order matters in three places:</p>
+<ol type="1">
+<li><strong>Interrupts first.</strong> SEI comes before any change,
+because the KERNAL's interrupt handler assumes the KERNAL's map. An
+interrupt arriving halfway through would run with the ROM switched
+out.</li>
+<li><strong>Knock before <code>$D030</code>.</strong> <code>$D030</code>
+exists only in the VIC-III and VIC-IV personalities, so the knock must
+come first. MAP takes precedence over every other banking mechanism, but
+only for the 8KB blocks it maps (MEGA65 Book, p. K-7). The skeleton maps
+no blocks, so any ROM bits left set in <code>$D030</code> would still
+bring ROM into those areas; clearing <code>$D030</code> removes
+them.</li>
+<li><strong>All three banking mechanisms.</strong> Clearing MAP alone
+leaves <code>$01</code> and <code>$D030</code> in charge of every block
+MAP does not map. Only when all three are set does the program know
+exactly what it sees.</li>
+</ol>
+<p>The single MAP in the skeleton clears the offsets and block enables
+but not MAP's megabyte bytes, which only the two-MAP form described
+below changes. They are zero after reset and the KERNAL leaves them at
+zero, so this is normally safe (MEGA65 Book, p. 14-41); a program that
+may start after other software has used them can clear them first with
+<code>LDA #0 : LDX #$0F : LDY #0 : LDZ #$0F : MAP</code> before the
+skeleton's own MAP.</p>
+<p>The MEGA65 Book describes a fuller version of the same procedure for
+programs that want every byte of chip RAM. It also removes I/O from
+<code>$D000-$DFFF</code> by clearing bits 0-2 of <code>$01</code>, moves
+colour data so the first 2KB of colour RAM can be used as general
+memory, and disables the ROM write-protection on banks 2 and 3 with
+Hypervisor trap <code>$70</code> (MEGA65 Book, pp. 14-39, 14-42).</p>
+<p>After this the program owns the machine. The KERNAL is gone, so the
+hardware vectors at <code>$FFFA-$FFFF</code> are now plain RAM in bank
+0. The program must store its own NMI and IRQ vectors there before it
+executes CLI, as shown in the raster interrupt section below. The
+RESTORE key raises an NMI, so even a program with no use for NMIs needs
+a vector pointing at an RTI.</p>
+<p>As a starting point, place this skeleton after a BASIC header at
+<code>$2001</code>, as described in Chapter 6, so the program loads and
+runs with RUN.</p>
+<h2 id="controlling-cpu-speed">Controlling CPU Speed</h2>
+<p>The MEGA65 inherited a speed control from each machine it is
+compatible with, and all of them still work. Two bits do most of the
+work in the VIC-III and VIC-IV personalities: FAST, bit 6 of
+<code>$D031</code>, and VFAST, bit 6 of <code>$D054</code>.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Speed</th>
+<th>FAST (<code>$D031</code> bit 6)</th>
+<th>VFAST (<code>$D054</code> bit 6)</th>
+<th>Other</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1 MHz</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>2 MHz</td>
+<td>0</td>
+<td>0</td>
+<td>C128 2 MHz bit set</td>
+</tr>
+<tr class="odd">
+<td>3.5 MHz</td>
+<td>1</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>40.5 MHz</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The C128 bit is bit 0 of <code>$D030</code> in the VIC-II
+personality. In the C65 personality that address is the C65 banking
+register, which is one reason the personality matters when changing
+speed.</p>
+<h3 id="the-00-shortcut">The <code>$00</code> shortcut</h3>
+<p>The CPU port's direction register at <code>$00</code> has a special
+meaning for two values. Writing <code>$41</code>, decimal 65, forces
+full speed regardless of the bits above. Writing <code>$40</code>,
+decimal 64, removes the force and returns control to them. Neither value
+changes the port's direction bits. This is the simplest method and works
+in every personality:</p>
+<pre><code>        lda #$41
+        sta $00         ; force 40.5 MHz</code></pre>
+<h3 id="changing-the-bits-directly">Changing the bits directly</h3>
+<p>To select a particular speed, release the force and set the bits. The
+45GS02's TSB and TRB instructions set and clear bits in memory without
+disturbing the rest:</p>
+<pre><code>        lda #$40
+        sta $00         ; release forced full speed
+        trb $d054       ; VFAST off
+        tsb $d031       ; FAST on: 3.5 MHz</code></pre>
+<p>Writing to <code>$D031</code> has a side effect worth knowing. It is
+one of the VIC-IV's hot registers, along with <code>$D011</code>,
+<code>$D016</code>, <code>$D018</code> and the VIC bank bits of
+<code>$DD00</code>: any write to one of them, even writing back the
+value already there, recalculates all the VIC-IV's display settings from
+their VIC-II equivalents. FAST lives in <code>$D031</code>, so changing
+speed this way can undo a program's VIC-IV screen setup (MEGA65 Book, p.
+Q-17). Either clear HOTREG, bit 7 of <code>$D05D</code>, as described in
+Chapter 12, or change speed with the <code>$00</code> shortcut
+instead.</p>
+<p>From BASIC, <code>SPEED 1</code>, <code>SPEED 3</code> and
+<code>SPEED</code> select 1, 3.5 and 40.5 MHz, and FAST is a synonym;
+RSPEED reports the current speed as 1, 3 or 40. Both have no effect, and
+RSPEED reports wrongly, once <code>POKE 0,65</code> has forced full
+speed (MEGA65 Book, pp. B-106, B-225, B-245).</p>
+<h3 id="things-that-change-speed-for-you">Things that change speed for
+you</h3>
+<p>A program cannot always assume the speed it set is the speed it gets.
+Activity on the IEC serial bus slows the CPU temporarily so that drive
+timing works, and the user can change speed in the Freezer.</p>
+<p>Nor is 1 MHz an exact copy of a C64. At 1, 2 and 3.5 MHz each
+instruction takes the 6502's number of cycles, but the memory accesses
+inside it may fall on different cycles, and timing can differ by up to
+about 7 microseconds. That is harmless for nearly all software,
+including most fast loaders, but tricks that depend on the exact cycle
+of a write, such as VIC-II variable screen positioning, are unlikely to
+work (MEGA65 Book, p. K-5). Timing-critical code should synchronise to
+the raster rather than counting cycles, at any speed.</p>
+<h2 id="practical-map-techniques">Practical MAP Techniques</h2>
+<p>Chapter 5 described MAP's registers. This section shows how to use it
+for the most common job: opening an 8KB window onto memory outside the
+first megabyte, such as attic RAM.</p>
+<h3 id="choosing-between-map-flat-addressing-and-dma">Choosing between
+MAP, flat addressing and DMA</h3>
+<p>The three ways to reach distant memory suit different jobs:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Best for</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Flat <code>[zp],Z</code></td>
+<td>Scattered reads and writes</td>
+<td>Pointer setup; one extra cycle or two per access</td>
+</tr>
+<tr class="even">
+<td>DMA</td>
+<td>Moving or filling blocks</td>
+<td>Building a DMA list; CPU waits while it runs</td>
+</tr>
+<tr class="odd">
+<td>MAP</td>
+<td>Running code from, or working intensively in, a region</td>
+<td>Changes what the CPU sees; affects every access in that block</td>
+</tr>
+</tbody>
+</table>
+<p>MAP is the only one of the three that lets the CPU execute code held
+outside the 64KB window, and it lets ordinary absolute and indexed
+instructions work on distant data at full speed.</p>
+<h3 id="a-window-onto-attic-ram">A window onto attic RAM</h3>
+<p>To make attic RAM at <code>$8000000</code> appear at
+<code>$4000-$5FFF</code>, the lower half needs megabyte
+<code>$80</code>, and an offset within that megabyte that turns CPU
+address <code>$4000</code> into <code>$00000</code>. That offset is
+<code>$00000 - $4000</code>, which wraps within 20 bits to
+<code>$FC000</code>. So A holds <code>$C0</code>, offset bits 15-8, and
+the low nibble of X holds <code>$F</code>, offset bits 19-16. Block 2 is
+enabled by bit 6 of X:</p>
+<pre><code>        lda #$80        ; megabyte $80: attic RAM
+        ldx #$0f        ; X = $0F: A selects the lower megabyte
+        ldy #$00
+        ldz #$00
+        map
+        lda #$c0        ; lower offset bits 15-8
+        ldx #$4f        ; enable block 2 ($4000), offset bits 19-16 = $F
+        ldy #$00
+        ldz #$00        ; upper half unmapped
+        map
+        eom</code></pre>
+<p>The megabyte selection persists until changed, so the second MAP sets
+the offset within megabyte <code>$80</code>. Only one EOM is needed,
+after the final MAP; interrupts stay blocked between the two. Moving the
+window is just a matter of repeating the second MAP with a different
+offset. To return to the first megabyte, select megabyte 0 the same
+way.</p>
+<p>In general, the offset for a window is
+<code>(target - window) AND $FFFFF</code>, where target is the address
+within the selected megabyte and window is the CPU address of the block.
+A takes offset bits 15-8, and the low nibble of X takes bits 19-16.
+Moving the window up by 8KB means adding <code>$2000</code> to the
+offset, so <code>$FC000</code> becomes <code>$FE000</code>, then
+<code>$00000</code>, and so on.</p>
+<h3 id="saving-and-restoring-the-map">Saving and restoring the map</h3>
+<p>The 45GS02 has no instruction to read the current MAP settings back,
+but the Hypervisor does. Trap <code>$74</code>, hyppo_get_mapping,
+writes the MAP state, both halves including their megabyte bytes, as six
+bytes to a page-aligned address in the bottom 32KB of bank 0, with the
+page number in Y (MEGA65 Book, pp. 14-41, 14-42):</p>
+<pre><code>        ldy #$62        ; save the map at $6200-$6205
+        lda #$74        ; hyppo_get_mapping
+        sta $d640
+        clv
+        bcc error</code></pre>
+<p>A cooperative routine can use this to save the map it inherited,
+change it, and later restore it with the matching service, trap
+<code>$76</code>, hyppo_set_mapping, which loads the map from the same
+six-byte layout at page Y (MEGA65 Book, Appendix N). Flat addressing and
+DMA remain simpler when they suffice, since they leave the map alone,
+but MAP is no longer off-limits to code that must return cleanly to
+BASIC. A takeover program can still simply keep a copy of the values it
+last set.</p>
+<h2 id="advanced-dma">Advanced DMA</h2>
+<p>Chapter 5 showed a single fill job. DMAgic fills memory at 40.5MB per
+second and copies at 20.25MB per second, against about 3.5MB and 1.7MB
+per second on a C65 (MEGA65 Book, p. P-3), so almost any bulk data
+movement is worth handing to it. This section covers the options that
+make it useful beyond simple blocks.</p>
+<p>All examples use enhanced jobs, started by writing the low byte of
+the list address to <code>$D705</code>, and the F018A list layout from
+Chapter 5: command, count, source, destination, modulo. Two details of
+the trigger registers matter. Writing the bank register
+<code>$D702</code> also clears the megabyte register <code>$D704</code>,
+so write <code>$D702</code> first and <code>$D704</code> after it. And
+BASIC 65 itself uses DMA to scroll the screen, so a program should
+rewrite all the list address registers before each job rather than
+assume they still hold its values (MEGA65 Book, pp. P-3, P-20, P-23).
+Two other triggers exist: <code>$D706</code> takes the list address in
+the current CPU memory map, and <code>$D707</code> runs a list placed
+directly after the instruction that triggers it, continuing execution
+after the list (MEGA65 Book, p. P-24).</p>
+<h3 id="reaching-any-megabyte">Reaching any megabyte</h3>
+<p>The three address bytes in a DMA list cover only the first megabyte:
+low byte, high byte, and a bank in the low nibble of the third byte.
+Option <code>$80</code> sets the source megabyte and option
+<code>$81</code> the destination megabyte. This copies 16KB of level
+data from attic RAM at <code>$8010000</code> to bank 4:</p>
+<pre><code>level   .byte $0a       ; F018A format
+        .byte $80, $80  ; source megabyte $80 (attic RAM)
+        .byte $81, $00  ; destination megabyte $00 (chip RAM)
+        .byte $00       ; end of options
+        .byte $00       ; command: copy
+        .word $4000     ; 16KB
+        .word $0000     ; source address within bank
+        .byte $01       ; source bank 1: $8010000
+        .word $0000     ; destination address within bank
+        .byte $04       ; destination bank 4: $0040000
+        .word $0000     ; modulo, unused</code></pre>
+<p>Colour RAM at <code>$FF80000</code> is reached the same way, with
+megabyte <code>$FF</code> and bank <code>$08</code>.</p>
+<h3 id="skipping-bytes">Skipping bytes</h3>
+<p>Normally DMAgic steps one byte at a time. Options <code>$83</code>
+and <code>$85</code> set the step, in whole bytes, for the source and
+destination. With a destination step of 80, a fill draws a vertical line
+down an 80-column text screen:</p>
+<pre><code>vline   .byte $0a
+        .byte $85, 80   ; destination step: 80 bytes, one row
+        .byte $00
+        .byte $03       ; command: fill
+        .word 25        ; 25 rows
+        .word $00a0     ; fill with screen code $A0, a solid block
+        .byte $00
+        .word $0800+40  ; column 40 of the screen at $0800
+        .byte $00
+        .word $0000</code></pre>
+<p>Steps are useful wherever data is interleaved: a column of a screen
+or bitmap, every second byte of the two-byte colour RAM cells used by
+the VIC-IV's enhanced text modes, or one channel of interleaved sample
+data.</p>
+<h3 id="chaining-jobs">Chaining jobs</h3>
+<p>Bit 2 of the command byte marks a job as chained: when it finishes,
+DMAgic continues with the list that immediately follows, until it
+reaches a job without the chain bit. A single trigger can then perform a
+whole sequence of operations, such as clearing the screen, clearing
+colour RAM and copying in a new character set. In enhanced mode each job
+in the chain begins with its own option bytes, so each can use different
+megabytes and steps.</p>
+<pre><code>clear   .byte $0a, $00  ; job 1 options: F018A, end
+        .byte $07       ; fill, chained (bit 2 set)
+        .word 2000
+        .word $0020     ; spaces
+        .byte $00
+        .word $0800
+        .byte $00
+        .word $0000
+        .byte $0a       ; job 2 options: F018A
+        .byte $81, $ff  ; destination megabyte $FF
+        .byte $00
+        .byte $03       ; fill, not chained: last job
+        .word 2000
+        .word $0001     ; colour 1, white
+        .byte $00
+        .word $0000
+        .byte $08       ; bank 8 of megabyte $FF: colour RAM
+        .word $0000</code></pre>
+<h3 id="transparency-and-line-drawing">Transparency and line
+drawing</h3>
+<p>The option list offers more than megabytes and steps (MEGA65 Book, p.
+P-14). Option <code>$07</code> turns on a transparent value and
+<code>$86</code> sets it: bytes equal to that value are skipped instead
+of copied, leaving the destination unchanged. That turns a DMA copy into
+a simple blitter for shapes with a background colour:</p>
+<pre><code>blit    .byte $0a
+        .byte $07       ; enable transparency
+        .byte $86, $00  ; bytes of $00 are not written
+        .byte $00       ; end of options
+        .byte $00       ; command: copy
+        .word 64        ; one FCM character&#39;s 64 bytes
+        .word $2000     ; source $42000
+        .byte $04
+        .word $0040     ; destination $40040
+        .byte $04
+        .word $0000</code></pre>
+<p>Options <code>$82</code> and <code>$84</code> add fractional steps,
+in 256ths of a byte, which DMAgic uses for texture scaling, and options
+<code>$87</code> to <code>$8F</code> and <code>$97</code> to
+<code>$9F</code> configure a line-drawing mode that steps the
+destination or source along a slope. The Book quotes rates of up to 20
+million pixels per second for scaling and 40 million for line drawing;
+its DMA chapter documents the parameters (MEGA65 Book, pp. P-13,
+P-14).</p>
+<p>Not every F018 operation exists. Only copy and fill are implemented:
+the command values for swap and mix, and the minterm bits that mix used,
+do nothing useful on the MEGA65 (MEGA65 Book, pp. P-6, P-24).</p>
+<h3 id="dma-and-the-cpu">DMA and the CPU</h3>
+<p>The CPU stops while a job runs and resumes at the instruction after
+the trigger. There is no need to poll for completion, but because the
+DMA controller is part of the CPU, a job cannot be interrupted, and a
+long one delays interrupts too (MEGA65 Book, p. P-3). A raster interrupt
+that must fire on time should not compete with a very large transfer;
+split big jobs into pieces timed to fit between interrupts. The command
+byte has a bit documented as "yield to interrupts", bit 3, but the
+Book's own text says jobs cannot be interrupted, so do not rely on
+it.</p>
+<p>Audio DMA is the exception: it keeps playing during an ordinary job,
+stealing the cycles it needs from it, so sound does not stop while DMA
+runs (MEGA65 Book, p. P-3).</p>
+<h2 id="raster-interrupts">Raster Interrupts</h2>
+<p>A raster interrupt fires when the video chip reaches a chosen line of
+the display. It is the standard way to change colours, scroll registers
+or screen modes partway down the screen, and to run code once per frame
+at a steady rate. The VIC-IV supports the VIC-II's raster interrupt
+registers unchanged, so the C64 technique carries over.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D012</code></td>
+<td>Raster compare, bits 7-0</td>
+</tr>
+<tr class="even">
+<td><code>$D011</code> bit 7</td>
+<td>Raster compare, bit 8</td>
+</tr>
+<tr class="odd">
+<td><code>$D01A</code> bit 0</td>
+<td>Enable the raster interrupt</td>
+</tr>
+<tr class="even">
+<td><code>$D019</code> bit 0</td>
+<td>Raster interrupt has occurred; write 1 to acknowledge</td>
+</tr>
+</tbody>
+</table>
+<h3 id="a-split-screen-example">A split-screen example</h3>
+<p>This continues from the takeover skeleton earlier in the chapter,
+with interrupts disabled, CIA interrupts off and the KERNAL switched
+out. It installs its own vectors and changes the border colour at two
+raster lines, splitting the border into two colours:</p>
+<pre><code>        lda #&lt;nmi
+        sta $fffa
+        lda #&gt;nmi
+        sta $fffb
+        lda #&lt;irq
+        sta $fffe
+        lda #&gt;irq
+        sta $ffff
+
+        lda #$00
+        sta line        ; first interrupt at line 0
+        sta $d012
+        lda $d011
+        and #$7f        ; compare bit 8 = 0
+        sta $d011
+        lda #$01
+        sta $d01a       ; enable raster interrupt
+        sta $d019       ; clear any pending one
+        cli
+
+main    jmp main        ; the main program runs here
+
+irq     pha
+        lda line
+        bne lower
+        lda #$06        ; blue at the top
+        sta $d020
+        lda #$90
+        bra set
+lower   lda #$02        ; red from line $90 down
+        sta $d020
+        lda #$00
+set     sta line
+        sta $d012       ; next interrupt line
+        lda #$01
+        sta $d019       ; acknowledge
+        pla
+        rti
+
+nmi     rti             ; ignore RESTORE
+
+line    .byte 0</code></pre>
+<p>The handler alternates between two lines, setting the next compare
+value each time. It saves only A because it changes only A. A handler
+that uses X, Y or Z must save those too, and one that changes B must
+restore it before RTI.</p>
+<h3 id="stability">Stability</h3>
+<p>On a C64, raster code at 1 MHz suffers from jitter: the interrupt can
+start a few cycles late depending on which instruction it interrupted,
+which shows as a ragged edge on colour changes. At 40.5 MHz the same few
+cycles are a tiny fraction of a scan line, so most raster effects are
+clean without the elaborate stabilisation C64 code needs. Code that runs
+at 1 MHz for compatibility still has the C64's jitter.</p>
+<p>The VIC-II-style registers count VIC-II raster lines. The VIC-IV also
+works in physical display lines, which allows finer positioning (MEGA65
+Book, pp. Q-43, Q-44):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D052</code>, low bits of <code>$D053</code></td>
+<td>FNRASTER</td>
+<td>Current physical raster line (read)</td>
+</tr>
+<tr class="even">
+<td><code>$D053</code> bit 7</td>
+<td>FNRST</td>
+<td>Reads back the compare mode: 0 physical, 1 VIC-II lines</td>
+</tr>
+<tr class="odd">
+<td><code>$D079</code>, low bits of <code>$D07A</code></td>
+<td>RASCMP</td>
+<td>Physical raster compare value, used when the compare mode is
+physical</td>
+</tr>
+<tr class="even">
+<td><code>$D07A</code></td>
+<td>EXTIRQS</td>
+<td>Enable extra interrupt sources, such as raster X position</td>
+</tr>
+<tr class="odd">
+<td><code>$D06F</code> bits 5-0</td>
+<td>RASLINE0</td>
+<td>First VIC-II raster line within the physical display</td>
+</tr>
+</tbody>
+</table>
+<p>The compare mode is selected by the FNRSTCMP setting, which FNRST
+reads back; the Book's register appendix gives its location. There are
+roughly twice as many physical lines as VIC-II lines in the standard
+display, so a physical compare can split the screen between two VIC-II
+lines.</p>
+<h3 id="cooperative-raster-interrupts">Cooperative raster
+interrupts</h3>
+<p>A program that keeps the KERNAL running can still use raster
+interrupts, by chaining into the KERNAL's handler instead of replacing
+the hardware vector. In C64 mode this works exactly as on a C64, through
+the vector at <code>$0314</code>, with the handler ending in a jump to
+the KERNAL's own handler so that keyboard scanning continues. Chapter 11
+gives the equivalent MEGA65-mode vector.</p>
+<h2 id="loading-files-through-the-hypervisor">Loading Files Through the
+Hypervisor</h2>
+<p>The KERNAL loads files from disk drives and disk images. The
+Hypervisor can load files straight from the SD card's FAT32 file system,
+without a disk image, and it works even when a takeover program has
+switched the KERNAL out. It can also load directly into attic RAM, which
+the KERNAL cannot.</p>
+<p>All Hypervisor services follow the same convention: put the service
+number in A, write it to <code>$D640</code>, and follow with CLV. The
+CPU may or may not execute the byte after the trap when the service
+returns, which is why a harmless CLV goes there; NOP also works, but it
+can act as a prefix to the next instruction, so CLV is safer. On return,
+carry set means success; carry clear means failure, with the error code
+in A. Registers not used to return values are preserved, and the trap
+register exists only in the MEGA65 I/O personality (MEGA65 Book, pp.
+N-4, N-5). The Book documents Hyppo version 1.2.</p>
+<h3 id="the-services">The services</h3>
+<table>
+<thead>
+<tr class="header">
+<th>A</th>
+<th>Service</th>
+<th>Inputs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$2E</code></td>
+<td>hyppo_setname</td>
+<td>Y: page of a zero-terminated ASCII file name</td>
+</tr>
+<tr class="even">
+<td><code>$36</code></td>
+<td>hyppo_loadfile</td>
+<td>X, Y, Z: bits 7-0, 15-8 and 23-16 of the load address in chip
+memory</td>
+</tr>
+<tr class="odd">
+<td><code>$3E</code></td>
+<td>hyppo_loadfile_attic</td>
+<td>X, Y, Z: bits 7-0, 15-8 and 23-16 of the load address in attic
+RAM</td>
+</tr>
+</tbody>
+</table>
+<p>hyppo_setname has strict requirements: the name must start on a page
+boundary somewhere in <code>$0000-$7E00</code>, must be shorter than 63
+characters, and must end with a zero byte. Only Y is passed, the page
+number. The name is ASCII, and Hyppo does not convert from PETSCII; it
+also sets the Hypervisor's transfer area to that page as a side effect
+(MEGA65 Book, p. N-38).</p>
+<p>The load services load to <code>$00ZZYYXX</code> in chip memory or
+<code>$08ZZYYXX</code> in attic RAM, and can load files up to 16MB,
+wrapping around at the end of the 16MB range. The commonest failure is
+error <code>$88</code>, file not found in the current directory (MEGA65
+Book, pp. N-27, N-28).</p>
+<h3 id="example-loading-level-data-into-bank-4">Example: loading level
+data into bank 4</h3>
+<pre><code>load    ldy #&gt;fname     ; page of the file name
+        lda #$2e        ; hyppo_setname
+        sta $d640
+        clv
+        bcc error
+
+        ldx #$00        ; load address $0040000
+        ldy #$00
+        ldz #$04
+        lda #$36        ; hyppo_loadfile
+        sta $d640
+        clv
+        bcc error
+        rts
+
+error   ; A holds the error code, e.g. $88 file not found
+        rts
+
+        .align 256      ; the name must start a page (syntax varies)
+fname   .text &quot;LEVEL1.BIN&quot;, 0</code></pre>
+<p>Many assemblers' text directives produce PETSCII rather than ASCII.
+Upper-case letters, digits and the full stop have the same codes in
+both, so names written in capitals are safe; lower-case letters are
+not.</p>
+<p>The file is loaded exactly as stored. A file saved as a PRG carries a
+two-byte load address at the front, and the load call places those two
+bytes in memory too; for raw data it is simpler to save files without
+them.</p>
+<p>Hyppo reads files from the FAT32 file system on the SD cards, in the
+current directory; it does not read floppy disks or disk images (MEGA65
+Book, p. N-38). Hypervisor services have changed between versions, and
+newer ones may not exist on an older Hypervisor, so a program that
+depends on them should check the version first with hyppo_getversion,
+service <code>$00</code>.</p>
+<h2 id="debugging">Debugging</h2>
+<p>Machine language fails silently: a wrong address or a missing RTS
+usually means a hung machine with no message. The MEGA65 offers several
+tools for finding out what happened, each suited to a different kind of
+problem.</p>
+<h3 id="the-built-in-monitor">The built-in monitor</h3>
+<p>The MONITOR introduced in Chapter 7 is a full C128-style monitor.
+Beyond assembling and disassembling, it can display and change
+registers, fill, compare, transfer and search memory, and load and save
+memory to disk. Because it understands 28-bit addresses, it can inspect
+attic RAM, colour RAM and the I/O personalities directly. The MEGA65
+Book lists every command (MEGA65 Book, p. O-6).</p>
+<p>The simplest breakpoint is a BRK instruction. Place one where you
+want execution to stop, run the program, and the monitor appears with
+the registers as they were at that point. Replace the BRK with the
+original instruction afterwards. Check the stack pointer and B in the
+register display first: a wrong B or a runaway stack explains a large
+share of crashes.</p>
+<h3 id="the-border-as-a-probe">The border as a probe</h3>
+<p>For timing problems and code that runs inside interrupts, the oldest
+trick still works best. An <code>INC $D020</code> at the start of a
+routine and a <code>DEC $D020</code> at the end turn the border a
+different colour while the routine runs. The height of the coloured band
+shows how much of the frame the routine takes, and a band that stops
+moving shows where a program has hung.</p>
+<h3 id="the-freezer">The Freezer</h3>
+<p>Holding RESTORE stops any program and opens the Freezer, which saves
+the complete machine state. From there you can examine memory in the
+frozen program, change settings, or resume. This works even when a
+takeover program has disabled interrupts and switched the KERNAL out,
+because the Freezer runs under the Hypervisor rather than the
+KERNAL.</p>
+<h3 id="matrix-mode-and-remote-debugging">Matrix Mode and remote
+debugging</h3>
+<p>Matrix Mode is a debugging console provided by the Hypervisor. Hold
+MEGA and press TAB to open it over the running display, and press the
+same combination again to close it. Because it belongs to the Hypervisor
+rather than the program, it works even when the program has hung. Its R
+command, or just RETURN, shows all the CPU registers, including the
+MAPHI and MAPLO values that no instruction can read, which makes it the
+quickest way to see what a program has done to the memory map (MEGA65
+Book, pp. 14-22, O-14). The same console is available over a UART serial
+or JTAG connection, where cross-development tools on a PC can also load
+programs and inspect memory.</p>
+<p>For larger projects, a PC-based emulator with a debugger, such as
+Xemu, is often quicker still. It allows breakpoints on memory access as
+well as execution, which is the fastest way to find out which piece of
+code is overwriting a variable. Emulators are not cycle-exact in every
+detail, so timing-critical code should always be checked on real
+hardware.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Two styles.</strong> Cooperative routines start from the SYS
+mapping and must restore everything they change. Takeover programs set
+<code>$01</code>, MAP, the I/O personality, <code>$D030</code>, B and
+the stack themselves, then install their own vectors. MAP takes
+precedence over other banking, but only for the blocks it maps.</li>
+<li><strong>Speed.</strong> FAST in <code>$D031</code> and VFAST in
+<code>$D054</code> select 1, 3.5 or 40.5 MHz; writing <code>$41</code>
+or <code>$40</code> to <code>$00</code> forces or releases full speed,
+and BASIC has SPEED and RSPEED. <code>$D031</code> is a hot register.
+Slow modes match the 6502's cycle counts but not its exact access
+timing.</li>
+<li><strong>MAP.</strong> A megabyte selector followed by an offset
+opens an 8KB window anywhere, including attic RAM. MAP cannot be read by
+an instruction, but Hypervisor trap <code>$74</code> copies it to
+memory, and Matrix Mode shows it.</li>
+<li><strong>DMA.</strong> Megabyte options reach any memory, step
+options handle interleaved data, transparency makes a simple blitter,
+and chained jobs perform whole sequences from one trigger. Only copy and
+fill are implemented, and jobs cannot be interrupted, though audio DMA
+keeps playing.</li>
+<li><strong>Raster interrupts.</strong> The VIC-II registers work
+unchanged, and the VIC-IV adds compares in physical lines. At 40.5 MHz
+jitter is rarely a problem. Handlers must preserve every register they
+use, including Z and B.</li>
+<li><strong>Hypervisor files.</strong> hyppo_setname takes a
+page-aligned ASCII name in Y; hyppo_loadfile and hyppo_loadfile_attic
+load from the SD card into chip RAM or attic RAM, independent of the
+KERNAL.</li>
+<li><strong>Debugging.</strong> The monitor, BRK breakpoints, border
+probes, the Freezer, Matrix Mode and emulators each cover different
+kinds of failure.</li>
+</ul>
+<p>Chapter 9 turns to combining machine language with BASIC 65.</p>
+<nav class="chapnav"><span><a href="ch07-45gs02-machine-language.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch09-mixing-basic-with-machine-language.html">Next &rarr;</a></span></nav>
+</body>
+</html>

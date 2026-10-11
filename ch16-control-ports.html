@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 16: The Control
+Ports</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch15-using-the-disk-drive.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch17-major-peripherals.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-16-the-control-ports">Programming
+the MEGA65 — Chapter 16: The Control Ports</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>The two controller ports on the MEGA65's left side are the same 9-pin
+ports the C64 had, and they accept the same devices: digital joysticks,
+paddles, the Commodore 1351 mouse, Amiga mice and light pens. They are
+wired to CIA 1, as on the C64, so C64 code that reads them works
+unchanged. The MEGA65 adds BASIC commands for every device, and a much
+better way to read the keyboard, which this chapter also covers because
+games often use it as a controller.</p>
+<h2 id="joysticks">Joysticks</h2>
+<p>A digital joystick has four direction switches and a fire button.
+Each closes a contact, and a closed contact reads as 0, so the bits are
+active low. The ports are read through CIA 1:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Port</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$DC00</code></td>
+<td>Port 2</td>
+</tr>
+<tr class="even">
+<td><code>$DC01</code></td>
+<td>Port 1</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Switch, 0 when pressed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>Up</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>Down</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>Left</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>Right</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>Fire</td>
+</tr>
+</tbody>
+</table>
+<p>The same CIA registers scan the keyboard, which is why holding a
+joystick in port 1 can produce stray key presses, and why many C64 games
+use port 2.</p>
+<h3 id="from-basic">From BASIC</h3>
+<p>JOY decodes a port for you: the low four bits give a direction from 1
+(up) clockwise to 8 (up and left), 0 when centred, and each fire button
+adds its own bit value: 128 for button 1, the trigger, and higher values
+for the extra buttons described under Multi-Button Controllers below
+(MEGA65 Book, pp. B-143, B-144). Port 3 returns the merged state of both
+ports, so a game can accept a joystick in either.</p>
+<pre><code>10 DO
+20 N = JOY(2)
+30 D = N AND 15
+40 IF D THEN PRINT &quot;DIRECTION&quot;; D;
+50 IF N AND 128 THEN PRINT &quot;FIRE!&quot;;
+60 PRINT
+70 LOOP</code></pre>
+<h3 id="from-machine-language">From machine language</h3>
+<p>Read the CIA register, invert it so pressed switches read as 1, and
+mask off the five joystick bits:</p>
+<pre><code>joy2    lda $dc00
+        eor #$ff        ; pressed = 1
+        and #$1f        ; bits 0-4: up, down, left, right, fire
+        rts</code></pre>
+<p>A routine run with the KERNAL active should read the port when no
+keys are being scanned, or accept the occasional false reading; a
+takeover program that does its own keyboard scanning avoids the conflict
+entirely.</p>
+<p>Players with a joystick in the wrong port can swap the ports from the
+Freezer with J, so a program only needs to support one port to be
+usable.</p>
+<h2 id="multi-button-controllers">Multi-Button Controllers</h2>
+<p>The vast majority of Commodore and Atari joysticks have one fire
+button. Some controllers have more, and because the 9-pin port has only
+one fire line, the extra buttons are signalled in other ways. The MEGA65
+recognises two protocols (MEGA65 Book, pp. B-143, B-144):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Protocol</th>
+<th>Buttons</th>
+<th>How the extra buttons are signalled</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Standard</td>
+<td>1</td>
+<td>The fire line only</td>
+<td>Most joysticks</td>
+</tr>
+<tr class="even">
+<td>Three-button</td>
+<td>Up to 3</td>
+<td>Buttons 2 and 3 use the port's two paddle lines, POTX and POTY</td>
+<td>C64GS controller, Atari CX78 game pad, many modern pads and
+adapters</td>
+</tr>
+<tr class="odd">
+<td>5plusbuttonsJoystick, by crystalct</td>
+<td>Up to 5</td>
+<td>Buttons 2 and 3 as above; buttons 4 and 5 reuse the direction
+signals</td>
+<td>Five-button pads, usually with Start and Select</td>
+</tr>
+</tbody>
+</table>
+<p>Controllers differ in how they label the buttons. A third button may
+be a second action button or one marked Start, and on five-button pads
+buttons 4 and 5 are typically Start and Select.</p>
+<h3 id="reading-the-buttons-from-basic">Reading the buttons from
+BASIC</h3>
+<p>JOY reports every button as its own bit, added to the direction:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Button</th>
+<th>Value</th>
+<th>Usual label</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>128</td>
+<td>A, the trigger</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>256</td>
+<td>B</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>512</td>
+<td>C, or Start</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>1024</td>
+<td>Start</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>2048</td>
+<td>Select</td>
+</tr>
+</tbody>
+</table>
+<p>AND isolates each button, regardless of the direction and the other
+buttons:</p>
+<pre><code>10 DO
+20 N = JOY(2)
+30 PRINT &quot;DIR&quot;; N AND 15;
+40 IF N AND 128 THEN PRINT &quot; A&quot;;
+50 IF N AND 256 THEN PRINT &quot; B&quot;;
+60 IF N AND 512 THEN PRINT &quot; C&quot;;
+70 IF N AND 1024 THEN PRINT &quot; START&quot;;
+80 IF N AND 2048 THEN PRINT &quot; SELECT&quot;;
+90 PRINT
+100 LOOP</code></pre>
+<p>Three consequences of the protocols are worth designing around:</p>
+<ul>
+<li><strong>Paddles confuse JOY.</strong> Buttons 2 and 3 share the
+paddle lines, so with paddles connected JOY may report buttons that are
+not pressed. Read paddles with POT instead.</li>
+<li><strong>Buttons 4 and 5 hide the stick.</strong> Because they reuse
+the direction signals, the stick may not register while Start or Select
+is held. Use them for actions taken while standing still, such as
+pausing, not for anything pressed during movement.</li>
+<li><strong>Not every player has extra buttons.</strong> Most Commodore
+joysticks have one button, so a game should be playable with button 1
+alone, or offer keyboard alternatives for the other actions.</li>
+</ul>
+<h3 id="reading-the-buttons-from-machine-language">Reading the buttons
+from machine language</h3>
+<p>Button 1 is bit 4 of the port's CIA register, as shown earlier.
+Buttons 2 and 3 are the port's paddle inputs. On a C64, reading them
+meant selecting the port through CIA 1 and waiting for the SID to sample
+the lines; the MEGA65 provides registers that read each port's paddle
+lines directly, without any SID or CIA setup (MEGA65 Book, p. T-6):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Name</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D620</code></td>
+<td>POTAX</td>
+<td>Port A, paddle X line</td>
+</tr>
+<tr class="even">
+<td><code>$D621</code></td>
+<td>POTAY</td>
+<td>Port A, paddle Y line</td>
+</tr>
+<tr class="odd">
+<td><code>$D622</code></td>
+<td>POTBX</td>
+<td>Port B, paddle X line</td>
+</tr>
+<tr class="even">
+<td><code>$D623</code></td>
+<td>POTBY</td>
+<td>Port B, paddle Y line</td>
+</tr>
+</tbody>
+</table>
+<p>A three-button controller connects button 2 to the X line and button
+3 to the Y line. A released button leaves the line unconnected, so it
+reads as a high value near <code>$FF</code>, as an empty paddle input
+does; a pressed button pulls the line up and it reads as a low value.
+Treating anything below <code>$80</code> as pressed gives a reliable
+result:</p>
+<pre><code>; return buttons 2 and 3 of the pad on port A in bits 1 and 2 of A
+btn23   lda #0
+        ldx $d620       ; POTAX: button 2
+        cpx #$80
+        bcs nob2        ; high: not pressed
+        ora #%00000010
+nob2    ldx $d621       ; POTAY: button 3
+        cpx #$80
+        bcs nob3
+        ora #%00000100
+nob3    rts</code></pre>
+<p>The Book names the ports A and B; press a button on a pad in each
+port and watch the registers to confirm which physical port each pair
+belongs to. Buttons 4 and 5 of the 5plusbuttonsJoystick protocol are
+encoded in the direction signals; JOY decodes them in BASIC, and machine
+language that needs them should follow the protocol's own
+specification.</p>
+<h2 id="more-joysticks-and-port-options">More Joysticks and Port
+Options</h2>
+<p>The MEGA65 has two joystick ports and no user port, so the C64's
+four-player adapters, which plug into the user port, cannot be used.
+Games for more than two players need another input, such as the keyboard
+matrix described below, or players sharing a port in turn. The MEGA65
+does provide some extra control over the two ports it has, in register
+<code>$D612</code> (MEGA65 Book, pp. T-4, T-5):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Name</th>
+<th>Effect when set</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>7</td>
+<td>LJOYB</td>
+<td>Rotates joystick B's directions by 180 degrees, for left-handed
+use</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>LJOYA</td>
+<td>The same for joystick A</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>JOYSWAP</td>
+<td>Exchanges joystick ports 1 and 2</td>
+</tr>
+</tbody>
+</table>
+<p>JOYSWAP is the hardware behind the Freezer's J command. Because the
+swap and rotation happen in hardware, they apply to every way of reading
+the ports, including JOY, the CIA registers and the paddle lines, so a
+program needs no special code to support them.</p>
+<p>Two hardware routes go further, and both are for experimenters rather
+than for software meant to run on every MEGA65:</p>
+<ul>
+<li><strong>The J21 header.</strong> Boards from revision R4 add a
+16-pin header, J21, with direct access to the joystick lines and two
+spare FPGA pins, intended for development work and a possible future
+daughter-board (MEGA65 Book, Appendix AD). Its pins are read and written
+through <code>$D625-$D628</code>, with separate data direction
+registers.</li>
+<li><strong>The PMOD adapter.</strong> On Nexys development boards
+running the MEGA65 core, a community-designed adapter adds a 9-pin
+joystick port through a PMOD connector (MEGA65 Book, p. 15-19).</li>
+</ul>
+<p>Software that relies on either should say so clearly, since a
+standard MEGA65 has neither extra port.</p>
+<h2 id="paddles">Paddles</h2>
+<p>A paddle is a dial connected to a variable resistor, and each port
+takes a pair. The SID chip measures the resistance and reports it as a
+number from 0 to 255. Each paddle also has a fire button, read like a
+joystick switch.</p>
+<p>POT reads paddles 1 to 4: the low byte is the position, and a value
+above 255 means the button is pressed (MEGA65 Book, p. B-197):</p>
+<pre><code>10 X = POT(1)
+20 B = X &gt; 255 : REM -1 WHILE THE BUTTON IS PRESSED
+30 V = X AND 255 : REM POSITION, 0 TO 255</code></pre>
+<p>Machine language reads the two values from SID registers
+<code>$D419</code> and <code>$D41A</code>, after selecting a port
+through the upper bits of CIA 1's port A, as on the C64.</p>
+<h2 id="mice">Mice</h2>
+<p>The MEGA65 accepts the Commodore 1351 mouse, Amiga mice, and modern
+USB mice through adapters such as the mouSTer. The configuration
+utility's Input page sets the mouse type for each port: "normal" means
+the 1351. An Amiga mouse in a port set to normal can interfere with the
+keyboard (MEGA65 Book, p. 4-4).</p>
+<p>BASIC 65 includes a complete mouse driver. MOUSE ON starts it, with a
+sprite as the pointer; RMOUSE reads the position and buttons; MOUSE OFF
+stops it:</p>
+<pre><code>10 MOUSE ON, 1, 1 : REM MOUSE IN PORT 1, SPRITE 1 AS POINTER
+20 DO
+30 RMOUSE X, Y, B
+40 IF X &lt; 0 THEN PRINT &quot;NO MOUSE&quot; : EXIT
+50 IF B THEN PRINT &quot;CLICK AT&quot;; X; Y
+60 LOOP
+70 MOUSE OFF</code></pre>
+<p>The driver runs in BASIC's interrupt, so the pointer moves smoothly
+while the program does other work.</p>
+<h2 id="light-pens">Light Pens</h2>
+<p>A light pen detects the moment the display's beam passes under its
+tip, and the video chip latches the position. LPEN(0) and LPEN(1) return
+the X and Y positions (MEGA65 Book, p. B-163). Light pens only work with
+CRT displays, so they are rarely used on the MEGA65 today.</p>
+<h2 id="the-keyboard-as-an-input-device">The Keyboard as an Input
+Device</h2>
+<p>The C64 read its keyboard by scanning a matrix through CIA 1, which
+is slow, misses some combinations of keys, and produces "ghost" keys
+when certain keys are held together. The MEGA65 still supports CIA
+scanning for old software, but adds two better methods (MEGA65 Book,
+Appendix F).</p>
+<h3 id="the-typing-event-queue">The typing event queue</h3>
+<p>For text input, the hardware keeps a queue of typing events, already
+translated into characters:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Name</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D610</code></td>
+<td>ASCIIKEY</td>
+<td>The next event as ASCII; <code>$00</code> if the queue is empty,
+<code>$FF</code> if it has no ASCII form</td>
+</tr>
+<tr class="even">
+<td><code>$D619</code></td>
+<td>PETSCIIKEY</td>
+<td>The next event as PETSCII; <code>$FF</code> if it has no PETSCII
+form</td>
+</tr>
+<tr class="odd">
+<td><code>$D60A</code> bits 0-6</td>
+<td>MODKEY</td>
+<td>Modifier keys held during the event</td>
+</tr>
+<tr class="even">
+<td><code>$D60A</code> bit 7</td>
+<td>KEYQUEUE</td>
+<td>1 while the queue is not empty</td>
+</tr>
+</tbody>
+</table>
+<p>Writing any value to <code>$D610</code> or <code>$D619</code> removes
+the event from the queue. ASCIIKEY gives access to characters PETSCII
+lacks, such as <code>{</code>, <code>|</code> and <code>_</code>, and to
+accented Latin-1 characters typed with the MEGA key (MEGA65 Book, pp.
+F-3, F-4).</p>
+<pre><code>wait    lda $d610       ; ASCIIKEY
+        beq wait        ; $00: nothing typed yet
+        sta $d610       ; remove it from the queue
+        rts             ; A holds the character</code></pre>
+<p>The KERNAL's GETIN and BASIC's GET and GETKEY read the same queue, so
+a program should use one method or the other, not both.</p>
+<h3 id="the-keyboard-matrix-registers">The keyboard matrix
+registers</h3>
+<p>For games, which need to know which keys are held down at once, the
+MEGA65 exposes the C65 keyboard matrix directly. It has nine columns of
+eight rows (MEGA65 Book, p. F-14):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D614</code></td>
+<td>Write a column number, 0 to 8</td>
+</tr>
+<tr class="even">
+<td><code>$D613</code></td>
+<td>Read the column: a row's bit is 0 while its key is pressed</td>
+</tr>
+<tr class="odd">
+<td><code>$D611</code> bits 0-6</td>
+<td>Modifier keys: a bit is 1 while the key is pressed</td>
+</tr>
+</tbody>
+</table>
+<p>Unlike CIA scanning, these registers report any combination of keys
+without ghosting, and they do not disturb the joystick ports. The Book's
+keyboard appendix gives the key at each row and column.</p>
+<h3 id="from-basic-1">From BASIC</h3>
+<p>GET and GETKEY read the typing queue. For held keys, a BASIC program
+can read the matrix registers with POKE and PEEK, though the keyboard is
+usually simpler to treat as a source of single key presses in BASIC.</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Joysticks.</strong> Read with JOY in BASIC, or from
+<code>$DC00</code> (port 2) and <code>$DC01</code> (port 1), active low,
+bits 0-4. Three-button and five-button controllers add buttons 2 to 5,
+which JOY reports as 256, 512, 1024 and 2048; machine language reads
+buttons 2 and 3 from the paddle registers <code>$D620-$D623</code>.</li>
+<li><strong>Paddles.</strong> POT returns position and button; machine
+language reads SID <code>$D419</code> and <code>$D41A</code>.</li>
+<li><strong>Mice.</strong> Set the mouse type in the configuration
+utility; MOUSE ON, RMOUSE and MOUSE OFF provide a complete driver.</li>
+<li><strong>Light pens.</strong> LPEN, with a CRT display.</li>
+<li><strong>Keyboard.</strong> The typing queue at <code>$D610</code>,
+<code>$D619</code> and <code>$D60A</code> gives characters; the matrix
+registers at <code>$D614</code>, <code>$D613</code> and
+<code>$D611</code> give held keys without ghosting.</li>
+</ul>
+<p>Chapter 17 covers the remaining peripherals.</p>
+<nav class="chapnav"><span><a href="ch15-using-the-disk-drive.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch17-major-peripherals.html">Next &rarr;</a></span></nav>
+</body>
+</html>

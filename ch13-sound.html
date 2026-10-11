@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 13: Sound</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch12-graphics.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch14-sd-card-and-mass-storage.html">Next &rarr;</a></span></nav>
+<h1 id="programming-the-mega65--chapter-13-sound">Programming the MEGA65
+— Chapter 13: Sound</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>The C64 had one SID. The MEGA65 has four, giving twelve voices, plus
+four channels of digitised sound played by DMA. Everything passes
+through a programmable cross-bar mixer before reaching the 3.5mm socket
+and the digital video output. The mixer also has an input reserved for
+an OPL-compatible FM synthesiser, but the MEGA65 Book notes that this
+device is not currently functional in the MEGA65 core (MEGA65 Book, p.
+V-24), so it is not covered here.</p>
+<p>The two working kinds of sound are very different. A SID synthesises
+its waveforms from a handful of register settings, so music costs almost
+no memory or CPU time. Digitised sound reproduces recorded audio, such
+as speech, real instruments or sound effects, at the cost of memory:
+each second of sound is thousands of bytes.</p>
+<p>This chapter covers:</p>
+<ul>
+<li>Sound and music from BASIC 65, which needs no register
+knowledge</li>
+<li>The four SIDs, their placement and the 6581/8580 choice</li>
+<li>The SID registers</li>
+<li>Digital audio through the audio DMA channels</li>
+<li>The cross-bar mixer and its registers</li>
+<li>A complete example of sample playback</li>
+</ul>
+<p>Register details in this chapter follow the MEGA65 Book, the official
+reference, in its June 2025 edition. Page references such as "p. P-18"
+refer to that edition.</p>
+<h2 id="sound-from-basic-65">Sound from BASIC 65</h2>
+<p>BASIC 65 divides the SIDs between two jobs. PLAY uses SID 1 for
+voices 1-3 and SID 3 for voices 4-6; SOUND uses SID 2 for voices 1-3 and
+SID 4 for voices 4-6. Music and sound effects therefore never interrupt
+each other (MEGA65 Book, pp. B-190, B-243). Both commands return
+immediately and play in the background under interrupt control, unlike
+the C128, which stopped the program while it played.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Command</th>
+<th>Format</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>SOUND</td>
+<td><code>SOUND voice, freq, dur [, dir, min, sweep, wave, pulse]</code></td>
+<td>Sound effect on SID 2 or 4</td>
+</tr>
+<tr class="even">
+<td>SOUND CLR</td>
+<td><code>SOUND CLR</code></td>
+<td>Silence SOUND and PLAY and reset the sound system</td>
+</tr>
+<tr class="odd">
+<td>PLAY</td>
+<td><code>PLAY [string1, ..., string6]</code></td>
+<td>Music on SID 1 and 3</td>
+</tr>
+<tr class="even">
+<td>TEMPO</td>
+<td><code>TEMPO speed</code></td>
+<td>Music speed, 1-255</td>
+</tr>
+<tr class="odd">
+<td>ENVELOPE</td>
+<td><code>ENVELOPE n [, attack, decay, sustain, release, waveform, pw]</code></td>
+<td>Redefine instrument slot 0-9</td>
+</tr>
+<tr class="even">
+<td>FILTER</td>
+<td><code>FILTER sid [, freq, lp, bp, hp, res]</code></td>
+<td>Set the filter for the right or left music SID</td>
+</tr>
+<tr class="odd">
+<td>VOL</td>
+<td><code>VOL right, left</code></td>
+<td>Volume 0-15 for SIDs 1-2 and SIDs 3-4</td>
+</tr>
+<tr class="even">
+<td>RPLAY</td>
+<td><code>RPLAY(voice)</code></td>
+<td>1 if music voice 1-6 is playing, otherwise 0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sound">SOUND</h3>
+<p>The voice is 1 to 6. The frequency is the raw 16-bit SID frequency
+value, 0 to 65535, not a value in hertz; the next section shows how to
+convert. The duration is in jiffies, 0 to 32767: 50 per second in PAL
+video mode and 60 in NTSC.</p>
+<p>The optional parameters add a sweep and choose the tone. The
+direction is 0 up, 1 down or 2 oscillating; min is the lowest frequency
+of the sweep and sweep its range. The waveform is 0 triangle, 1
+sawtooth, 2 square (the default) or 3 noise, and pulse sets the square
+wave's width, 0 to 4095 (MEGA65 Book, p. B-243).</p>
+<p>Because jiffies depend on the video standard, a program that wants a
+sound of fixed length should check it first. Bit 7 of <code>$D06F</code>
+is set in NTSC mode:</p>
+<pre><code>10 IF PEEK($D06F) AND $80 THEN J=60 : ELSE J=50
+20 SOUND 1, 7382, J                      : REM SQUARE WAVE FOR ONE SECOND
+30 SOUND 3, 4000, 120, 2, 2000, 400, 1   : REM SWEEPING SAWTOOTH
+40 SOUND CLR                             : REM SILENCE AND RESET</code></pre>
+<p>These lines follow the Book's own example (MEGA65 Book, p.
+B-243).</p>
+<h3 id="play">PLAY</h3>
+<p>PLAY takes up to six strings, one per music voice. A note is a letter
+A to G, optionally preceded by modifiers. Directives are a letter
+followed by a digit, and stay in force until changed (MEGA65 Book, pp.
+B-190, B-191).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Modifier</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>#</code></td>
+<td>Sharp</td>
+</tr>
+<tr class="even">
+<td><code>$</code></td>
+<td>Flat</td>
+</tr>
+<tr class="odd">
+<td><code>.</code></td>
+<td>Dotted; it goes before the note, unlike sheet music</td>
+</tr>
+<tr class="even">
+<td><code>W</code> <code>H</code> <code>Q</code> <code>I</code>
+<code>S</code></td>
+<td>Whole, half, quarter, eighth or sixteenth note</td>
+</tr>
+<tr class="odd">
+<td><code>R</code></td>
+<td>Rest</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th>Directive</th>
+<th>Meaning</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>O</code></td>
+<td>Octave; 4 is the default, middle octave</td>
+<td>0-6</td>
+</tr>
+<tr class="even">
+<td><code>T</code></td>
+<td>Instrument envelope</td>
+<td>0-9</td>
+</tr>
+<tr class="odd">
+<td><code>U</code></td>
+<td>Volume</td>
+<td>0-9</td>
+</tr>
+<tr class="even">
+<td><code>X</code></td>
+<td>Filter off or on</td>
+<td>0-1</td>
+</tr>
+<tr class="odd">
+<td><code>M</code></td>
+<td>Modulation: vibrato depth, 0 off</td>
+<td>0-9</td>
+</tr>
+<tr class="even">
+<td><code>P</code></td>
+<td>Portamento: slide speed between notes, 0 off</td>
+<td>0-9</td>
+</tr>
+<tr class="odd">
+<td><code>L</code></td>
+<td>Loop back to the start of the string</td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+<p>While portamento is on, notes are not gated off between each other;
+turn it off with <code>P0</code> to restore normal note endings.</p>
+<pre><code>10 ENVELOPE 9, 10, 5, 10, 5, 0, 300
+20 VOL 8, 8
+30 TEMPO 30
+40 PLAY &quot;O5T9HCIDCDEHCG IGAGFEFDEWCL&quot;, &quot;O2T0QCGEGCGEG DBGB CGEGL&quot;</code></pre>
+<p>This example is from the Book (MEGA65 Book, p. B-191). Spaces in PLAY
+strings are ignored, so they can separate bars.</p>
+<p>Empty arguments leave a voice playing undisturbed, so
+<code>PLAY ,"O5CDE"</code> changes only voice 2. PLAY with no arguments
+silences all voices and resets the music system, including TEMPO. A PLAY
+string is an ordinary BASIC string and limited to 255 characters; longer
+pieces are played in sections, using RPLAY to wait for each to
+finish.</p>
+<h3 id="tempo-envelope-filter-and-vol">TEMPO, ENVELOPE, FILTER and
+VOL</h3>
+<p>TEMPO sets the length of a whole note to 24 divided by the speed, in
+seconds (MEGA65 Book, p. B-262): TEMPO 24 makes a whole note last one
+second.</p>
+<p>ENVELOPE redefines one of the ten instrument slots used by PLAY's
+<code>T</code> directive. Attack, decay, sustain and release are 0 to
+15; the waveform is 0 triangle, 1 sawtooth, 2 pulse, 3 noise or 4 ring
+modulation; pw is the pulse width (MEGA65 Book, p. B-99). The defaults
+are:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Slot</th>
+<th>Instrument</th>
+<th>A</th>
+<th>D</th>
+<th>S</th>
+<th>R</th>
+<th>Wave</th>
+<th>Pulse</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>Piano</td>
+<td>0</td>
+<td>9</td>
+<td>0</td>
+<td>0</td>
+<td>2</td>
+<td>1536</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>Accordion</td>
+<td>12</td>
+<td>0</td>
+<td>12</td>
+<td>0</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>Calliope</td>
+<td>0</td>
+<td>0</td>
+<td>15</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>Drum</td>
+<td>0</td>
+<td>5</td>
+<td>5</td>
+<td>0</td>
+<td>3</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>Flute</td>
+<td>9</td>
+<td>4</td>
+<td>4</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td>Guitar</td>
+<td>0</td>
+<td>9</td>
+<td>2</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>Harpsichord</td>
+<td>0</td>
+<td>9</td>
+<td>0</td>
+<td>0</td>
+<td>2</td>
+<td>512</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>Organ</td>
+<td>0</td>
+<td>9</td>
+<td>9</td>
+<td>0</td>
+<td>2</td>
+<td>2048</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td>Trumpet</td>
+<td>8</td>
+<td>9</td>
+<td>4</td>
+<td>1</td>
+<td>2</td>
+<td>512</td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td>Xylophone</td>
+<td>0</td>
+<td>9</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>FILTER sets the SID filter for music: sid is 1 for the right music
+SID and 2 for the left. The cutoff is 0 to 2047, the three mode switches
+are 0 or 1, and resonance is 0 to 15. Combining modes produces
+band-reject and notch effects. A voice uses the filter only while its
+PLAY string has <code>X1</code> in effect (MEGA65 Book, p. B-109).</p>
+<p>VOL sets the volume, 0 to 15, of the right pair of SIDs, 1 and 2, and
+the left pair, 3 and 4. "Right" and "left" describe the default mix; the
+user's mixer settings decide where each pair is actually heard (MEGA65
+Book, p. B-279).</p>
+<h2 id="the-four-sids">The Four SIDs</h2>
+<p>The MEGA65's SIDs are implemented in the FPGA, and each behaves as a
+complete SID with three voices, a filter and its own envelope
+generators. They occupy four consecutive 32-byte register blocks, and
+the Book's I/O map names them by the side of the mix they feed:</p>
+<table>
+<thead>
+<tr class="header">
+<th>SID</th>
+<th>Registers</th>
+<th>Book name</th>
+<th>Used by BASIC for</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>$D400-$D41F</code></td>
+<td>Right #1</td>
+<td>PLAY voices 1-3</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>$D420-$D43F</code></td>
+<td>Right #2</td>
+<td>SOUND voices 1-3</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>$D440-$D45F</code></td>
+<td>Left #1</td>
+<td>PLAY voices 4-6</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>$D460-$D47F</code></td>
+<td>Left #2</td>
+<td>SOUND voices 4-6</td>
+</tr>
+</tbody>
+</table>
+<p>The same four SIDs appear again at <code>$D480-$D4FF</code> (MEGA65
+Book, p. J-9). Each block's registers are laid out exactly as on the
+C64, so the reference in the next section applies to all four: add
+<code>$20</code>, <code>$40</code> or <code>$60</code> to reach SIDs 2,
+3 and 4.</p>
+<h3 id="left-and-right">Left and right</h3>
+<p>The mixer treats the SIDs as two pairs: one mixer input carries the
+left SIDs and another the right SIDs (MEGA65 Book, p. V-24). By default
+each pair is panned only slightly towards its side, so a C64 tune played
+on SID 1 is still heard from both speakers. A program that wants a part
+to come from one side chooses a SID from the appropriate pair; the
+user's mixer settings decide how far apart the two pairs actually
+sound.</p>
+<h3 id="chip-models">Chip models</h3>
+<p>Commodore built two versions of the SID. The original 6581 and the
+later 8580 differ mainly in their filters and in how combined waveforms
+sound, and some C64 games relied on quirks of the 6581 that the 8580
+fixed (MEGA65 Book, p. 4-7). Music written for one can sound noticeably
+different on the other, because composers tuned their filter settings to
+the chip they had.</p>
+<p>The MEGA65 models either. The user chooses a default with the SID
+generation setting in the configuration utility, and a program can
+choose for itself with SIDMODE at <code>$D63C</code>: 0 selects 6581
+behaviour and 1 selects 8580 (MEGA65 Book, p. R-3). The Book's register
+table places SIDMODE in the low four bits of <code>$D63C</code>,
+suggesting one bit per SID; confirm the bit order on hardware before
+relying on it. A program that changes SIDMODE should restore it before
+exiting, since it overrides the user's setting.</p>
+<h3 id="timing-music">Timing music</h3>
+<p>C64 music players are usually called once per frame from a raster
+interrupt, which ties their tempo to the video standard: 50 frames a
+second in PAL, 60 in NTSC. The MEGA65 keeps both video modes and their
+timings, so a tune written for PAL plays 20% faster in NTSC mode. A
+player that must sound the same in both should be driven by a CIA timer,
+or check bit 7 of <code>$D06F</code> and adjust its tempo, as the SOUND
+example above does for durations.</p>
+<h2 id="sid-register-reference">SID Register Reference</h2>
+<p>Offsets are from the base of a SID, <code>$D400</code> for SID 1.
+Voices 1, 2 and 3 use the same seven-register layout at offsets
+<code>$00</code>, <code>$07</code> and <code>$0E</code>.</p>
+<h3 id="voice-registers">Voice registers</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Offset (voice 1)</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$00-$01</code></td>
+<td>Frequency, 16 bits, low byte first</td>
+</tr>
+<tr class="even">
+<td><code>$02-$03</code></td>
+<td>Pulse width, 12 bits: low byte, then bits 11-8 in the low
+nybble</td>
+</tr>
+<tr class="odd">
+<td><code>$04</code></td>
+<td>Control: waveform, gate and modulation bits, below</td>
+</tr>
+<tr class="even">
+<td><code>$05</code></td>
+<td>Attack (bits 7-4) and decay (bits 3-0)</td>
+</tr>
+<tr class="odd">
+<td><code>$06</code></td>
+<td>Sustain level (bits 7-4) and release (bits 3-0)</td>
+</tr>
+</tbody>
+</table>
+<p>The control register:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Name</th>
+<th>Effect when set</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>7</td>
+<td>Noise</td>
+<td>Noise waveform</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Pulse</td>
+<td>Pulse waveform, width from registers 2-3</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>Sawtooth</td>
+<td>Sawtooth waveform</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Triangle</td>
+<td>Triangle waveform</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Test</td>
+<td>Holds the oscillator at zero</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Ring</td>
+<td>Ring-modulates triangle with the previous voice's oscillator</td>
+</tr>
+<tr class="odd">
+<td>1</td>
+<td>Sync</td>
+<td>Synchronises this oscillator to the previous voice's</td>
+</tr>
+<tr class="even">
+<td>0</td>
+<td>Gate</td>
+<td>1 starts attack, decay and sustain; 0 starts release</td>
+</tr>
+</tbody>
+</table>
+<p>For voice 1 the "previous" voice is voice 3.</p>
+<h3 id="filter-and-volume">Filter and volume</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Offset</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$15</code></td>
+<td>Filter cutoff, bits 2-0</td>
+</tr>
+<tr class="even">
+<td><code>$16</code></td>
+<td>Filter cutoff, bits 10-3</td>
+</tr>
+<tr class="odd">
+<td><code>$17</code></td>
+<td>Resonance (bits 7-4); route voices 1-3 and external input through
+the filter (bits 0-3)</td>
+</tr>
+<tr class="even">
+<td><code>$18</code></td>
+<td>Bit 7 mutes voice 3; bits 6-4 select high-pass, band-pass and
+low-pass; bits 3-0 master volume</td>
+</tr>
+<tr class="odd">
+<td><code>$19-$1A</code></td>
+<td>Paddle inputs (read)</td>
+</tr>
+<tr class="even">
+<td><code>$1B</code></td>
+<td>Voice 3 oscillator output (read)</td>
+</tr>
+<tr class="odd">
+<td><code>$1C</code></td>
+<td>Voice 3 envelope output (read)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="playing-a-note">Playing a note</h3>
+<p>The frequency value is the output frequency multiplied by 16,777,216
+and divided by the SID's clock rate, roughly 1 MHz. On a PAL C64 the
+clock is 985,248 Hz, so concert A at 440 Hz needs a value of about
+7,493. The SID's own clock is what matters here, not the CPU speed, so
+the 45GS02 running at 40.5 MHz does not change the pitch.</p>
+<p>This plays a note on SID 3, voice 1, which comes from the left of the
+default mix:</p>
+<pre><code>sid3    = $d440
+        lda #$0f
+        sta sid3+$18    ; volume 15, no filter
+        lda #$09
+        sta sid3+$05    ; attack 0, decay 9
+        lda #$00
+        sta sid3+$06    ; sustain 0, release 0
+        lda #&lt;7493
+        sta sid3+$00
+        lda #&gt;7493
+        sta sid3+$01    ; about 440 Hz
+        lda #$11
+        sta sid3+$04    ; triangle, gate on
+        ; ... later ...
+        lda #$10
+        sta sid3+$04    ; triangle, gate off: release</code></pre>
+<p>The SID registers, apart from the four read-only ones, cannot be read
+back. A program that needs to know a register's current value, for
+example to change one control bit, should keep its own copy in RAM.</p>
+<h2 id="digital-audio-with-audio-dma">Digital Audio with Audio DMA</h2>
+<p>To play a recorded sound, a computer must send its samples to a
+digital-to-analogue converter at an exact, steady rate: 8,000 times a
+second for an 8 kHz sample. The MEGA65's DMA controller has four audio
+channels that do this in the background, much like the Amiga's. Unlike
+the Amiga's, they support 8- and 16-bit samples, rates up to about 1 MHz
+and 256 volume levels per channel, but no modulation between channels
+(MEGA65 Book, p. P-3).</p>
+<h3 id="how-it-works">How it works</h3>
+<p>The DMA controller is part of the CPU, and the MEGA65 has no bus
+slots reserved for audio. Audio DMA instead uses idle CPU cycles, which
+exist only at full speed, about 40.5 MHz: then every instruction that
+reads a byte from memory leaves a wait state that audio DMA can use. Two
+consequences follow (MEGA65 Book, p. P-18):</p>
+<ul>
+<li><strong>The CPU must run at full speed</strong> while audio DMA
+plays.</li>
+<li><strong>Tight loops need a memory read.</strong> A loop that never
+reads memory, such as <code>loop: JMP loop</code>, starves audio DMA.
+Add a read, such as <code>LDA $1234</code>, to any idle loop.</li>
+</ul>
+<p>Audio DMA also keeps running during ordinary DMA jobs, stealing
+cycles from them so that playback is not interrupted (MEGA65 Book, p.
+P-3).</p>
+<h3 id="global-control-d711">Global control: <code>$D711</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Name</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>7</td>
+<td>AUDEN</td>
+<td>Enable audio DMA, and feed it to the mixer in place of the direct
+digital registers at <code>$D6F8-$D6FB</code></td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>NOMIX</td>
+<td>Bypass the mixer: audio DMA plays at full volume and all other
+sound, including the SIDs, is silenced</td>
+</tr>
+</tbody>
+</table>
+<p>The other bits should normally be left clear, so write
+<code>$80</code> to <code>$D711</code> to enable audio DMA (MEGA65 Book,
+p. P-18).</p>
+<h3 id="channel-registers">Channel registers</h3>
+<p>Channels 0 to 3 have 16 registers each, at <code>$D720</code>,
+<code>$D730</code>, <code>$D740</code> and <code>$D750</code>. Offsets
+are the same for every channel (MEGA65 Book, pp. P-21 to P-23):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Offset</th>
+<th>Name</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0</code></td>
+<td>control</td>
+<td>Bit 7 enable, bit 6 loop, bit 5 sign, bit 4 sine mode, bit 3 stop
+flag, bits 1-0 sample format</td>
+</tr>
+<tr class="even">
+<td><code>$1-$3</code></td>
+<td>base address</td>
+<td>24-bit address where a looping sample restarts</td>
+</tr>
+<tr class="odd">
+<td><code>$4-$6</code></td>
+<td>frequency</td>
+<td>24-bit rate value, added to a counter every CPU cycle</td>
+</tr>
+<tr class="even">
+<td><code>$7-$8</code></td>
+<td>top address</td>
+<td>Low 16 bits of the last sample's address</td>
+</tr>
+<tr class="odd">
+<td><code>$9</code></td>
+<td>volume</td>
+<td>0 (mute) to <code>$FF</code> (full), to this channel's own side</td>
+</tr>
+<tr class="even">
+<td><code>$A-$C</code></td>
+<td>current address</td>
+<td>24-bit address of the next sample; set it to start playback</td>
+</tr>
+<tr class="odd">
+<td><code>$D-$F</code></td>
+<td>timing counter</td>
+<td>The rate counter itself</td>
+</tr>
+</tbody>
+</table>
+<p>The control bits in detail:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Name</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>7</td>
+<td>CHxEN</td>
+<td>1 plays the channel; clearing it stops playback</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>CHxLOOP</td>
+<td>At the end, continue from the base address</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>CHxSGN</td>
+<td>Sample sign: 0 signed, 1 unsigned</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>CHxSINE</td>
+<td>Play a built-in 32-sample 16-bit sine wave instead of memory</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>CHxSTP</td>
+<td>Set by the hardware when a sample finishes</td>
+</tr>
+<tr class="even">
+<td>1-0</td>
+<td>CHxSBITS</td>
+<td><code>%11</code> 16-bit, <code>%10</code> 8-bit, <code>%01</code>
+upper nybble, <code>%00</code> lower nybble</td>
+</tr>
+</tbody>
+</table>
+<p>Three details trip people up. First, playback starts from the current
+address at <code>$A-$C</code>, not the base address; the base address is
+only the loop point, and for a whole-sample loop both are set to the
+start. Second, only the low 16 bits of the end are compared, so one
+sample can be at most 64KB and must lie in chip RAM. Third, the current
+address registers are not latched and may change while being read; stop
+the channel before reading them if an exact value matters (MEGA65 Book,
+pp. P-18, P-19).</p>
+<p>Getting the sign bit wrong makes the waveform jump wherever it
+crosses zero, which sounds like loud crackling. 4-bit samples use one
+half of each byte, so two different 4-bit sounds can share the same
+memory, one in each nybble.</p>
+<h3 id="sample-rate">Sample rate</h3>
+<p>The frequency value is added to a 24-bit counter every CPU cycle, and
+a new sample is fetched each time the counter overflows (MEGA65 Book, p.
+P-19). The value for a given rate is therefore:</p>
+<pre><code>value = rate * 16777216 / 40500000</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th>Sample rate</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>4 kHz</td>
+<td><code>$000679</code></td>
+</tr>
+<tr class="even">
+<td>8 kHz</td>
+<td><code>$000CF2</code></td>
+</tr>
+<tr class="odd">
+<td>11.025 kHz</td>
+<td><code>$0011D7</code></td>
+</tr>
+<tr class="even">
+<td>16 kHz</td>
+<td><code>$0019E4</code></td>
+</tr>
+<tr class="odd">
+<td>22.05 kHz</td>
+<td><code>$0023AE</code></td>
+</tr>
+<tr class="even">
+<td>32 kHz</td>
+<td><code>$0033C8</code></td>
+</tr>
+</tbody>
+</table>
+<p>These values assume the Book's 40.5 MHz clock; some published tables
+use 40 MHz and differ by about 1%, which is inaudible for most purposes.
+At rates up to about 16 kHz with 8-bit samples, the irregular spacing of
+idle cycles causes no audible distortion in normal programs; at much
+higher rates it can (MEGA65 Book, p. P-19). Frequency and volume can
+both be changed while a sample plays, so one recorded note can be played
+at different pitches or faded in and out.</p>
+<h3 id="stereo">Stereo</h3>
+<p>Channels 0 and 1 feed the left digital audio input of the mixer and
+channels 2 and 3 the right, at the volume in their own register
+<code>$9</code>. Four more registers let each channel also feed the
+opposite side: <code>$D71C</code> and <code>$D71D</code> send channels 0
+and 1 to the right, and <code>$D71E</code> and <code>$D71F</code> send
+channels 2 and 3 to the left. Setting both <code>$D729</code> and
+<code>$D71C</code> to <code>$FF</code> plays channel 0 at full volume on
+both sides (MEGA65 Book, p. P-19).</p>
+<h3 id="sine-mode">Sine mode</h3>
+<p>Setting bit 4 of a channel's control register plays a built-in
+32-sample, 16-bit sine wave instead of fetching from memory. Because no
+memory is read, the result is free of the distortion idle-cycle timing
+can cause, and clean tones well above 60 kHz are possible. The address
+registers must still be set as if the table sat in the bottom 64 bytes
+of memory (MEGA65 Book, pp. P-19, P-20).</p>
+<h3 id="end-of-sample-and-interrupts">End of sample and interrupts</h3>
+<p>When a non-looping sample ends, the hardware sets the channel's stop
+flag, bit 3. The Book's text states that audio DMA cannot presently
+generate interrupts, although its register table lists interrupt flag
+and enable bits at <code>$D713</code> and offset registers at
+<code>$D714-$D717</code> (MEGA65 Book, pp. P-20, P-21). Until those are
+documented, a program should poll the stop flag, for example once a
+frame.</p>
+<h3 id="longer-sounds">Longer sounds</h3>
+<p>A 64KB region holds about eight seconds of 8-bit sound at 8 kHz.
+Longer sounds use the loop bit as a ring buffer: the channel loops over
+a region while the program copies the next part of the sound into the
+half the current address has just left, using DMA from attic RAM.
+Because audio DMA steals cycles from ordinary DMA jobs, the copies do
+not interrupt playback.</p>
+<h2 id="the-audio-mixer">The Audio Mixer</h2>
+<p>Everything the MEGA65 plays passes through a full cross-bar mixer.
+Each output, such as the left speaker or the right headphone, is built
+by multiplying every input by its own 16-bit coefficient and adding the
+results. Because each output has its own complete set of coefficients,
+every output can carry a completely different mix (MEGA65 Book, p.
+V-23).</p>
+<h3 id="inputs-and-outputs">Inputs and outputs</h3>
+<p>The inputs relevant to the MEGA65 are listed below; the others exist
+only on the MEGAphone or development boards (MEGA65 Book, p. V-24).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Input</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0</code></td>
+<td>Left SIDs (3 and 4)</td>
+</tr>
+<tr class="even">
+<td><code>$1</code></td>
+<td>Right SIDs (1 and 2)</td>
+</tr>
+<tr class="odd">
+<td><code>$8</code></td>
+<td>Digital audio left: audio DMA channels 0-1, or
+<code>$D6F8-$D6F9</code></td>
+</tr>
+<tr class="even">
+<td><code>$9</code></td>
+<td>Digital audio right: audio DMA channels 2-3, or
+<code>$D6FA-$D6FB</code></td>
+</tr>
+<tr class="odd">
+<td><code>$E</code></td>
+<td>Coefficient also used for the OPL FM input, <code>$F</code> (not yet
+functional)</td>
+</tr>
+<tr class="even">
+<td><code>$F</code></td>
+<td>Its coefficient is the master volume for the output</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th>Output</th>
+<th>Destination</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0</code></td>
+<td>Left primary output</td>
+</tr>
+<tr class="even">
+<td><code>$1</code></td>
+<td>Right primary output</td>
+</tr>
+<tr class="odd">
+<td><code>$6</code></td>
+<td>Left headphone output</td>
+</tr>
+<tr class="even">
+<td><code>$7</code></td>
+<td>Right headphone output</td>
+</tr>
+</tbody>
+</table>
+<h3 id="mixer-registers">Mixer registers</h3>
+<p>The 128 coefficients are reached through a register-select port and a
+data port (MEGA65 Book, p. V-26):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Name</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D6F4</code></td>
+<td>MIXREGSEL</td>
+<td>Select a coefficient byte</td>
+</tr>
+<tr class="even">
+<td><code>$D6F5</code></td>
+<td>MIXREGDATA</td>
+<td>Read or write the selected byte</td>
+</tr>
+<tr class="odd">
+<td><code>$D6F8-$D6F9</code></td>
+<td>DIGILLSB/MSB</td>
+<td>16-bit sample for the left digital input</td>
+</tr>
+<tr class="even">
+<td><code>$D6FA-$D6FB</code></td>
+<td>DIGIRLSB/MSB</td>
+<td>16-bit sample for the right digital input</td>
+</tr>
+<tr class="odd">
+<td><code>$D6FC-$D6FD</code></td>
+<td>READBACKLSB/MSB</td>
+<td>Audio read-back, source selected by <code>$D6F4</code>, for
+visualisers or effects</td>
+</tr>
+</tbody>
+</table>
+<p>The coefficient for input i on output o starts at byte
+<code>o × 32 + i × 2</code>: the low byte there, the high byte at the
+next number. For example, the right SIDs (input 1) on the left primary
+output (output 0) are bytes 2 and 3. Changes take effect at once, so
+ramp coefficients gradually to avoid clicks, and allow 32 cycles after
+changing one coefficient before selecting another, or the change may be
+lost (MEGA65 Book, pp. V-23, V-25).</p>
+<p>This sets the right SIDs to full level on the left primary
+output:</p>
+<pre><code>        lda #2          ; output 0, input 1, low byte
+        ldx #$ff
+        jsr setmix
+        lda #3          ; high byte
+        ldx #$ff
+        jsr setmix
+        rts
+
+; setmix: write X to mixer byte A, then wait
+; at least 32 cycles before returning
+setmix  sta $d6f4
+        stx $d6f5
+        ldy #8
+wait    lda $d6f5       ; the read also gives audio
+        dey             ; DMA its idle cycles
+        bne wait
+        rts</code></pre>
+<h3 id="direct-digital-audio">Direct digital audio</h3>
+<p>With AUDEN in <code>$D711</code> clear, the digital inputs take their
+samples straight from <code>$D6F8-$D6FB</code>, 16 bits per side. A
+program writing these registers at a steady rate can play procedurally
+generated sound, such as a software synthesiser, without audio DMA. For
+recorded samples audio DMA is simpler, steadier and cheaper in CPU time
+(MEGA65 Book, p. V-25).</p>
+<h3 id="working-with-the-mix">Working with the mix</h3>
+<p>The mixer settings belong to the user, who adjusts them with the
+audio mixer in the Freezer, and they persist with the machine. A program
+should normally control loudness and position through what it owns: each
+SID's volume register, the choice of SID pair, and the audio DMA volumes
+and cross-feed registers. Programs that genuinely need to manage the
+mix, such as music trackers, should read the coefficients they change
+and restore them before exiting.</p>
+<p>Two practical habits help while developing:</p>
+<ul>
+<li><strong>Test with stereo speakers.</strong> A sound that seems
+centred on one speaker may come entirely from one side.</li>
+<li><strong>Keep the volume down while experimenting.</strong> A wrong
+sample format or bad register value can produce a very loud noise. Use
+speakers with their own volume control, or lower the master volume in
+the Freezer, rather than headphones plugged straight into the
+socket.</li>
+</ul>
+<p>On the R3 and earlier boards, the 3.5mm socket is driven by an
+over-sampled 1-bit output, with a choice of pulse-width or pulse-density
+modulation through the PWMPDM bit in <code>$D711</code>. R4 and later
+boards use a dedicated DAC, and on older boards the Book recommends HDMI
+audio for the best quality (MEGA65 Book, pp. V-25, V-26).</p>
+<h2 id="a-worked-example-playing-a-sample">A Worked Example: Playing a
+Sample</h2>
+<p>This example plays a recorded sound effect once, centred between the
+speakers, while the program carries on, and then detects when it has
+finished.</p>
+<h3 id="preparing-the-sound">Preparing the sound</h3>
+<p>Audio DMA plays raw sample data with no file header, so a sound
+recorded or downloaded on a PC must first be converted. The free ffmpeg
+tool does it in one step; this converts any audio file to mono, 8 kHz,
+unsigned 8-bit samples (<a
+href="https://dansanderson.com/mega65/justified-ancients/">Dan
+Sanderson</a>):</p>
+<pre><code>ffmpeg -i boom.wav -f u8 -ar 8000 -ac 1 boom.raw</code></pre>
+<p>The options are the sample format (<code>u8</code> unsigned 8-bit,
+<code>s16le</code> signed 16-bit), the sample rate in hertz, and the
+number of channels. Copy the result to a disk image or the SD card with
+the program.</p>
+<h3 id="loading-it">Loading it</h3>
+<p>From BASIC, reserve memory in bank 5 with MEM, as Chapter 6
+described, then BLOAD the file to <code>$50000</code>:</p>
+<pre><code>10 MEM 0,3                       : REM RESERVE $50000-$53FFF
+20 BLOAD &quot;BOOM.RAW&quot;,R,P($50000)</code></pre>
+<p><code>MEM 0,3</code> reserves the first two 8KB blocks of bank 5,
+16KB in all, enough for the 12,000-byte sample used below: one and a
+half seconds at 8 kHz. The BLOAD form follows Dan Sanderson's examples
+(<a href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>).</p>
+<h3 id="playing-it">Playing it</h3>
+<p>This routine plays a 12,000-byte, unsigned 8-bit sample at 8 kHz on
+channel 0. The sample starts at <code>$050000</code> and its last byte
+is at <code>$052EDF</code>, of which only the low 16 bits are written.
+The CPU must be at full speed, its default in MEGA65 mode.</p>
+<pre><code>play    lda #$00
+        sta $d720       ; stop channel 0 while setting it up
+        lda #$80
+        sta $d711       ; AUDEN: enable audio DMA
+
+        lda #$00        ; current address: start of sample
+        sta $d72a
+        sta $d72b
+        lda #$05
+        sta $d72c
+        lda #$00        ; base address: same, in case of looping
+        sta $d721
+        sta $d722
+        lda #$05
+        sta $d723
+
+        lda #$df        ; top address: low 16 bits of $052EDF
+        sta $d727
+        lda #$2e
+        sta $d728
+
+        lda #$f2        ; rate: 8 kHz = $000CF2
+        sta $d724
+        lda #$0c
+        sta $d725
+        lda #$00
+        sta $d726
+
+        lda #$80        ; volume: left side
+        sta $d729
+        sta $d71c       ; same to the right: centred
+
+        lda #$a2        ; enable, unsigned, 8-bit, no loop
+        sta $d720
+        rts</code></pre>
+<p>The final write starts playback. The routine returns at once, and the
+sound plays while the program continues. Writing 0 to <code>$D720</code>
+stops it early, and calling the routine again restarts the sound,
+because it resets the current address.</p>
+<h3 id="detecting-the-end">Detecting the end</h3>
+<p>The hardware sets the stop flag, bit 3 of <code>$D720</code>, when
+the sample finishes (MEGA65 Book, p. P-20). A game can check it once a
+frame:</p>
+<pre><code>        lda $d720
+        and #%00001000  ; CH0STP
+        bne finished</code></pre>
+<h3 id="variations">Variations</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Change</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Loop the sound</td>
+<td>Control value <code>$E2</code>: bit 6 set</td>
+</tr>
+<tr class="even">
+<td>Signed 16-bit data</td>
+<td>Control value <code>$83</code>: bit 5 clear, format
+<code>%11</code>; the top address covers two bytes per sample</td>
+</tr>
+<tr class="odd">
+<td>Left side only</td>
+<td>Write 0 to <code>$D71C</code></td>
+</tr>
+<tr class="even">
+<td>Right side</td>
+<td>Use channel 2 at <code>$D740</code>, with <code>$D71E</code> for its
+left-side level</td>
+</tr>
+<tr class="odd">
+<td>Higher pitch</td>
+<td>Increase the rate; doubling it plays an octave higher and twice as
+fast</td>
+</tr>
+<tr class="even">
+<td>Fade out</td>
+<td>Lower the volume register a step each frame; it can change while
+playing</td>
+</tr>
+<tr class="odd">
+<td>A clean test tone</td>
+<td>Control value <code>$90</code>: sine mode, no memory needed</td>
+</tr>
+<tr class="even">
+<td>Several sounds at once</td>
+<td>Use up to four channels, each with its own sample</td>
+</tr>
+</tbody>
+</table>
+<p>With four channels and the rate register acting as a pitch control,
+this is the basis of a MOD-style music player: short instrument samples,
+each played at different rates to make different notes. The MEGA65's
+intro disk includes such a player, Manche (<a
+href="https://dansanderson.com/mega65/justified-ancients/">Dan
+Sanderson</a>).</p>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>BASIC 65</strong> plays music with PLAY on SIDs 1 and 3 and
+effects with SOUND on SIDs 2 and 4, all in the background. SOUND takes
+raw SID frequency values and durations in jiffies; PLAY strings use
+notes, modifiers and directives for octave, instrument, volume, filter,
+vibrato, portamento and looping. TEMPO, ENVELOPE, FILTER, VOL, RPLAY and
+SOUND CLR complete the set.</li>
+<li><strong>Four SIDs</strong> sit at <code>$D400</code> and
+<code>$D420</code> (the right pair) and <code>$D440</code> and
+<code>$D460</code> (the left pair), mirrored at
+<code>$D480-$D4FF</code>. SIDMODE at <code>$D63C</code> selects 6581 or
+8580 behaviour.</li>
+<li><strong>Audio DMA</strong>, enabled by writing <code>$80</code> to
+<code>$D711</code>, plays samples from chip RAM on four channels at
+<code>$D720-$D75F</code>, using the CPU's idle cycles at full speed.
+Playback starts at the current address, loops from the base address, and
+sets a stop flag at the end. Rates are a 24-bit fraction of 40.5
+MHz.</li>
+<li><strong>Stereo</strong> comes from channels 0-1 on the left and 2-3
+on the right, with <code>$D71C-$D71F</code> feeding each to the opposite
+side.</li>
+<li><strong>The mixer</strong> combines 16 inputs into 8 outputs through
+16-bit coefficients reached with <code>$D6F4</code> and
+<code>$D6F5</code>; input 15's coefficient is each output's master
+volume. The mix belongs to the user, so programs normally adjust their
+own sources instead.</li>
+<li><strong>Longer sounds</strong> stream through a looping region
+refilled by DMA from attic RAM; audio DMA keeps playing during ordinary
+DMA jobs.</li>
+</ul>
+<p>Chapter 14 turns to mass storage on the SD card.</p>
+<nav class="chapnav"><span><a href="ch12-graphics.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch14-sd-card-and-mass-storage.html">Next &rarr;</a></span></nav>
+</body>
+</html>

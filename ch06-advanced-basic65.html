@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 6: Advanced BASIC 65</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch05-mega65-architecture.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch07-45gs02-machine-language.html">Next &rarr;</a></span></nav>
+<h1 id="programming-the-mega65--chapter-6-advanced-basic-65">Programming
+the MEGA65 — Chapter 6: Advanced BASIC 65</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>Chapter 4 treated BASIC 65 as a language: how to structure programs,
+debug them and make them run well. This chapter treats it as a program,
+which is what it really is. BASIC 65 is a large piece of machine
+language in ROM that reads your program from memory, keeps your
+variables in memory, and calls the KERNAL to do its input and
+output.</p>
+<p>Knowing how it does this pays off in several ways. You can read a
+program's tokens directly when a listing is damaged or a file will not
+load. You can find a variable's value from machine language and pass
+data between BASIC and ML without PEEKs and POKEs through a single byte.
+You can place machine code, data tables and graphics where BASIC will
+not overwrite them. And you can use the parts of BASIC 65 that reach
+beyond the 64KB window, which are some of the most useful in the
+language.</p>
+<p>This chapter covers:</p>
+<ul>
+<li>Where BASIC 65 keeps program text, variables, arrays and
+strings</li>
+<li>How program lines and keywords are stored</li>
+<li>How variables and strings are laid out, and how strings are
+reclaimed</li>
+<li>Commands that reach the whole 28-bit address space</li>
+<li>Error trapping and recovery</li>
+<li>Machine language hooks, as groundwork for Chapters 8 and 9</li>
+</ul>
+<p>The details here follow the MEGA65 ROM as distributed with current
+systems. BASIC 65 has changed considerably across ROM versions, and
+where a feature arrived in a particular version, that is noted. A
+program that depends on these internals should check the ROM version
+before relying on them.</p>
+<h2 id="where-basic-65-keeps-things">Where BASIC 65 Keeps Things</h2>
+<p>On the C64, BASIC squeezes everything into one area of about 38KB:
+the program first, then variables, then arrays, with strings growing
+down from the top. A long program leaves little room for data, and a
+large array leaves little room for the program.</p>
+<p>BASIC 65 spreads the same structures across two banks, so program
+text and data no longer compete:</p>
+<table>
+<thead>
+<tr class="header">
+<th>What</th>
+<th>Where</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Program text</td>
+<td>Bank 0, <code>$2001-$F6FF</code></td>
+<td>About 54KB for the program alone</td>
+</tr>
+<tr class="even">
+<td>Scalar variables</td>
+<td>Bank 0</td>
+<td>Simple variables such as <code>A</code>, <code>B%</code>,
+<code>C$</code> (the descriptor, not the text)</td>
+</tr>
+<tr class="odd">
+<td>Arrays</td>
+<td>Bank 1</td>
+<td>All array elements</td>
+</tr>
+<tr class="even">
+<td>String text</td>
+<td>Bank 1</td>
+<td>The characters of every string, for both scalars and arrays</td>
+</tr>
+<tr class="odd">
+<td>Text screen</td>
+<td>Bank 0</td>
+<td>80 by 25 screen at <code>$0800</code></td>
+</tr>
+<tr class="even">
+<td>Bitmap graphics</td>
+<td>Banks 4 and 5</td>
+<td>Used by the graphics commands covered in Chapter 12</td>
+</tr>
+<tr class="odd">
+<td>Attic RAM</td>
+<td><code>$8000000</code> upward</td>
+<td>Not used by BASIC 65; free for programs</td>
+</tr>
+</tbody>
+</table>
+<p>The arrangement has practical consequences. A program can be up to
+about 54KB long regardless of how much data it uses, and arrays and
+strings share most of bank 1 between them. The split also explains why a
+pointer to a variable is not enough on its own: you also need to know
+which bank it is in. The POINTER function, described below, solves this
+by returning a full flat address.</p>
+<h3 id="reserving-memory">Reserving memory</h3>
+<p>Banks 4 and 5 belong to the graphics system, but a program that does
+not use all of them can claim parts for its own data or machine code.
+The MEM command, added in ROM 920273, reserves memory in those
+banks:</p>
+<pre><code>MEM bank4mask, bank5mask</code></pre>
+<p>Each argument is a byte whose eight bits stand for the eight 8KB
+blocks of that bank. A set bit reserves the block so the graphics
+commands will not use it. For example, <code>MEM 1,0</code> reserves
+<code>$40000-$41FFF</code>.</p>
+<p>Attic RAM needs no reservation, since BASIC 65 does not touch it. It
+is the natural home for large tables, level data, or anything loaded
+once and copied into chip RAM as needed. Bear in mind that some resident
+utilities do use attic RAM, and that early development boards lack it
+entirely.</p>
+<h3 id="example-checking-memory">Example: checking memory</h3>
+<p>FRE reports more than free space on the MEGA65. <code>FRE(0)</code>
+and <code>FRE(1)</code> give the free bytes in banks 0 and 1,
+<code>FRE(4)</code> and <code>FRE(5)</code> return the reservation
+bitfields for banks 4 and 5 in the same format as MEM, and
+<code>FRE(-1)</code> returns the ROM version (MEGA65 Book, p. B-117).
+This program reserves 16KB of bank 4 and confirms it:</p>
+<pre><code>10 MEM 3,0                            : REM RESERVE $40000-$43FFF
+20 PRINT FRE(0);&quot;BYTES FREE FOR PROGRAM&quot;
+30 PRINT FRE(1);&quot;BYTES FREE FOR VARIABLES&quot;
+40 PRINT &quot;BANK 4 RESERVED BLOCKS: &quot;;HEX$(FRE(4))
+50 PRINT &quot;ROM VERSION&quot;;FRE(-1)</code></pre>
+<p>Line 40 shows at least <code>03</code>, the two blocks reserved in
+line 10; other bits may be set if the system is using parts of bank 4.
+In 80 by 50 text mode, for example, the first 8KB of bank 4 always holds
+screen data, whether or not MEM reserved it (MEGA65 Book, p. B-164).
+<code>FRE(-1)</code> is the simplest way for a program to check that it
+is running on a ROM new enough for the features it uses.</p>
+<h2 id="how-a-program-is-stored">How a Program Is Stored</h2>
+<p>A BASIC 65 program is stored in bank 0 from <code>$2001</code> as a
+chain of lines, in the same format Commodore has used since the PET.
+Each line is laid out like this:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bytes</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>2</td>
+<td>Link: the address of the next line, low byte first</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Line number, low byte first</td>
+</tr>
+<tr class="odd">
+<td>varies</td>
+<td>The line's text, with keywords replaced by tokens</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td><code>$00</code>, marking the end of the line</td>
+</tr>
+</tbody>
+</table>
+<p>The program ends with a link of <code>$0000</code>. BASIC follows the
+links to find lines quickly, without scanning every byte, which is why a
+corrupted link makes the rest of the program vanish from a listing even
+though the bytes are still in memory.</p>
+<h3 id="tokens">Tokens</h3>
+<p>Keywords are not stored as text. When you type a line, BASIC replaces
+each keyword with a token, a byte with its high bit set. This saves
+space and saves BASIC from recognising keywords every time a line runs.
+LIST reverses the process.</p>
+<p>The C64's single-byte tokens still mean what they did:
+<code>$80</code> is END and <code>$9E</code> is SYS, for example. BASIC
+65 has far more keywords than there are single-byte codes, so most of
+its extensions use two bytes: a prefix byte followed by a code.
+Statements added since the C128 use the prefix <code>$FE</code>, so BANK
+is stored as <code>$FE $02</code> and CURSOR as <code>$FE $41</code>. A
+small number of additional functions use a different prefix. Chapter 3
+gives each keyword's token alongside its description.</p>
+<p>Everything that is not a keyword is stored as PETSCII text, including
+numbers. The constant <code>3000</code> occupies four bytes, and is
+converted to a number each time the line runs. Hexadecimal constants
+such as <code>$3000</code> are stored the same way, as five
+characters.</p>
+<h3 id="a-worked-example">A worked example</h3>
+<p>The one-line program <code>10 BANK 0:SYS $3000</code> is stored like
+this:</p>
+<pre><code>$2001:  10 20             link: next line at $2010
+$2003:  0a 00             line number 10
+$2005:  fe 02             BANK
+$2007:  30                &quot;0&quot;
+$2008:  3a                &quot;:&quot;
+$2009:  9e                SYS
+$200a:  24 33 30 30 30    &quot;$3000&quot;
+$200f:  00                end of line
+$2010:  00 00             end of program</code></pre>
+<p>This format matters most when you write machine language that must
+load and run like a BASIC program. The usual approach, used by most
+MEGA65 assemblers' startup code, is to emit exactly these bytes at
+<code>$2001</code> followed by the machine code. Typing RUN then
+executes the SYS. Chapter 9 builds such a header step by step.</p>
+<h3 id="example-walking-the-program">Example: walking the program</h3>
+<p>Because every line starts with a link to the next, a program can walk
+its own listing. This one prints each line's number, address and the
+length of its tokenised text: the line's total size less two bytes of
+link, two of line number and one terminating zero.</p>
+<pre><code>10 BANK 0
+20 A=$2001
+30 DO
+40 N=WPEEK(A) : IF N=0 THEN EXIT
+50 PRINT &quot;LINE&quot;;WPEEK(A+2);&quot; AT $&quot;;HEX$(A);&quot;:&quot;;N-A-5;&quot;BYTES&quot;
+60 A=N
+70 LOOP
+80 BANK 128</code></pre>
+<p>WPEEK reads a 16-bit value low byte first, which matches how both
+links and line numbers are stored (MEGA65 Book, p. B-284). Adding a loop
+that prints <code>HEX$(PEEK(I))</code> for each byte of a line shows its
+tokens directly, which is a quick way to look up a token that Chapter 3
+does not list.</p>
+<h2 id="variables-arrays-and-strings">Variables, Arrays and Strings</h2>
+<p>BASIC 65 keeps the classic Commodore approach to variables: each
+scalar variable has a short entry holding its name and either its value
+or, for a string, a descriptor pointing to its text. What has changed is
+where those entries live and how quickly BASIC finds them.</p>
+<h3 id="variable-types">Variable types</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Suffix</th>
+<th>Type</th>
+<th>Example</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>none</td>
+<td>Floating point</td>
+<td><code>A</code>, <code>XY</code></td>
+<td>5-byte Commodore floating-point number</td>
+</tr>
+<tr class="even">
+<td><code>%</code></td>
+<td>Integer</td>
+<td><code>B%</code></td>
+<td>Signed 16-bit integer, -32768 to 32767</td>
+</tr>
+<tr class="odd">
+<td><code>$</code></td>
+<td>String</td>
+<td><code>C$</code></td>
+<td>Descriptor: length and address of the text in bank 1</td>
+</tr>
+<tr class="even">
+<td><code>&amp;</code></td>
+<td>Byte</td>
+<td><code>D&amp;(10)</code></td>
+<td>Unsigned 8-bit value, 0 to 255</td>
+</tr>
+</tbody>
+</table>
+<p>As on the C64, only the first two characters of a name are
+significant, so <code>TOTAL</code> and <code>TOP</code> are the same
+variable. Byte variables are new to BASIC 65 and are most useful in
+arrays, where they take a fifth of the space of floating-point
+elements.</p>
+<p>Two byte arrays are predefined. <code>T@&amp;()</code> is mapped onto
+the text screen and <code>C@&amp;()</code> onto colour RAM, so
+<code>T@&amp;(X,Y)</code> reads or writes the character at column X, row
+Y without any address arithmetic. They were added in ROM 920354.</p>
+<h3 id="finding-variables-quickly">Finding variables quickly</h3>
+<p>The C64 finds a variable by searching the variable table from the
+start, so a program with many variables slows down noticeably, and
+variables created late are found last. Since ROM 920279, BASIC 65 stores
+one-letter scalar variables such as <code>A</code>, <code>B%</code> and
+<code>C$</code> at an address computed from the name, so they are found
+immediately with no search.</p>
+<p>The practical lesson is simple: give the variables used inside your
+busiest loops one-letter names. Longer names still work, but they are
+found the old way.</p>
+<h3 id="pointer">POINTER</h3>
+<p>The POINTER function returns the address of a variable's entry:</p>
+<pre><code>10 A%=1234
+20 P=POINTER(A%)
+30 PRINT HEX$(P)</code></pre>
+<p>Since ROM 920154, POINTER returns a full flat address rather than a
+16-bit one, so the result can be passed directly to PEEK, POKE or a
+machine-language routine without working out which bank the variable is
+in. This is the cleanest way to share data between BASIC and machine
+code: BASIC calls POINTER, passes the result to the routine, and the
+routine reads or writes the variable in place.</p>
+<h3 id="strings-and-garbage-collection">Strings and garbage
+collection</h3>
+<p>String text lives in bank 1, growing downward from the top of free
+memory. Assigning a new value to a string variable does not reuse the
+old space; it allocates new space and leaves the old text behind as
+garbage. When free memory runs out, BASIC pauses to collect the garbage,
+moving live strings together and reclaiming the rest.</p>
+<p>On the C64 that pause could last many seconds, because the collector
+searched every variable for each string it moved. BASIC 65 descends from
+the C128's BASIC 7.0, which stores a back-pointer with each string so
+the collector can work in a single pass. Collections still happen, but
+they are far shorter.</p>
+<p>You can check free memory with FRE. <code>FRE(0)</code> reports free
+space in bank 0, and <code>FRE(1)</code> reports free space in bank 1,
+which is the figure that matters for strings and arrays. Calling
+<code>FRE(1)</code> at a quiet moment, such as between levels of a game,
+forces a collection when it will not be noticed.</p>
+<h3 id="examples-looking-inside-variables">Examples: looking inside
+variables</h3>
+<p>POINTER gives the address of a variable's value. An integer is two
+bytes, low byte first; a floating-point variable is five bytes; a
+string's POINTER is the address of its three-byte descriptor, which
+holds the length and then the text's address as an offset in bank 1
+(MEGA65 Book, p. B-193).</p>
+<pre><code>10 BANK 0                             : REM SCALARS ARE IN BANK 0
+20 A%=1234 : P=POINTER(A%)
+30 PRINT &quot;A% AT $&quot;;HEX$(P);&quot;:&quot;;PEEK(P);PEEK(P+1)   : REM 210 4
+40 N$=&quot;MEGA65&quot; : D=POINTER(N$)
+50 L=PEEK(D) : S=WPEEK(D+1)           : REM LENGTH, TEXT OFFSET
+60 BANK 1                             : REM STRING TEXT IS IN BANK 1
+70 FOR I=0 TO L-1 : PRINT CHR$(PEEK(S+I)); : NEXT : PRINT
+80 BANK 128</code></pre>
+<p>Line 30 prints 210 and 4, because 1234 is <code>$04D2</code> stored
+low byte first. Lines 40 to 70 rebuild the string from its descriptor. A
+string's text can move whenever garbage collection runs, so a program
+should call POINTER again rather than keep an old text address. Array
+element addresses, in contrast, stay fixed while the program runs.</p>
+<p>Arrays are stored element after element, with the leftmost index
+changing fastest. <code>DIM A%(3,2)</code> is laid out as (0,0), (1,0),
+(2,0), (3,0), (0,1), (1,1) and so on, two bytes each, starting at
+<code>POINTER(A%(0,0))</code> (MEGA65 Book, p. B-193). This program
+confirms it by printing each element's offset from the start:</p>
+<pre><code>10 DIM A%(3,2)
+20 B=POINTER(A%(0,0))
+30 FOR Y=0 TO 2 : FOR X=0 TO 3
+40 PRINT &quot;(&quot;;X;&quot;,&quot;;Y;&quot;)&quot;;POINTER(A%(X,Y))-B
+50 NEXT X : NEXT Y</code></pre>
+<p>The offsets run 0, 2, 4, 6, 8 and so on. This order matters when
+machine language works through an array: walking memory in order visits
+A%(0,0), A%(1,0), A%(2,0) before reaching A%(0,1).</p>
+<h3 id="example-the-screen-as-an-array">Example: the screen as an
+array</h3>
+<p>The predefined byte arrays <code>T@&amp;</code> and
+<code>C@&amp;</code> make the text screen and its colours ordinary BASIC
+data. This draws a bar of solid blocks across row 12, each block in a
+different colour, without a single POKE:</p>
+<pre><code>10 FOR X=0 TO 79
+20 T@&amp;(X,12)=160                      : REM SCREEN CODE 160: SOLID BLOCK
+30 C@&amp;(X,12)=X AND 15                 : REM COLOURS 0-15 IN TURN
+40 NEXT</code></pre>
+<p>Reading works the same way, so <code>T@&amp;(X,Y)</code> tells a game
+what character is at a position, which is a simple collision test.</p>
+<h2 id="reaching-the-whole-machine">Reaching the Whole Machine</h2>
+<p>C64 BASIC can only PEEK and POKE the 64KB the CPU sees. BASIC 65 can
+reach anywhere in the 28-bit address space, through a handful of
+commands that are worth knowing well.</p>
+<h3 id="bank">BANK</h3>
+<p>BANK selects which 64KB bank PEEK, POKE, SYS, BLOAD and BSAVE address
+when given a 16-bit address. <code>BANK 0</code> makes
+<code>$3000</code> mean <code>$03000</code>; <code>BANK 4</code> makes
+it mean <code>$43000</code>.</p>
+<p>The default is not bank 0. BASIC starts in a special configuration,
+<code>BANK 128</code>, which shows the system memory layout with ROM and
+I/O mapped in, much as a C64 program would expect. This is why
+<code>POKE 53280,0</code> changes the border colour without any BANK
+command. A common mistake is to write <code>BANK 0</code> early in a
+program to reach RAM and then wonder why a later POKE to
+<code>$D020</code> does nothing: in bank 0, <code>$D020</code> is just
+RAM. Use <code>BANK 128</code> to return to the system view.</p>
+<h3 id="flat-addresses">Flat addresses</h3>
+<p>An address above <code>$FFFF</code> given to PEEK or POKE is treated
+as a full 28-bit address and ignores BANK entirely:</p>
+<pre><code>10 POKE $FF80000,1     : REM FIRST BYTE OF COLOUR RAM
+20 PRINT PEEK($8000000) : REM FIRST BYTE OF ATTIC RAM</code></pre>
+<p>This is usually clearer than switching banks, and it combines
+naturally with POINTER, which returns flat addresses.</p>
+<h3 id="sys">SYS</h3>
+<p>SYS calls a machine-language routine, which must end with RTS. A
+16-bit address is interpreted through BANK; an address above
+<code>$FFFF</code> is taken as a flat address and BANK is ignored.
+Either way, SYS sets up a fixed mapping for the call, and only part of
+it comes from the chosen bank (MEGA65 Book, p. B-256):</p>
+<table>
+<thead>
+<tr class="header">
+<th>CPU address</th>
+<th>During SYS</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0000-$1FFF</code></td>
+<td>Always bank 0</td>
+</tr>
+<tr class="even">
+<td><code>$2000-$7FFF</code></td>
+<td>The selected bank, 0 to 5</td>
+</tr>
+<tr class="odd">
+<td><code>$8000-$BFFF</code></td>
+<td>Bank 0: BASIC's ROM is switched out for the call</td>
+</tr>
+<tr class="even">
+<td><code>$C000-$FFFF</code></td>
+<td>ROM and I/O, as in the system view, so the KERNAL and hardware
+registers remain available</td>
+</tr>
+</tbody>
+</table>
+<p>The Book explains why: the KERNAL must keep its ROM at
+<code>$E000-$FFFF</code> and its variables in <code>$0000-$1FFF</code>
+to handle interrupts, and SYS uses the remaining MAP offset to bring the
+selected bank into <code>$2000-$7FFF</code> (MEGA65 Book, pp. 14-43,
+14-44).</p>
+<p>So a routine in bank 4 must lie at <code>$42000-$47FFF</code> to be
+called with <code>BANK 4 : SYS $2000</code>, and SYS cannot reach attic
+RAM at all. For small routines, the Book recommends bank 0 from $1600 to
+$1EFF, which it describes as guaranteed unused by the system; its SYS
+entry suggests <code>$1800-$1EFF</code>.</p>
+<p>SYS can also load the registers before the call, and RREG reads them
+back afterwards:</p>
+<pre><code>10 BANK 0
+20 SYS $3000, 1, 2, 3, 4   : REM A=1, X=2, Y=3, Z=4
+30 RREG A, X, Y, Z, S</code></pre>
+<p>Chapter 9 uses these to pass parameters between BASIC and machine
+language.</p>
+<h3 id="bload-and-bsave">BLOAD and BSAVE</h3>
+<p>BLOAD and BSAVE load and save raw memory rather than programs. The B
+parameter selects the bank and P the start address within it:</p>
+<pre><code>BLOAD &quot;LEVEL1&quot;, B4, P0
+BSAVE &quot;LEVEL1&quot;, B4, P0 TO P8192</code></pre>
+<p>These are the usual way to load machine code, character sets and
+graphics data alongside a BASIC program.</p>
+<h3 id="edma">EDMA</h3>
+<p>EDMA gives BASIC direct access to the DMAgic controller described in
+Chapter 5. It takes a command, a length, and source and destination
+addresses, all as flat 28-bit addresses:</p>
+<pre><code>EDMA 0, 8192, $8000000, $40000  : REM COPY 8KB FROM ATTIC RAM TO BANK 4
+EDMA 3, 2000, 32, $800          : REM FILL 2000 BYTES OF SCREEN WITH SPACES</code></pre>
+<p>Command 0 copies and command 3 fills, using the low byte of the
+source argument as the fill value. Because the hardware does the work,
+an EDMA copy of thousands of bytes finishes before a FOR loop could move
+a few dozen. It is the fastest way for BASIC to move data between attic
+RAM and chip RAM.</p>
+<h3 id="sys-to">SYS TO</h3>
+<p>SYS has a second form, SYS TO, with named arguments and two extra
+abilities (MEGA65 Book, p. B-256). Registers are set by name, with
+hexadecimal values in parentheses:</p>
+<pre><code>SYS TO $1800, A(5), X($FF)</code></pre>
+<p>The O argument overrides the MAP offset for <code>$2000-$7FFF</code>,
+which lets SYS TO run code anywhere in the first 384KB rather than only
+in the window above. The value is multiplied by 256 and added to the CPU
+address. To run a routine stored at <code>$54000</code>, in bank 5
+beyond the reach of ordinary SYS:</p>
+<pre><code>SYS TO $2000, O($520)                 : REM $2000 + $52000 = $54000</code></pre>
+<p>The I argument, <code>I(1)</code>, keeps BASIC's ROM and
+interrupt-driven features running during the call, so PLAY music and
+MOVSPR movement continue. The price is that the routine must lie between
+<code>$1600</code> and <code>$1EFF</code>, and I and O cannot be
+combined.</p>
+<h3 id="example-saving-and-restoring-the-screen">Example: saving and
+restoring the screen</h3>
+<p>EDMA moves memory far faster than any FOR loop. This program copies
+the 80 by 25 screen at <code>$0800</code> (2048) to attic RAM, clears
+it, and puts it back, following the Book's own examples (MEGA65 Book, p.
+B-91):</p>
+<pre><code>10 EDMA 0, 80*25, 2048, $8000000      : REM COPY SCREEN TO ATTIC RAM
+20 EDMA 3, 80*25, 32, 2048            : REM FILL SCREEN WITH SPACES
+30 PRINT &quot;PRESS A KEY&quot;
+40 GETKEY A$
+50 EDMA 0, 80*25, $8000000, 2048      : REM COPY IT BACK</code></pre>
+<p>A length of 0 means 65,536 bytes. Adding 32 to the command, bit 5,
+runs the operation backwards, which is what overlapping copies to a
+higher address need. This shifts the top row of the screen one character
+to the right:</p>
+<pre><code>10 EDMA 32, 79, 2048, 2049            : REM REVERSE COPY, SAFE FOR OVERLAP</code></pre>
+<h3 id="example-data-files-in-attic-ram">Example: data files in attic
+RAM</h3>
+<p>BLOAD and BSAVE switch to flat addressing when given an address above
+<code>$FFFF</code>, which lets them reach attic RAM and save more than
+64KB at once. The R option reads or writes raw data with no two-byte
+load address (MEGA65 Book, pp. B-29, B-35):</p>
+<pre><code>10 BLOAD &quot;LEVELS&quot;, P($8000000), R                    : REM INTO ATTIC RAM
+20 EDMA 0, 8192, $8000000, $40000                     : REM LEVEL 1 TO BANK 4
+30 BSAVE &quot;BANK4&quot;, P($40000) TO P($42000), R           : REM SAVE IT BACK RAW</code></pre>
+<p>In the older form, a 16-bit P address with a B bank, BLOAD and BSAVE
+cannot cross a bank boundary or reach attic RAM; the flat form has
+neither limit.</p>
+<h2 id="error-handling">Error Handling</h2>
+<p>When C64 BASIC hits an error, the program stops. BASIC 65 lets a
+program catch the error, find out what went wrong, and carry on. This
+turns many fatal mistakes, such as bad input, a missing file or a
+division by zero, into situations the program can handle itself.</p>
+<h3 id="trap-and-resume">TRAP and RESUME</h3>
+<p><code>TRAP</code> followed by a line number tells BASIC where to go
+when an error occurs. <code>TRAP</code> on its own turns trapping off
+again. Inside the handler, three variables describe the error:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ER</code></td>
+<td>The error number</td>
+</tr>
+<tr class="even">
+<td><code>EL</code></td>
+<td>The line number where the error occurred</td>
+</tr>
+<tr class="odd">
+<td><code>ERR$(n)</code></td>
+<td>The message text for error number n</td>
+</tr>
+</tbody>
+</table>
+<p>The handler ends with one of three forms of RESUME:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Form</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>RESUME</code></td>
+<td>Runs the statement that failed again</td>
+</tr>
+<tr class="even">
+<td><code>RESUME NEXT</code></td>
+<td>Continues with the statement after the one that failed</td>
+</tr>
+<tr class="odd">
+<td><code>RESUME</code> line</td>
+<td>Continues at the given line</td>
+</tr>
+</tbody>
+</table>
+<p>This program keeps running however the user answers:</p>
+<pre><code>10 TRAP 1000
+20 INPUT &quot;DIVIDE 100 BY&quot;;N
+30 PRINT 100/N
+40 GOTO 20
+1000 PRINT ERR$(ER);&quot; ERROR IN LINE&quot;;EL
+1010 RESUME 20</code></pre>
+<p>Entering 0 produces a division by zero error in line 30; the handler
+reports it and asks again.</p>
+<p>An error inside the handler itself is not trapped, so a handler
+should be short and simple. Plain RESUME needs particular care: if the
+cause of the error has not been fixed, the same statement fails again
+and the program loops forever.</p>
+<h3 id="disk-errors">Disk errors</h3>
+<p>Disk errors are reported separately, because they happen in the drive
+rather than in BASIC. A failed OPEN or LOAD may not raise a BASIC error
+at all. After any disk operation, the reserved variables <code>DS</code>
+and <code>DS$</code> hold the drive's status number and message:</p>
+<pre><code>10 DOPEN#1,&quot;SCORES&quot;
+20 IF DS&lt;&gt;0 THEN PRINT DS$:STOP</code></pre>
+<p>A status below 20 means success. Checking DS after every important
+disk operation is the single most effective way to make a BASIC program
+robust. Chapter 15 lists the drive's status codes.</p>
+<h3 id="example-a-robust-file-loader">Example: a robust file loader</h3>
+<p>TRAP and the disk status variables work together. This loader asks
+for a file name, reports BASIC errors and disk errors in plain words,
+and asks again rather than stopping:</p>
+<pre><code>10 TRAP 900
+20 INPUT &quot;FILE TO LOAD&quot;;F$
+30 BLOAD (F$), P($40000), R
+40 IF DS&lt;&gt;0 THEN PRINT &quot;DISK: &quot;;DS$ : GOTO 20
+50 PRINT &quot;LOADED&quot; : END
+900 PRINT &quot;ERROR&quot;;ER;&quot;IN LINE&quot;;EL;&quot;: &quot;;ERR$(ER)
+910 RESUME 20</code></pre>
+<p>The file name is a string expression, so it goes in parentheses, as
+the BLOAD reference requires (MEGA65 Book, p. B-29). Line 40 handles the
+common case of a missing file, which the drive reports through DS; the
+TRAP handler catches anything BASIC itself rejects, such as an invalid
+file name.</p>
+<h3 id="example-finding-where-a-calculation-fails">Example: finding
+where a calculation fails</h3>
+<p>RESUME with a line number lets a program record how far it got before
+an error. This uses the pattern from the Book's TRAP entry to find where
+EXP overflows (MEGA65 Book, p. B-267):</p>
+<pre><code>10 TRAP 100
+20 FOR I=1 TO 100
+30 PRINT EXP(I)
+40 NEXT
+50 PRINT &quot;STOPPED FOR I =&quot;;I
+60 END
+100 PRINT ERR$(ER) : RESUME 50</code></pre>
+<p>The program prints values until EXP exceeds the floating-point range,
+then reports the overflow and the value of I that caused it, and ends
+normally.</p>
+<h2 id="extending-basic-65">Extending BASIC 65</h2>
+<p>C64 programmers extended BASIC by redirecting the vectors in page 3,
+so that new keywords could be recognised and executed. That technique
+does not carry over cleanly. BASIC 65 has no officially documented
+extension interface, and its internal routines and work areas have moved
+between ROM versions. An extension that patches BASIC's internals may
+stop working after a ROM update.</p>
+<p>The robust alternative is to leave BASIC alone and give it fast
+helpers. Three features from earlier in this chapter make that easy:
+BANK and SYS to call code anywhere, SYS parameters and RREG to pass
+small values, and POINTER to pass the address of larger data.</p>
+<h3 id="a-pattern-for-helper-routines">A pattern for helper
+routines</h3>
+<p>Suppose a machine-language routine at <code>$42000</code> sorts an
+integer array. BASIC loads it once, then passes the array's flat address
+in A, X, Y and Z:</p>
+<pre><code>10 BLOAD &quot;SORT&quot;, B4, P8192
+20 DIM A%(99)
+30 REM ... FILL THE ARRAY ...
+40 P=POINTER(A%(0))
+50 BANK 4
+60 SYS $2000, P AND 255, INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
+70 BANK 128</code></pre>
+<p>The routine stores the four registers into a zero-page pointer and
+works through the array with <code>[zp],Z</code> addressing, as shown in
+Chapter 5. It needs no knowledge of where BASIC keeps anything, because
+POINTER has already worked that out, and it will keep working across ROM
+versions.</p>
+<p>A few rules keep such helpers safe:</p>
+<ul>
+<li><strong>Reserve the memory.</strong> Code in banks 4 or 5 should be
+protected with MEM so the graphics commands cannot overwrite it.</li>
+<li><strong>Leave the base page alone, or restore it.</strong> BASIC and
+the KERNAL expect B to be zero when the routine returns.</li>
+<li><strong>Restore the map.</strong> If the routine uses MAP, it must
+restore the SYS mapping before returning with RTS.</li>
+<li><strong>Return to <code>BANK 128</code>.</strong> After the call,
+switch BASIC back to the system view before using POKE on I/O
+registers.</li>
+</ul>
+<p>Chapter 9 develops this pattern fully, including returning results
+through RREG and through variables, and Chapter 11 documents the ROM
+entry points that are stable enough to call.</p>
+<h3 id="example-installing-a-usr-routine">Example: installing a USR
+routine</h3>
+<p>The USR function jumps through a vector at <code>$02F8</code>, which
+BASIC sees in the system bank (MEGA65 Book, p. B-285). The smallest
+possible USR routine is a single RTS: it leaves BASIC's floating-point
+accumulator untouched, so USR returns its argument unchanged. That is
+enough to show the mechanism:</p>
+<pre><code>10 BANK 0 : POKE $1800, $60           : REM RTS AT $1800
+20 BANK 128 : WPOKE $02F8, $1800      : REM POINT THE USR VECTOR AT IT
+30 PRINT USR(42)                      : REM SHOULD PRINT 42</code></pre>
+<p>A real USR routine reads its argument from the floating-point
+accumulator and leaves its result there, using BASIC's internal
+conversion routines, as Chapter 9 explains.</p>
+<h3 id="example-machine-code-alongside-play">Example: machine code
+alongside PLAY</h3>
+<p>An ordinary SYS switches BASIC out, so interrupt-driven features
+pause for the duration of the call. SYS TO with <code>I(1)</code> keeps
+them running, which suits short routines called often while music plays
+(MEGA65 Book, p. B-256):</p>
+<pre><code>10 PLAY &quot;O4T0IC E G O5C O4G E L&quot;
+20 POKE $1800, $EE, $20, $D0, $60     : REM INC $D020 : RTS
+30 FOR I=1 TO 50
+40 SYS TO $1800, I(1)                 : REM MUSIC KEEPS PLAYING
+50 SLEEP 0.1
+60 NEXT
+70 PLAY                               : REM STOP THE MUSIC</code></pre>
+<p>The routine sits at <code>$1800</code>, inside the
+<code>$1600-$1EFF</code> range that interrupt mode requires. POKE
+accepts several values in a row, so line 20 places a four-byte routine
+in one statement.</p>
+<h3 id="example-one-command-start-up">Example: one-command start-up</h3>
+<p>BOOT loads a program file and starts executing it at its load
+address, combining BLOAD and SYS. With no arguments it runs a file named
+AUTOBOOT.C65, the MEGA65's equivalent of an auto-start file (MEGA65
+Book, p. B-31):</p>
+<pre><code>BOOT &quot;GAME&quot;                           : REM LOAD AND RUN MACHINE CODE
+BOOT                                  : REM RUN AUTOBOOT.C65</code></pre>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Memory.</strong> Program text lives in bank 0 from
+<code>$2001</code>, scalar variables in bank 0, and arrays and string
+text in bank 1. Banks 4 and 5 serve the graphics system and can be
+reserved with MEM. Attic RAM is left free.</li>
+<li><strong>Program format.</strong> Lines are linked, numbered and
+tokenized as on every Commodore machine. BASIC 65's newer keywords use
+two-byte tokens, most with the <code>$FE</code> prefix.</li>
+<li><strong>Variables.</strong> Floating-point, integer, string and byte
+types are available. One-letter scalar names are found without
+searching, and POINTER returns a variable's flat address.</li>
+<li><strong>Strings.</strong> Text is kept in bank 1, and the garbage
+collector inherited from BASIC 7.0 avoids the C64's long pauses.
+<code>FRE(1)</code> reports the space left.</li>
+<li><strong>Reach.</strong> BANK, flat addresses in PEEK and POKE, BLOAD
+and BSAVE, SYS with RREG, and EDMA give BASIC access to the whole
+machine. <code>BANK 128</code> returns to the system view.</li>
+<li><strong>Errors.</strong> TRAP, ER, EL, ERR$ and RESUME handle BASIC
+errors; DS and DS$ report disk errors.</li>
+<li><strong>Extensions.</strong> Small machine-language helpers called
+through SYS and POINTER are more durable than patches to BASIC's
+internals.</li>
+</ul>
+<p>Chapter 7 begins the machine-language part of the book with the
+45GS02 itself.</p>
+<nav class="chapnav"><span><a href="ch05-mega65-architecture.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch07-45gs02-machine-language.html">Next &rarr;</a></span></nav>
+</body>
+</html>

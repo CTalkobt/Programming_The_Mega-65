@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Programming the MEGA65 ��� Chapter 9: Mixing BASIC with Machine
+Language</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<nav class="chapnav"><span><a href="ch08-ml-methods-specific-to-the-mega65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch10-vocabulary-of-the-45gs02.html">Next &rarr;</a></span></nav>
+<h1
+id="programming-the-mega65--chapter-9-mixing-basic-with-machine-language">Programming
+the MEGA65 — Chapter 9: Mixing BASIC with Machine Language</h1>
+<p>Oct 4, 2026 · @Craig Taylor</p>
+<h2 id="introduction">Introduction</h2>
+<p>Most successful MEGA65 programs are not written entirely in one
+language. BASIC 65 is excellent at the parts of a program that change
+often and run rarely: menus, setup, file handling, scoring, game logic
+that runs once a frame. Machine language is excellent at the parts that
+run constantly or must be exact: drawing, collision checks, sorting,
+decompression, interrupt handlers. Writing each part in the language
+that suits it gives a program that is both quick to develop and quick to
+run.</p>
+<p>The hard part is the boundary between them. This chapter covers
+everything that happens at that boundary:</p>
+<ul>
+<li>Where machine code can live without BASIC overwriting it</li>
+<li>How to make machine code load and run like a BASIC program</li>
+<li>How to get machine code into memory from BASIC</li>
+<li>How to call it and pass it parameters</li>
+<li>How to get results back</li>
+<li>The USR function as an alternative entry point</li>
+</ul>
+<p>Chapter 6 introduced several of the BASIC 65 features used here:
+BANK, SYS, RREG, BLOAD and POINTER. This chapter puts them to work and
+ends with a complete program that uses each of them.</p>
+<p>Throughout, the machine-language routines are cooperative in the
+sense of Chapter 8: they are called by SYS, they run with the SYS
+mapping, and they restore everything they change before returning with
+RTS.</p>
+<h2 id="where-to-put-machine-code">Where to Put Machine Code</h2>
+<p>On the C64 the usual answer was <code>$C000</code>, a 4KB block BASIC
+never touches. The MEGA65 has no single equivalent, but it has several
+good places, each with a different trade-off.</p>
+<p>Where code can live depends on what SYS can reach. SYS builds a fixed
+memory map for each call, and only part of it follows the bank chosen
+with BANK or a long address (MEGA65 Book, pp. 14-18, 14-43):</p>
+<table>
+<thead>
+<tr class="header">
+<th>CPU address</th>
+<th>During SYS</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0000-$1FFF</code></td>
+<td>Always bank 0</td>
+</tr>
+<tr class="even">
+<td><code>$2000-$7FFF</code></td>
+<td>The selected bank, 0 to 5</td>
+</tr>
+<tr class="odd">
+<td><code>$8000-$BFFF</code></td>
+<td>Always bank 0</td>
+</tr>
+<tr class="even">
+<td><code>$C000-$FFFF</code></td>
+<td>ROM and I/O, in every bank</td>
+</tr>
+</tbody>
+</table>
+<p>A long address does the same job as BANK: <code>SYS $47000</code>
+calls <code>$7000</code> in bank 4. SYS cannot reach attic RAM at all.
+With that in mind, the main places for machine code are:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Location</th>
+<th>Size</th>
+<th>Called with</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Bank 0, <code>$1600-$1EFF</code></td>
+<td>2.25KB</td>
+<td><code>SYS $1600</code> from any bank</td>
+<td>The Book's recommended home for routines; also the only range usable
+with <code>SYS TO ... I1</code></td>
+</tr>
+<tr class="even">
+<td>After the BASIC program in bank 0</td>
+<td>Varies</td>
+<td><code>SYS</code> with its address</td>
+<td>Moves if the program is edited; ideal for single-file programs</td>
+</tr>
+<tr class="odd">
+<td>Banks 1 to 5, <code>$x2000-$x7FFF</code></td>
+<td>24KB per bank</td>
+<td><code>SYS $42000</code>, or BANK and SYS</td>
+<td>Reserve banks 4 and 5 with MEM; shared with BASIC's graphics</td>
+</tr>
+<tr class="even">
+<td>Anywhere in the first 384KB</td>
+<td>Any</td>
+<td><code>SYS TO</code> with an O offset</td>
+<td>Code must expect to run at its mapped address</td>
+</tr>
+<tr class="odd">
+<td>Attic RAM</td>
+<td>8MB</td>
+<td>Not directly</td>
+<td>Storage only: copy into chip RAM to run</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bank-0-below-the-program">Bank 0 below the program</h3>
+<p>The area from <code>$1600</code> to <code>$1EFF</code> lies below the
+start of BASIC text, and during SYS it is always visible, whatever bank
+BASIC has selected. The Book recommends it for machine-code subroutines
+called from BASIC, and it is the only range usable with SYS TO's
+BASIC-active mode, described later (MEGA65 Book, pp. 14-18, 14-19). The
+MEGA65 team's own unit-test module for BASIC programs loads here too (<a
+href="https://www.scribd.com/document/743829404/Mega65-Developer-Guide">MEGA65
+Developer Guide</a>).</p>
+<p>It is a shared resource rather than a reserved one. Resident tools
+such as on-device assemblers may claim part of it, so a program that
+will be used alongside other software should keep its footprint small or
+use another bank.</p>
+<h3 id="after-the-basic-program">After the BASIC program</h3>
+<p>Machine code can be appended to the end of a BASIC program in bank 0
+and saved with it as one file. This is how most single-file MEGA65
+programs are built, and the next section shows how. The only limitation
+is that the code moves if the BASIC program above it changes length, so
+it suits finished programs better than ones still being edited.</p>
+<h3 id="banks-4-and-5">Banks 4 and 5</h3>
+<p>For anything larger, the other banks offer 24KB each in the
+<code>$2000-$7FFF</code> window that SYS maps from the selected bank.
+Banks 4 and 5 are the usual choice, reserved with MEM as described in
+Chapter 6 so BASIC's graphics commands leave them alone. Code at
+<code>$42000</code> is called with <code>SYS $42000</code>, or with
+<code>BANK 4 : SYS $2000</code>. Code at <code>$40000-$41FFF</code> or
+<code>$48000-$4FFFF</code> cannot be called with plain SYS, because
+those offsets fall outside the bank's window; <code>$8000-$BFFF</code>
+during SYS is always bank 0.</p>
+<p>Bank 0 itself can hold code above the BASIC program up to
+<code>$BFFF</code>, provided it stays clear of the end of the program
+text and BASIC's work areas (MEGA65 Book, p. B-256).</p>
+<h3 id="attic-ram">Attic RAM</h3>
+<p>Code cannot run from attic RAM through SYS, but attic RAM is a good
+place to keep many routines or overlays that are copied into chip RAM
+when needed. A single EDMA command moves an overlay into place faster
+than BASIC could PEEK a few bytes.</p>
+<h2 id="a-basic-header">A BASIC Header</h2>
+<p>A program written entirely or mostly in machine language should still
+load and run like a BASIC program, so the user can type RUN and nothing
+else. The standard way is to begin the file with a one-line BASIC
+program whose only job is to call the machine code that follows it. This
+is called a BASIC header, or a BASIC stub.</p>
+<p>The line we want is:</p>
+<pre><code>10 BANK 0:SYS $2012</code></pre>
+<p>The <code>BANK 0</code> makes the SYS address refer to bank 0
+whatever BANK setting the user left behind. Early MEGA65 ROMs required
+it before a SYS like this, and the Book recommends it as best practice
+on all versions (MEGA65 Book, p. 14-18). <code>$2012</code> is the
+address immediately after the header, worked out below.</p>
+<h3 id="building-it-byte-by-byte">Building it byte by byte</h3>
+<p>Using the program format from Chapter 6, the line becomes:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Bytes</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$2001</code></td>
+<td><code>$10 $20</code></td>
+<td>Link: the next line starts at <code>$2010</code></td>
+</tr>
+<tr class="even">
+<td><code>$2003</code></td>
+<td><code>$0A $00</code></td>
+<td>Line number 10</td>
+</tr>
+<tr class="odd">
+<td><code>$2005</code></td>
+<td><code>$FE $02</code></td>
+<td>BANK token</td>
+</tr>
+<tr class="even">
+<td><code>$2007</code></td>
+<td><code>$30 $3A</code></td>
+<td>"0:"</td>
+</tr>
+<tr class="odd">
+<td><code>$2009</code></td>
+<td><code>$9E</code></td>
+<td>SYS token</td>
+</tr>
+<tr class="even">
+<td><code>$200A</code></td>
+<td><code>$24 $32 $30 $31 $32</code></td>
+<td>"$2012"</td>
+</tr>
+<tr class="odd">
+<td><code>$200F</code></td>
+<td><code>$00</code></td>
+<td>End of line</td>
+</tr>
+<tr class="even">
+<td><code>$2010</code></td>
+<td><code>$00 $00</code></td>
+<td>End of program</td>
+</tr>
+<tr class="odd">
+<td><code>$2012</code></td>
+<td></td>
+<td>First byte of machine code</td>
+</tr>
+</tbody>
+</table>
+<p>In assembler form:</p>
+<pre><code>        * = $2001
+        .word next      ; link to the next line
+        .word 10        ; line number
+        .byte $fe, $02  ; BANK
+        .text &quot;0:&quot;
+        .byte $9e       ; SYS
+        .text &quot;$2012&quot;   ; entry point, as text
+        .byte 0         ; end of line
+next    .word 0         ; end of program
+
+start   ; machine code begins here, at $2012</code></pre>
+<p>The address in the SYS is text, so the assembler cannot fill it in
+automatically unless it can convert a number to hex digits. Most MEGA65
+assemblers can, and many ship a ready-made header macro. Writing the
+address in hex rather than decimal makes the arithmetic easy either way:
+four digits, always five characters with the <code>$</code>.</p>
+<h3 id="using-the-header">Using the header</h3>
+<p>The assembler writes a PRG file whose first two bytes are the load
+address, <code>$2001</code>. On the MEGA65 that file loads and lists
+like any BASIC program:</p>
+<pre><code>LOAD &quot;MYPROG&quot;
+LIST
+10 BANK 0:SYS $2012
+RUN</code></pre>
+<p>The load address matters. A program that loads at <code>$2001</code>
+runs in MEGA65 mode. A program that loads at <code>$0801</code>, the
+C64's start of BASIC, makes the MEGA65 switch to C64 mode, which is how
+C64 software runs unchanged. A MEGA65 program must therefore always
+start at <code>$2001</code>.</p>
+<p>When the machine code returns with RTS, BASIC carries on with the
+rest of line 10 and then finds the end of the program. Further BASIC
+lines can be added between the header and the code, as the worked
+example at the end of this chapter does, provided the SYS address is
+updated to match.</p>
+<h2 id="getting-machine-code-into-memory">Getting Machine Code into
+Memory</h2>
+<p>A BASIC program that uses machine-language helpers needs a way to put
+them in memory before calling them. There are three common methods.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Best for</th>
+<th>Drawback</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BLOAD from disk</td>
+<td>Routines of any size, data, graphics</td>
+<td>A second file to keep with the program</td>
+</tr>
+<tr class="even">
+<td>DATA statements and POKE</td>
+<td>Small routines in a self-contained listing</td>
+<td>Slow to load, bulky, easy to mistype</td>
+</tr>
+<tr class="odd">
+<td>Appended to the program</td>
+<td>Finished single-file programs</td>
+<td>Code moves if the BASIC part changes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bload">BLOAD</h3>
+<p>BLOAD loads a file into memory without disturbing the BASIC program
+in memory. With B and P it loads to a given bank and address; without P
+it uses the load address stored in the file:</p>
+<pre><code>10 BLOAD &quot;SPRITES.BIN&quot;, B4, P8192   : REM TO $42000
+20 BLOAD &quot;HELPERS&quot;                  : REM TO ITS OWN ADDRESS</code></pre>
+<p>Because BLOAD does not restart the program, it can be called from
+inside a running program, which is the usual way to load overlays or
+level data. Check DS afterwards, as described in Chapter 6, since a
+missing file is reported by the drive.</p>
+<h3 id="boot-and-raw-files">BOOT and raw files</h3>
+<p>BOOT combines BLOAD and SYS: it loads a PRG file and starts executing
+at its load address. With no file name it runs AUTOBOOT.C65, the
+MEGA65's auto-start file (MEGA65 Book, p. B-31):</p>
+<pre><code>BOOT &quot;HELPERS&quot;                         : REM LOAD AND RUN</code></pre>
+<p>BLOAD normally treats the first two bytes of a file as its load
+address. The R option reads every byte as data instead, and a
+<code>,S</code> suffix on the name lets BLOAD read a sequential file,
+which is how data written by other programs or tools can be loaded
+(MEGA65 Book, p. B-29):</p>
+<pre><code>BLOAD &quot;USER DATA,S&quot;, P($1600), R       : REM RAW SEQ FILE TO $1600
+BLOAD &quot;TABLES&quot;, P($8000000), R          : REM INTO ATTIC RAM</code></pre>
+<p>An address above <code>$FFFF</code> puts BLOAD into flat-address
+mode, which reaches attic RAM; the older form with a 16-bit P address
+and a B bank cannot.</p>
+<h3 id="data-loaders">DATA loaders</h3>
+<p>For a short routine in a printed listing, DATA statements remain the
+most portable method: the whole program is one listing that can be typed
+in.</p>
+<pre><code>10 FOR I=0 TO 8
+20 READ B : POKE $1600+I, B : C=C+B
+30 NEXT
+40 IF C&lt;&gt;1396 THEN PRINT &quot;DATA ERROR&quot; : STOP
+50 SYS $1600
+60 END
+100 DATA 162,0,238,32,208,202,208,250,96</code></pre>
+<p>The routine cycles the border colour 256 times in 9 bytes:
+<code>LDX #0</code>, <code>INC $D020</code>, <code>DEX</code>,
+<code>BNE</code> back to the INC, <code>RTS</code>. The checksum in line
+40 catches typing mistakes before they crash the machine, a practice
+worth keeping for any DATA loader.</p>
+<h3 id="code-appended-to-the-program">Code appended to the program</h3>
+<p>When the BASIC header technique is extended with more BASIC lines,
+the machine code sits after the last line in the same file. A single
+LOAD brings in both parts, and the program needs no other files. The
+cost is that the SYS address must be updated whenever the BASIC part
+changes length, so this method suits programs built by an assembler from
+source, where the address is computed automatically.</p>
+<h3 id="overlays-from-attic-ram">Overlays from attic RAM</h3>
+<p>A program with many routines can load them all once into attic RAM,
+then copy each into its working area with EDMA as needed. Because EDMA
+is so fast, swapping an overlay takes less time than a single screen
+refresh.</p>
+<h2 id="calling-machine-code-and-passing-parameters">Calling Machine
+Code and Passing Parameters</h2>
+<p>SYS is the bridge from BASIC into machine language. Its full form
+loads the registers before the call:</p>
+<pre><code>SYS address, a, x, y, z, s</code></pre>
+<p>Every argument after the address is optional and is placed in the
+matching register: A, X, Y, Z and the status register. Each must be 0 to
+255. Arguments can be skipped with empty commas, so
+<code>SYS $1600,,5</code> sets only X.</p>
+<p>There are four ways to pass information to a routine, suited to
+different amounts and kinds of data.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Capacity</th>
+<th>Good for</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>SYS registers</td>
+<td>4 bytes</td>
+<td>Small numbers, flags, a 28-bit address</td>
+</tr>
+<tr class="even">
+<td>Parameter block</td>
+<td>Any size</td>
+<td>Several values, words, settings</td>
+</tr>
+<tr class="odd">
+<td>POINTER</td>
+<td>Any variable or array</td>
+<td>Large data shared in place</td>
+</tr>
+<tr class="even">
+<td>String descriptors</td>
+<td>Any string</td>
+<td>Text</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-sys-does-to-basic">What SYS does to BASIC</h3>
+<p>Any register not given a value is set to zero. During the call, SYS
+switches BASIC's ROM out of <code>$2000-$BFFF</code> and tells the
+KERNAL's interrupt handler to skip BASIC's interrupt-driven features,
+such as PLAY music and MOVSPR sprite movement. They resume when the
+routine returns with RTS (MEGA65 Book, pp. B-256, 14-44). A routine
+called often while music plays can therefore make the music stutter.</p>
+<h3 id="sys-to">SYS TO</h3>
+<p>SYS TO is a second form of SYS with named arguments: <code>A</code>,
+<code>X</code>, <code>Y</code>, <code>Z</code> and <code>S</code> for
+registers, plus two extra abilities (MEGA65 Book, pp. B-256, 14-18,
+14-19):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Argument</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>A(n)</code> ... <code>S(n)</code></td>
+<td>Load a register; hexadecimal values go in parentheses, as in
+<code>X($FF)</code></td>
+</tr>
+<tr class="even">
+<td><code>I1</code></td>
+<td>Keep BASIC active during the call, so PLAY and MOVSPR continue; the
+routine must lie in <code>$1600-$1EFF</code></td>
+</tr>
+<tr class="odd">
+<td><code>O(offset)</code></td>
+<td>Add offset × 256 to addresses <code>$2000-$7FFF</code>, so code
+anywhere in the first 384KB can run</td>
+</tr>
+</tbody>
+</table>
+<p>I and O cannot be used together, because both rely on the MAP
+register. Some examples:</p>
+<pre><code>SYS TO $1600, X($FF), A(5)             : REM REGISTERS BY NAME
+SYS TO $1600, I1                       : REM MUSIC KEEPS PLAYING
+SYS TO $6100, O($520)                  : REM RUNS CODE AT $58100</code></pre>
+<p>In the last line, <code>$520</code> × 256 is <code>$52000</code>,
+which maps <code>$2000-$7FFF</code> to <code>$54000-$59FFF</code>; the
+routine at <code>$58100</code> runs at CPU address <code>$6100</code>.
+Code run this way must be written for the address it runs at, since its
+JMP and JSR targets are CPU addresses, or use only relative
+branches.</p>
+<h3 id="registers">Registers</h3>
+<p>Register passing is the fastest and simplest. A routine that fills a
+row of the screen with a character might take the character in A and the
+row in X:</p>
+<pre><code>10 BANK 0
+20 SYS $1600, 160, 12   : REM FILL ROW 12 WITH SOLID BLOCKS</code></pre>
+<p>The routine sees A = 160 and X = 12 at its first instruction, exactly
+as if another machine-language routine had loaded them.</p>
+<h3 id="parameter-blocks">Parameter blocks</h3>
+<p>When four bytes are not enough, BASIC can POKE parameters into a
+small block of memory the routine knows about, then call it. The block
+is best placed at the start of the routine's own reserved area, so the
+address is fixed and documented:</p>
+<pre><code>10 PB=$1600              : REM PARAMETER BLOCK
+20 POKE PB, X AND 255 : POKE PB+1, X/256
+30 POKE PB+2, Y : POKE PB+3, COL
+40 SYS $1610             : REM ROUTINE FOLLOWS THE BLOCK</code></pre>
+<p>This also works in reverse: the routine writes results into the block
+and BASIC PEEKs them back.</p>
+<h3 id="pointer">POINTER</h3>
+<p>For large amounts of data, copying is wasteful. POINTER gives the
+routine the address of a variable or array element, and the routine
+works on the data where it lies. Because POINTER returns a flat address,
+split it across the registers and let the routine use
+<code>[zp],Z</code> addressing:</p>
+<pre><code>10 DIM D&amp;(999)
+20 P=POINTER(D&amp;(0))
+30 SYS $1600, P AND 255, INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)</code></pre>
+<p>The routine stores A, X, Y and Z into four bytes of the base page,
+then reads or writes <code>[zp],Z</code>. Byte arrays are the easiest
+type to share this way, because each element is exactly one byte and the
+elements are stored one after another.</p>
+<h3 id="strings">Strings</h3>
+<p>POINTER applied to a string variable returns the address of its
+descriptor, not the text itself. Following the Commodore convention, the
+descriptor holds the length in one byte followed by the address of the
+text, and the text of a BASIC 65 string is in bank 1. A routine
+therefore reads the length and address from the descriptor, then reads
+the characters from bank 1 with a flat pointer.</p>
+<p>The Book documents this layout as part of POINTER, so it can be
+relied on: three bytes, the length followed by the low and high bytes of
+the text's address as an offset in bank 1. The text itself can move
+whenever garbage collection runs, so a routine should take the address
+from the descriptor at the moment it is called rather than keep it
+(MEGA65 Book, p. B-193). Chapter 6 shows the same descriptor read from
+BASIC.</p>
+<h2 id="returning-results">Returning Results</h2>
+<p>The same methods work in the other direction. Which to use depends
+again on how much comes back.</p>
+<h3 id="rreg">RREG</h3>
+<p>When a routine returns with RTS, BASIC saves the registers as they
+were at that moment. RREG copies them into BASIC variables:</p>
+<pre><code>RREG a, x, y, z, s</code></pre>
+<p>The names after RREG are ordinary BASIC variables, not the registers
+themselves, so any names will do. Using names such as RA, RX and RY
+avoids overwriting variables called A, X or Y that the program uses for
+other things. Like SYS, RREG lets you skip positions with empty
+commas.</p>
+<p>A routine that returns a 16-bit result in X and Y, low byte first,
+can be read like this:</p>
+<pre><code>10 SYS $1600
+20 RREG , RX, RY
+30 R = RX + 256*RY</code></pre>
+<h3 id="reporting-success-or-failure">Reporting success or failure</h3>
+<p>The status register comes back as the fifth RREG value, which gives a
+routine a convenient way to report errors. The carry flag, bit 0, is the
+usual choice, as the Hypervisor does: set it for success and clear it
+for failure, or the other way round, as long as routine and caller
+agree.</p>
+<pre><code>10 SYS $1600
+20 RREG ,,,, RS
+30 IF (RS AND 1)=0 THEN PRINT &quot;FAILED&quot; : STOP</code></pre>
+<p>Avoid the tempting name ST: it is BASIC's reserved I/O status
+variable, and assigning to it is an error.</p>
+<h3 id="parameter-blocks-and-arrays">Parameter blocks and arrays</h3>
+<p>For more than a few bytes, the routine writes into memory and BASIC
+reads it. A parameter block works in both directions, and BASIC reads it
+with PEEK. For bulk results, BASIC can pass the POINTER address of a
+byte array, and the routine fills the array in place. The results then
+appear in the array with no PEEKs at all:</p>
+<pre><code>10 DIM R&amp;(255)
+20 P=POINTER(R&amp;(0))
+30 SYS $1600, P AND 255, INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
+40 FOR I=0 TO 255 : PRINT R&amp;(I); : NEXT</code></pre>
+<p>Writing directly into floating-point or integer variables is possible
+too, but it means encoding values in BASIC's internal formats. Byte
+arrays avoid that: the value the routine stores is exactly the value
+BASIC reads.</p>
+<h2 id="the-usr-function">The USR Function</h2>
+<p>SYS is a statement: it does something but cannot appear inside an
+expression. USR is a function, so a machine-language routine called
+through it can take part in a calculation:</p>
+<pre><code>Y = 10 + USR(X) * 2</code></pre>
+<p>When BASIC evaluates USR, it evaluates the argument, then jumps
+through the USR vector to a machine-language routine, and uses whatever
+the routine leaves behind as the function's value. The vector is the two
+bytes at <code>$02F8</code>, low byte first, read in the system bank;
+the Book's own example installs a routine at <code>$1800</code> (MEGA65
+Book, p. B-194):</p>
+<pre><code>10 BANK 128
+20 POKE $02F8, 0, 24                   : REM USR VECTOR = $1800</code></pre>
+<p>POKE writes successive bytes from a list, so one statement sets both
+halves of the vector; WPOKE <code>$02F8,$1800</code> does the same.</p>
+<p>BASIC 65's USR accepts string arguments as well as numbers. The
+MEGA65 team's own unit-test module uses this: after it is loaded at
+<code>$1600</code> and initialised with SYS, calls such as
+<code>A=USR("P")</code> send commands to a testing host, with the first
+character choosing the operation (<a
+href="https://www.scribd.com/document/743829404/Mega65-Developer-Guide">MEGA65
+Developer Guide</a>). That pattern, one vector serving many commands
+distinguished by the argument, is a neat way to give BASIC a small
+family of new functions without patching the interpreter.</p>
+<h3 id="the-cost-of-usr">The cost of USR</h3>
+<p>USR's convenience comes at a price. The argument arrives in BASIC's
+floating-point accumulator, not in a register, and the result must be
+left there too. A routine must therefore call BASIC's own conversion
+routines to turn the argument into an integer and to turn its result
+back into floating point, and it must remove a string argument from
+BASIC's temporary string area when it is done. Those routines are
+internal to BASIC 65, and their addresses can change between ROM
+versions.</p>
+<p>For that reason this book recommends SYS with RREG for most work.
+Reserve USR for cases where calling machine code inside an expression
+genuinely simplifies the BASIC program, and keep the conversion calls in
+one place so they are easy to update if the ROM changes.</p>
+<h2 id="a-worked-example">A Worked Example</h2>
+<p>This example brings the chapter's techniques together. A
+machine-language routine adds up every element of a BASIC byte array and
+returns the 24-bit total. BASIC passes the array's address with POINTER
+and the registers, passes the element count in a parameter block, and
+reads the result from the same block. The routine reports success
+through the carry flag.</p>
+<h3 id="memory-layout">Memory layout</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$1600-$1601</code></td>
+<td>count: number of elements, set by BASIC</td>
+</tr>
+<tr class="even">
+<td><code>$1602-$1604</code></td>
+<td>result: 24-bit sum, set by the routine</td>
+</tr>
+<tr class="odd">
+<td><code>$1610</code></td>
+<td>Entry point of the routine</td>
+</tr>
+<tr class="even">
+<td><code>$1700-$17FF</code></td>
+<td>The routine's private base page</td>
+</tr>
+</tbody>
+</table>
+<p>The private base page is a 45GS02 technique worth noting. Rather than
+guess which zero-page locations BASIC 65 leaves free, the routine points
+B at a page of its own, uses it freely, and sets B back to zero before
+returning.</p>
+<h3 id="the-machine-language-routine">The machine-language routine</h3>
+<pre><code>        * = $1600
+count   .word 0         ; set by BASIC
+result  .byte 0, 0, 0   ; returned to BASIC
+
+        * = $1610
+ptr     = $00           ; offset in the private base page
+workpg  = $17           ; private base page at $1700
+
+sum     pha             ; save A: low byte of the array address
+        lda #workpg
+        tab             ; base page = $1700
+        pla
+        sta ptr         ; store the flat address of the array
+        stx ptr+1
+        sty ptr+2
+        stz ptr+3       ; STZ stores the Z register
+        ldz #$00
+        lda #$00
+        sta result
+        sta result+1
+        sta result+2
+
+loop    lda count       ; finished when count reaches zero
+        ora count+1
+        beq done
+        clc
+        lda [ptr],z     ; next element of the array
+        adc result
+        sta result
+        bcc next
+        inc result+1
+        bne next
+        inc result+2
+next    inw ptr         ; advance the pointer
+        lda count       ; count = count - 1
+        bne nodec
+        dec count+1
+nodec   dec count
+        bra loop
+
+done    lda #$00
+        tab             ; restore base page 0 for BASIC
+        sec             ; report success
+        rts</code></pre>
+<p>INW advances only the low 16 bits of the pointer, so the routine
+assumes the array does not cross a 64KB boundary. That holds for arrays
+of normal size; a routine meant for very large arrays would advance all
+four bytes, for instance with LDQ, INQ and STQ, saving Z around them
+since it is part of Q.</p>
+<h3 id="the-basic-program">The BASIC program</h3>
+<pre><code>10 BANK 0
+20 BLOAD &quot;SUMBYTES&quot;, B0, P5632       : REM LOAD TO $1600
+30 DIM D&amp;(999)
+40 FOR I=0 TO 999 : D&amp;(I)=INT(RND(1)*256) : NEXT
+50 P=POINTER(D&amp;(0))
+60 POKE $1600, 1000 AND 255 : POKE $1601, INT(1000/256)
+70 SYS $1610, P AND 255, INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
+80 RREG ,,,, RS
+90 IF (RS AND 1)=0 THEN PRINT &quot;FAILED&quot; : STOP
+100 S=PEEK($1602)+256*PEEK($1603)+65536*PEEK($1604)
+110 PRINT &quot;SUM:&quot;; S
+120 T=0 : FOR I=0 TO 999 : T=T+D&amp;(I) : NEXT
+130 PRINT &quot;CHECK:&quot;; T
+140 BANK 128</code></pre>
+<p>Lines 120 and 130 compute the same total in BASIC so the two can be
+compared, and the difference in speed is plain to see. The
+machine-language routine finishes before the screen has time to redraw,
+while the BASIC loop takes a noticeable moment even at 40.5 MHz.</p>
+<h3 id="what-each-part-demonstrates">What each part demonstrates</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Technique</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Code placed in bank 0 below BASIC</td>
+<td><code>$1600</code>, called with SYS from any bank</td>
+</tr>
+<tr class="even">
+<td>BLOAD to a fixed address</td>
+<td>Line 20</td>
+</tr>
+<tr class="odd">
+<td>Parameters in registers</td>
+<td>The flat address in A, X, Y and Z, line 70</td>
+</tr>
+<tr class="even">
+<td>Parameter block</td>
+<td>count and result, lines 60 and 100</td>
+</tr>
+<tr class="odd">
+<td>POINTER and flat addressing</td>
+<td>Line 50 and <code>[ptr],z</code> in the routine</td>
+</tr>
+<tr class="even">
+<td>Status through RREG</td>
+<td>Lines 80 and 90</td>
+</tr>
+<tr class="odd">
+<td>Private base page</td>
+<td>TAB in the routine</td>
+</tr>
+</tbody>
+</table>
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Division of labour.</strong> BASIC handles logic, setup and
+files; machine language handles anything that runs constantly or must be
+exact.</li>
+<li><strong>What SYS can reach.</strong> <code>$0000-$1FFF</code> and
+<code>$8000-$BFFF</code> are always bank 0, <code>$2000-$7FFF</code>
+comes from the selected bank, and <code>$C000-$FFFF</code> is ROM and
+I/O. Attic RAM is out of reach.</li>
+<li><strong>Placement.</strong> Bank 0 <code>$1600-$1EFF</code> is the
+Book's recommended home for routines; code appended to the program suits
+single-file releases; other banks hold up to 24KB each in their
+<code>$2000-$7FFF</code> window; attic RAM stores overlays.</li>
+<li><strong>BASIC header.</strong> <code>10 BANK 0:SYS $2012</code> at
+<code>$2001</code> makes machine code load and run like a BASIC program.
+A program must load at <code>$2001</code> to stay in MEGA65 mode.</li>
+<li><strong>Loading.</strong> BLOAD for files, with R for raw data and
+flat addresses for attic RAM; BOOT to load and run in one step; DATA and
+POKE with a checksum for typed-in listings; EDMA for overlays.</li>
+<li><strong>Calling.</strong> SYS registers for up to four bytes,
+parameter blocks for more, POINTER for data shared in place. SYS pauses
+PLAY and MOVSPR; <code>SYS TO ... I1</code> keeps them running, and
+<code>SYS TO ... O()</code> reaches code anywhere in the first
+384KB.</li>
+<li><strong>Results.</strong> RREG returns the registers and status;
+parameter blocks and byte arrays return larger results without format
+conversion. Avoid the reserved name ST.</li>
+<li><strong>USR.</strong> The vector is at <code>$02F8</code>. USR is
+useful inside expressions, but it depends on BASIC's internal conversion
+routines, so SYS with RREG is the safer default.</li>
+</ul>
+<p>Chapter 10 is the complete reference to the 45GS02 instruction
+set.</p>
+<nav class="chapnav"><span><a href="ch08-ml-methods-specific-to-the-mega65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch10-vocabulary-of-the-45gs02.html">Next &rarr;</a></span></nav>
+</body>
+</html>
