@@ -10,7 +10,8 @@ There is no build system, test suite or linter. The HTML files at the root are t
 
 ## Structure
 
-- `index.html` is the table of contents. It is hand-written, minified onto a few lines, and links every chapter.
+- `index.html` is the table of contents. It is hand-written, minified onto a few lines, and links every chapter. Its footer (`p.version`) shows the version, which a small inline script fetches when the page loads: the short hash of the latest commit on `main`, from the GitHub API. Don't hard-code a hash there, because a file can't contain the hash of the commit that adds it.
+- `changelog.html` is a hand-written list of reader-visible changes, newest date first. It isn't in the chapter list; the version footer on `index.html` links to it.
 - `chNN-<slug>.html` (chapters 1–17) and `appendices.html` hold the book's content. Each is a standalone pandoc-generated HTML5 page (`<meta name="generator" content="pandoc">`) with pandoc's default inline `<style>` block, plus a link to the shared `style.css`.
 - `style.css` holds the shared look: a narrow serif body, dark mode through `prefers-color-scheme`, tables that scroll sideways, and `nav.chapnav`.
 
@@ -22,5 +23,6 @@ The pandoc source (Markdown) is **not** in this repo, so edit the HTML directly.
 - **Page header:** each chapter has one `<h1>` in the form "Programming the MEGA65 — Chapter N: Title", followed by a date/byline paragraph (`<p>Oct 4, 2026 · @Craig Taylor</p>`). Heading `id`s are pandoc-style slugs.
 - **Citations:** facts taken from the official MEGA65 manual are cited inline as `(MEGA65 Book, p. X-NN)`. This refers to the August 2025 edition of the MEGA65 Book. When a newer source supersedes it, the text cites that source instead.
 - **Code:** BASIC and assembly listings go in `<pre><code>`. Register addresses, keywords and opcodes go in inline `<code>`. Reference material (registers, opcodes, keywords, ROM entry points) mostly lives in tables (`<table>` with `<thead>`/`<tbody>`).
+- **Changelog:** when you change the book's content, add a line to `changelog.html` under the heading for that day's date, in the form `<h2 id="YYYY-MM-DD">Month D, YYYY</h2>`. Create the heading if it doesn't exist, and put the newest date at the top. Name the chapter at the start of the line, as in "Chapter 11: …". Leave out changes readers won't notice, such as edits to `CLAUDE.md`.
 - **Version-dependent features:** the text says which ROM, core or Hypervisor version introduced a feature. Chapter 11 explains how a program can detect the version it is running on.
 
