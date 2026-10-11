@@ -58,6 +58,18 @@ naming.</li>
 listed the features that need a ROM newer than the stable release.</li>
 <li>Added an "Updated" date to each chapter changed since first
 publication.</li>
+<li>Chapter 12: corrected the palette banks (text and bitplanes share
+one), NCM (a property of any SEAM character; nybble 0 is the
+background), the effect of attributes on FCM, 16-colour sprite palette
+entries, and what BASIC's SPRITE supports; removed an unsupported claim
+about SCREEN's arguments and a citation that did not cover the sprite
+pointer list.</li>
+<li>Chapter 13: fixed the SOUND example, which silenced itself; SOUND's
+sweep is a step, not a range; portamento does not stop notes ending in
+current ROMs; the mixer example now waits after selecting a register;
+NOMIX affects only the PWM outputs; gave SIDMODE's bit order and the SID
+read-back copy; noted audio DMA interrupts in development cores; and
+corrected three citations.</li>
 <li>Chapters 5 and 12: colour RAM is 32KB on every model, not 64KB on
 some; a COLPTR offset of <code>$8000</code> or more wraps round.</li>
 <li>Chapter 11: corrected the description of ROM version numbers.

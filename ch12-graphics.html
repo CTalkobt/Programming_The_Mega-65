@@ -37,10 +37,11 @@ Like its ancestors it has no frame buffer: it builds each line of the
 display as it is drawn, from screen memory, character data and colour
 RAM. That design is why character graphics remain central on the MEGA65,
 even though it can display far more than a C64.</p>
-<p>The native display is 720 by 576 pixels, and the chip has separate
-256-colour palettes for sprites, bitplanes and character graphics, so
-more than one palette's worth of colours can be on screen at once (<a
-href="https://www.c64-wiki.com/wiki/mega65">C64-Wiki</a>).</p>
+<p>The native display is 720 by 576 pixels, and the chip has four
+banks of 256 palette entries: one for text and bitmap graphics, one for
+sprites, and an alternate bank that individual characters can select, so
+more than one palette's worth of colours can be on screen at once
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026).</p>
 <p>This chapter works from the easiest methods to the most detailed:</p>
 <ul>
 <li>BASIC 65's graphics commands, which need no register knowledge</li>
@@ -114,8 +115,7 @@ draws, waits for a key, and returns to text:</p>
 40 CIRCLE 160,100,50
 50 GETKEY A$
 60 SCREEN CLOSE</code></pre>
-<p>The arguments to SCREEN have changed between ROM versions, so check
-Chapter 3 against the ROM you are using.</p>
+<p>Chapter 3 gives SCREEN's full syntax.</p>
 <h3 id="when-to-go-further">When to go further</h3>
 <p>The graphics commands are ideal for charts, diagrams, title screens
 and games where drawing speed is not critical. For fast animation,
@@ -182,8 +182,8 @@ memory directly, at byte granularity, anywhere the chip can see.</p>
 </tr>
 </tbody>
 </table>
-<p>LINESTEP, CHRCOUNT, SCRNPTR, COLPTR and the movable sprite pointer
-list are described in Dan Sanderson's and Retrocogs' VIC-IV tutorials;
+<p>LINESTEP, CHRCOUNT, SCRNPTR and COLPTR are described in Dan
+Sanderson's and Retrocogs' VIC-IV tutorials;
 check the CHARPTR and DISPROWS addresses against the MEGA65 Book (<a
 href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
 Sanderson</a>, <a
@@ -443,18 +443,20 @@ language</h3>
 <code>$0100</code> upward, and place the character data at the matching
 addresses.</p>
 <p>The attribute bits still apply in SEAM, in the high nybble of the
-second colour byte. That does no harm to FCM characters, but in NCM the
-same bits select the sub-palette, so they must not also trigger blinking
-or underlining. Clear ATTR, bit 5 of <code>$D031</code>, to suppress the
+second colour byte. In FCM they cut the colour that <code>$FF</code>
+pixels show to the first 16 palette entries and can make characters
+blink or underline; in NCM the same bits select the sub-palette, so they
+must not also trigger blinking or underlining (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026). Clear ATTR, bit 5 of <code>$D031</code>, to suppress the
 attributes system-wide (<a
 href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
 Sanderson</a>). Because <code>$D031</code> is a hot register, either
 clear HOTREG first or change <code>$D031</code> before setting the
 VIC-IV pointers.</p>
 <h3 id="nybble-colour-mode">Nybble Colour Mode</h3>
-<p>NCM is not a separate screen mode but a property of individual FCM
+<p>NCM is not a separate screen mode but a property of individual SEAM
 characters, selected by bit 3 of the first byte of the character's
-colour RAM entry (<a
+colour RAM entry. Setting that bit makes the character a 4-bit
+full-colour character whatever FCLRLO and FCLRHI say (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026; <a
 href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
 Sanderson</a>). Each byte of character data then holds two pixels of
 four bits each, and three details follow from that:</p>
@@ -469,7 +471,9 @@ row starts where it ends.</li>
 <li><strong>Colours come from a group of 16.</strong> The high nybble of
 the character's colour value supplies the upper four bits of each
 pixel's palette index, and the pixel's nybble supplies the lower four. A
-nybble of <code>$F</code> shows the character's full colour value.</li>
+nybble of <code>$0</code> is the background colour, as <code>$00</code> is
+in FCM, and a nybble of <code>$F</code> shows the character's full
+colour value (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026).</li>
 </ul>
 <p>Because NCM characters are twice as wide, a row of them needs half as
 many characters to fill the screen. A full row of NCM characters is 40
@@ -525,15 +529,14 @@ use only colours 0-15 look as they would on a C64. BASIC 65's PALETTE
 COLOR command changes an entry without any register work, and PALETTE
 RESTORE puts the defaults back.</p>
 <h3 id="several-palettes">Several palettes</h3>
-<p>The VIC-IV keeps more than one palette. Character graphics, sprites
-and bitplanes can each use a different palette, which allows more than
-256 different colours on screen at once without changing the palette
-mid-frame (<a href="https://www.c64-wiki.com/wiki/mega65">C64-Wiki</a>),
-and the sprite system can choose among four palette banks (<a
-href="https://dansanderson.com/mega65/sprite-attack/">Dan
-Sanderson</a>). A palette-selection register decides which bank the
-<code>$D100-$D3FF</code> registers edit and which banks the display
-uses; the MEGA65 Book documents its bits.</p>
+<p>The VIC-IV keeps four palette banks of 256 entries.
+<code>$D070</code> chooses which bank the <code>$D100-$D3FF</code>
+registers edit (bits 7-6), which bank text and bitmap graphics use (bits
+5-4), which bank sprites use (bits 3-2), and an alternate bank (bits
+1-0) that a character selects with the bold and reverse attributes.
+Text and bitplanes share a bank; sprites can use a different one, which
+allows more than 256 different colours on screen at once without
+changing the palette mid-frame (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026).</p>
 <h3 id="palette-effects">Palette effects</h3>
 <p>Because the display reads the palette as it draws, changing an entry
 changes every pixel of that colour instantly. This makes some effects
@@ -575,8 +578,10 @@ is not confined to one 16KB bank as on the C64.</p>
 <tbody>
 <tr class="odd">
 <td>16-colour sprites</td>
-<td>15 colours plus transparent, using palette entries chosen per
-sprite</td>
+<td>15 colours plus a transparent one chosen per sprite; sprite n uses
+palette entries n×16 to n×16+15, or 128 higher with bitplane mode on
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>sprite.vhdl</code>)</td>
 </tr>
 <tr class="even">
 <td>64-pixel-wide sprites</td>
@@ -619,12 +624,15 @@ and high-resolution positioning.</p>
 <p>BASIC 65's SPRITE command turns sprites on and sets their colour,
 size and mode; MOVSPR moves them, optionally along a path at a set
 speed; SPRCOLOR sets the shared multicolour registers; and SPRSAV copies
-sprite data to and from strings. SPRITE can switch a sprite between
-monochrome, VIC-II multicolour and VIC-IV multicolour modes, though
-support for the newest modes in BASIC has lagged behind the hardware (<a
+sprite data to and from strings. SPRITE switches a sprite between
+monochrome and VIC-II multicolour, and from ROM 920415 SPRITE SYS R
+turns on high-resolution sprites (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>). BASIC does not support 16-colour and the other
+VIC-IV sprite modes (<a
 href="https://dansanderson.com/mega65/sprite-attack/">Dan
-Sanderson</a>). For the newer features, BASIC programs set the registers
-directly with SETBIT and POKE.</p>
+Sanderson</a>), so for those, BASIC programs set the registers directly
+with SETBIT and POKE.</p>
 <h2 id="bitplanes">Bitplanes</h2>
 <p>The C65 introduced bitplane graphics, the Amiga's way of building a
 colour image: several one-bit-per-pixel images, the bitplanes, are
@@ -1119,7 +1127,7 @@ mccol   .byte $00, $40, $80, $c0   ; x AND 3 = 0
 <h3 id="4-bits-per-pixel-ncm-quilt">4 bits per pixel: NCM quilt</h3>
 <p>NCM characters are 16 pixels wide; the left pixel of each byte is the
 low nybble. pcol is 0 to 15, the index within the character's 16-colour
-group.</p>
+group; 0 leaves the pixel showing the background.</p>
 <pre><code>plotncm lda px
         and #$f0
         sta xyoff
@@ -1332,11 +1340,12 @@ at least twice CHRCOUNT. A screen word of <code>$FFFF</code> ends the
 row, and the next row starts right after it.</li>
 <li><strong>FCM</strong> stores one byte per pixel; screen memory holds
 the data address divided by 64. <strong>NCM</strong> is a per-character
-option with four bits per pixel, 16-pixel-wide characters and
-sub-palettes of 16. Clear ATTR when using NCM.</li>
+option for SEAM characters, with four bits per pixel, 16-pixel-wide
+characters and sub-palettes of 16. Clear ATTR when using FCM or
+NCM.</li>
 <li><strong>Palettes</strong> have 256 nybble-swapped entries at
-<code>$D100-$D3FF</code>, with separate palettes for characters, sprites
-and bitplanes.</li>
+<code>$D100-$D3FF</code>, in four banks: text and bitplanes share one,
+sprites can use another, and characters can switch to an alternate.</li>
 <li><strong>Sprites</strong> gain 16-colour, 64-pixel-wide,
 variable-height and high-resolution modes, and a movable pointer list at
 <code>$D06C-$D06E</code>.</li>

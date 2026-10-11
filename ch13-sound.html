@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch12-graphics.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch14-sd-card-and-mass-storage.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-13-sound">Programming the MEGA65
 — Chapter 13: Sound</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The C64 had one SID. The MEGA65 has four, giving twelve voices, plus
 four channels of digitised sound played by DMA. Everything passes
@@ -60,8 +60,8 @@ refer to that edition.</p>
 voices 1-3 and SID 3 for voices 4-6; SOUND uses SID 2 for voices 1-3 and
 SID 4 for voices 4-6. Music and sound effects therefore never interrupt
 each other (MEGA65 Book, pp. B-190, B-243). Both commands return
-immediately and play in the background under interrupt control, unlike
-the C128, which stopped the program while it played.</p>
+immediately and play in the background under interrupt control. The
+C128's PLAY, by contrast, stopped the program while it played.</p>
 <table>
 <thead>
 <tr class="header">
@@ -120,7 +120,9 @@ convert. The duration is in jiffies, 0 to 32767: 50 per second in PAL
 video mode and 60 in NTSC.</p>
 <p>The optional parameters add a sweep and choose the tone. The
 direction is 0 up, 1 down or 2 oscillating; min is the lowest frequency
-of the sweep and sweep its range. The waveform is 0 triangle, 1
+of the sweep, and sweep is the step added to or taken from the frequency
+each jiffy, with the starting frequency as the top of the sweep (MEGA65
+ROM source, SOUND). The waveform is 0 triangle, 1
 sawtooth, 2 square (the default) or 3 noise, and pulse sets the square
 wave's width, 0 to 4095 (MEGA65 Book, p. B-243).</p>
 <p>Because jiffies depend on the video standard, a program that wants a
@@ -129,7 +131,8 @@ is set in NTSC mode:</p>
 <pre><code>10 IF PEEK($D06F) AND $80 THEN J=60 : ELSE J=50
 20 SOUND 1, 7382, J                      : REM SQUARE WAVE FOR ONE SECOND
 30 SOUND 3, 4000, 120, 2, 2000, 400, 1   : REM SWEEPING SAWTOOTH
-40 SOUND CLR                             : REM SILENCE AND RESET</code></pre>
+40 SLEEP 3                               : REM LET THEM PLAY
+50 SOUND CLR                             : REM SILENCE AND RESET</code></pre>
 <p>These lines follow the Book's own example (MEGA65 Book, p.
 B-243).</p>
 <h3 id="play">PLAY</h3>
@@ -214,8 +217,10 @@ B-190, B-191).</p>
 </tr>
 </tbody>
 </table>
-<p>While portamento is on, notes are not gated off between each other;
-turn it off with <code>P0</code> to restore normal note endings.</p>
+<p>The Book says that while portamento is on, notes are not gated off
+between each other. In current ROMs the check that would do this is
+disabled, so each note still ends normally (MEGA65 ROM source, PLAY).
+Turn portamento off with <code>P0</code>.</p>
 <pre><code>10 ENVELOPE 9, 10, 5, 10, 5, 0, 300
 20 VOL 8, 8
 30 TEMPO 30
@@ -419,18 +424,19 @@ user's mixer settings decide how far apart the two pairs actually
 sound.</p>
 <h3 id="chip-models">Chip models</h3>
 <p>Commodore built two versions of the SID. The original 6581 and the
-later 8580 differ mainly in their filters and in how combined waveforms
+later 8580 differ in their filters and in how combined waveforms
 sound, and some C64 games relied on quirks of the 6581 that the 8580
-fixed (MEGA65 Book, p. 4-7). Music written for one can sound noticeably
+fixed (MEGA65 Book, p. 4-7, for the quirks). Music written for one can sound noticeably
 different on the other, because composers tuned their filter settings to
 the chip they had.</p>
 <p>The MEGA65 models either. The user chooses a default with the SID
 generation setting in the configuration utility, and a program can
 choose for itself with SIDMODE at <code>$D63C</code>: 0 selects 6581
-behaviour and 1 selects 8580 (MEGA65 Book, p. R-3). The Book's register
-table places SIDMODE in the low four bits of <code>$D63C</code>,
-suggesting one bit per SID; confirm the bit order on hardware before
-relying on it. A program that changes SIDMODE should restore it before
+behaviour and 1 selects 8580 (MEGA65 Book, p. R-3). There is one bit
+per SID in the low four bits of <code>$D63C</code>, in an unexpected
+order: bit 0 is SID 3 (<code>$D440</code>), bit 1 is SID 1
+(<code>$D400</code>), bit 2 is SID 4 (<code>$D460</code>) and bit 3 is
+SID 2 (<code>$D420</code>) (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026). A program that changes SIDMODE should restore it before
 exiting, since it overrides the user's setting.</p>
 <h3 id="timing-music">Timing music</h3>
 <p>C64 music players are usually called once per frame from a raster
@@ -595,8 +601,11 @@ default mix:</p>
         lda #$10
         sta sid3+$04    ; triangle, gate off: release</code></pre>
 <p>The SID registers, apart from the four read-only ones, cannot be read
-back. A program that needs to know a register's current value, for
-example to change one control bit, should keep its own copy in RAM.</p>
+back at <code>$D400</code>. The MEGA65 does keep a readable copy of
+what was written to all four SIDs at <code>$FF65000-$FF6507F</code>
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026); the Book does not document it, so a program that needs a
+register's current value, for example to change one control bit, is
+safest keeping its own copy in RAM.</p>
 <h2 id="digital-audio-with-audio-dma">Digital Audio with Audio DMA</h2>
 <p>To play a recorded sound, a computer must send its samples to a
 digital-to-analogue converter at an exact, steady rate: 8,000 times a
@@ -640,8 +649,9 @@ digital registers at <code>$D6F8-$D6FB</code></td>
 <tr class="even">
 <td>4</td>
 <td>NOMIX</td>
-<td>Bypass the mixer: audio DMA plays at full volume and all other
-sound, including the SIDs, is silenced</td>
+<td>Bypass the mixer on the PWM outputs: audio DMA plays at full volume
+on the 3.5mm socket of R3 and earlier boards. HDMI audio and the audio
+DAC of R4 and later boards still carry the mixer output</td>
 </tr>
 </tbody>
 </table>
@@ -821,9 +831,10 @@ of memory (MEGA65 Book, pp. P-19, P-20).</p>
 flag, bit 3. The Book's text states that audio DMA cannot presently
 generate interrupts, although its register table lists interrupt flag
 and enable bits at <code>$D713</code> and offset registers at
-<code>$D714-$D717</code> (MEGA65 Book, pp. P-20, P-21). Until those are
-documented, a program should poll the stop flag, for example once a
-frame.</p>
+<code>$D714-$D717</code> (MEGA65 Book, pp. P-20, P-21). Development
+cores do raise these interrupts (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026), but until they are documented
+and in a release, a program should poll the stop flag, for example once
+a frame.</p>
 <h3 id="longer-sounds">Longer sounds</h3>
 <p>A 64KB region holds about eight seconds of 8-bit sound at 8 kHz.
 Longer sounds use the loop bit as a ring buffer: the channel loops over
@@ -961,9 +972,13 @@ output:</p>
         jsr setmix
         rts
 
-; setmix: write X to mixer byte A, then wait
-; at least 32 cycles before returning
+; setmix: write X to mixer byte A. Wait after
+; selecting the byte and again after writing it
 setmix  sta $d6f4
+        ldy #8
+sel     lda $d6f5       ; let the selection settle
+        dey
+        bne sel
         stx $d6f5
         ldy #8
 wait    lda $d6f5       ; the read also gives audio
@@ -1024,9 +1039,10 @@ described, then BLOAD the file to <code>$50000</code>:</p>
 20 BLOAD &quot;BOOM.RAW&quot;,R,P($50000)</code></pre>
 <p><code>MEM 0,3</code> reserves the first two 8KB blocks of bank 5,
 16KB in all, enough for the 12,000-byte sample used below: one and a
-half seconds at 8 kHz. The BLOAD form follows Dan Sanderson's examples
-(<a href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
-Sanderson</a>).</p>
+half seconds at 8 kHz. The load address follows Dan Sanderson's example
+(<a href="https://dansanderson.com/mega65/justified-ancients/">Dan
+Sanderson</a>); the R flag loads the file raw, instead of treating its
+first two bytes as a load address (MEGA65 Book, BLOAD).</p>
 <h3 id="playing-it">Playing it</h3>
 <p>This routine plays a 12,000-byte, unsigned 8-bit sample at 8 kHz on
 channel 0. The sample starts at <code>$050000</code> and its last byte
