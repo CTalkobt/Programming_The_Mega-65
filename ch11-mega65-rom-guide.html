@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-11-mega65-rom-guide">Programming
 the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
 DOS, the monitor, the character sets, and a complete set of C64 ROMs for
@@ -141,12 +141,15 @@ is not an interface, MEGA65 releases have reorganised it, and code
 should reach the ROM only through the jump table and vectors described
 in the following sections.</p>
 <h3 id="identifying-the-version">Identifying the version</h3>
-<p>MEGA65 ROM versions are six-digit numbers such as 920379, shown in
-the start-up banner. They fall into two series. The 92xxxx releases were
-the long-running first series; the 99xxxx releases followed with
-substantial changes, enough that tools written for one series do not
-always work with the other (<a
-href="https://github.com/MEGA65/eleven">Eleven IDE</a>).</p>
+<p>MEGA65 ROM versions are six-digit numbers such as 920422, shown in
+the start-up banner. Release and beta ROMs are numbered 92xxxx and are
+meant to stay compatible with existing software. Development ROMs,
+numbered 99xxxx, are built separately and may include experimental
+features that break existing software. The two series run side by side;
+most owners should run a 92xxxx ROM (MEGA65 ROM source, README; owners
+can request access through the <a
+href="https://github.com/MEGA65/mega65-rom-public">MEGA65 ROM issue
+repository</a>).</p>
 <p>The ROM version matters most to programs that depend on behaviour
 added in a particular release, such as the BASIC 65 features dated in
 Chapter 6. Such programs should say which version they need. Programs

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 *Programming the MEGA65* is a book, published as a static HTML site on GitHub Pages at `m65.ctalkobt.net` (see `CNAME`). It is modeled on Raeto Colin West's *Programming the Commodore 64*: the machine and BASIC 65 first, then 45GS02 machine language, then graphics, sound, storage and peripherals. The license is LGPL 2.1.
 
-There is no build system, test suite or linter. The HTML files at the root are the published site. To preview it, open `index.html` in a browser or run `python3 -m http.server`.
+There is no build system, test suite or linter. The HTML files at the root are the published site. To preview it, open `index.html` in a browser or run `python3 -m http.server`. The only CI is `.github/workflows/link-check.yml`, which runs lychee on every push to `main`, on pull requests and weekly. It checks internal links, `#anchor` fragments and external links, so renaming a heading breaks any link to its `id`.
 
 ## Structure
 
@@ -20,7 +20,7 @@ The pandoc source (Markdown) is **not** in this repo, so edit the HTML directly.
 ## Conventions to preserve when editing
 
 - **Chapter navigation:** each chapter has an identical `<nav class="chapnav">` bar right after `<body>` and again right before `</body>`. It has three parts: a "← Previous" link (an empty `<span></span>` in chapter 1), a link to "Contents", and a "Next →" link. If you add, remove or rename a chapter, update the nav bars in the chapters on either side and the list in `index.html`.
-- **Page header:** each chapter has one `<h1>` in the form "Programming the MEGA65 — Chapter N: Title", followed by a date/byline paragraph (`<p>Oct 4, 2026 · @Craig Taylor</p>`). Heading `id`s are pandoc-style slugs.
+- **Page header:** each chapter has one `<h1>` in the form "Programming the MEGA65 — Chapter N: Title", followed by a date/byline paragraph (`<p>Oct 4, 2026 · @Craig Taylor</p>`). When you change a page's content (not just markup), add or update an "Updated" date after the original date: `<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>`. Heading `id`s are pandoc-style slugs.
 - **Citations:** facts taken from the official MEGA65 manual are cited inline as `(MEGA65 Book, p. X-NN)`. This refers to the August 2025 edition of the MEGA65 Book. When a newer source supersedes it, the text cites that source instead.
 - **Code:** BASIC and assembly listings go in `<pre><code>`. Register addresses, keywords and opcodes go in inline `<code>`. Reference material (registers, opcodes, keywords, ROM entry points) mostly lives in tables (`<table>` with `<thead>`/`<tbody>`).
 - **Changelog:** when you change the book's content, add a line to `changelog.html` under the heading for that day's date, in the form `<h2 id="YYYY-MM-DD">Month D, YYYY</h2>`. Create the heading if it doesn't exist, and put the newest date at the top. Name the chapter at the start of the line, as in "Chapter 11: …". Leave out changes readers won't notice, such as edits to `CLAUDE.md`.

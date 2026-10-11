@@ -28,7 +28,7 @@
 <nav class="chapnav"><span></span><a href="index.html">Contents</a><span><a href="ch02-getting-to-know-the-mega65.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-1-introduction">Programming the
 MEGA65 — Chapter 1: Introduction</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="what-the-mega65-is">What the MEGA65 Is</h2>
 <p>The MEGA65 is an 8-bit home computer, built in the 2020s to the
 design of a machine Commodore never released. It looks and feels like a
@@ -362,6 +362,20 @@ a feature arrived in a particular version, the text says so, and Chapter
 11 shows how a program can check what it is running on. If an example
 behaves differently on your machine, check for an update before assuming
 the example is wrong.</p>
+<p>The book was checked against ROM 920422 and the MEGA65 core's
+development source as of September 2026. At the time of writing, the
+latest stable release is package v0.97, from April 2025, with ROM 920413
+and its matching core; ROMs after 920413 are beta releases (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). A few
+features described here are newer than the stable release, and the text
+gives the ROM that added each:</p>
+<ul>
+<li>The KERNAL routines CURSOR (ROM 920415), RESET_RUN (920416) and
+VERSIONQ (920417), in Chapter 11.</li>
+<li>The name SYSFLAGS for the routine at <code>$FF47</code>, called
+KEYLOCKS before ROM 920418, also in Chapter 11.</li>
+</ul>
+<p>On a stable ROM, leave these out or check the version first, as
+Chapter 11 describes.</p>
 <nav class="chapnav"><span></span><a href="index.html">Contents</a><span><a href="ch02-getting-to-know-the-mega65.html">Next &rarr;</a></span></nav>
 </body>
 </html>

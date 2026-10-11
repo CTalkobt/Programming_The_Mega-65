@@ -30,7 +30,7 @@
 <h1
 id="programming-the-mega65--chapter-10-vocabulary-of-the-45gs02">Programming
 the MEGA65 — Chapter 10: Vocabulary of the 45GS02</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every instruction the 45GS02 executes,
 in alphabetical order. Each entry gives the operation, the flags it
@@ -1109,7 +1109,7 @@ below give the full sequence. Flat indirect forms add the
 <tr class="even">
 <td>STQ</td>
 <td>M = Q</td>
-<td>-</td>
+<td>N Z (from A)</td>
 <td><code>bp $42 $42 $85 · abs $42 $42 $8D · (bp) $42 $42 $92 · [bp] $42 $42 $EA $92</code></td>
 </tr>
 </tbody>
@@ -1120,6 +1120,13 @@ ADQ and LDQ as forms of its own mnemonics, and treats INQ and DEQ as
 implied-only, using other names for the memory forms. Check your
 assembler's documentation for the spelling it expects.</p>
 <h3 id="notes-5">Notes</h3>
+<p><strong>STQ changes flags.</strong> Unlike STA, STQ is not
+flag-neutral. The CPU executes the <code>$42 $42</code> prefix as two
+NEG instructions before the store: A ends up unchanged, but N and Z are
+set from it (MEGA65 Book, STQ instruction entry). Don't rely on flags
+from an earlier instruction surviving an STQ. The other quad
+instructions set N and Z from their own results, so the prefix makes no
+difference to them.</p>
 <p><strong>Indirect quad modes</strong> are written <code>(bp)</code>
 and <code>[bp]</code> for every instruction except LDQ, which cc65
 writes <code>(bp),Z</code> and <code>[bp],Z</code>. Because Z is part of

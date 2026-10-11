@@ -1,0 +1,33 @@
+name: Link check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, to catch external links that stop working between edits.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links and anchors
+        uses: lycheeverse/lychee-action@v2
+        with:
+          # --include-fragments also checks #anchors, such as the
+          # appendices.html#appendix-a-... links on the contents page.
+          # 429 (rate limited) is accepted so a busy host doesn't fail the build.
+          args: >-
+            --no-progress
+            --include-fragments
+            --max-retries 3
+            --accept 200,429
+            './*.html'
+          fail: true

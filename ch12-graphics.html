@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-12-graphics">Programming the
 MEGA65 — Chapter 12: Graphics</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The VIC-IV is three video chips in one. It behaves as a VIC-II for
 C64 software, adds the C65's VIC-III features of 80 columns, bitplanes
@@ -342,10 +342,20 @@ then take their foreground from the first 32 palette entries, and the
 full-colour modes below reach the whole palette (<a
 href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
 Sanderson</a>).</p>
-<p>Because each character now takes two bytes, LINESTEP must be twice
-CHRCOUNT: 160 for an 80-column row. The screen editor's memory is not
-laid out for this, so SEAM programs move SCRNPTR to their own area. In
-BASIC:</p>
+<p>Because each character now takes two bytes, LINESTEP must be at
+least twice CHRCOUNT: 160 for an 80-column row. The screen editor's memory is not
+laid out for this, so SEAM programs move SCRNPTR to their own area.</p>
+<p>One 16-bit value is not a character. In SEAM, a screen word of
+<code>$FFFF</code> marks the end of a row: the VIC-IV stops drawing the
+row there, and the next row starts straight after the marker instead of
+LINESTEP bytes after the start of this one. Rows ended this way can
+therefore have different lengths. A program that only wants ordinary
+characters must never store <code>$FFFF</code> in screen memory, so
+character <code>$1FFF</code> cannot be combined with all of the high
+screen-byte bits set (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, September 2026).</p>
+<p>In BASIC:</p>
 <pre><code>100 S1=WPEEK($D060) : S2=WPEEK($D062)  : REM SAVE SCRNPTR
 110 SETBIT $D054,0                      : REM CHR16 ON
 120 WPOKE $D058,160                     : REM LINESTEP 80 X 2
@@ -1313,7 +1323,8 @@ and how far apart rows are.</li>
 HOTREG, bit 7 of <code>$D05D</code>, to take full control.</li>
 <li><strong>SEAM</strong>, enabled by CHR16, gives two bytes per
 character, 8,192 characters, and access to FCM and NCM. LINESTEP must be
-twice CHRCOUNT.</li>
+at least twice CHRCOUNT. A screen word of <code>$FFFF</code> ends the
+row, and the next row starts right after it.</li>
 <li><strong>FCM</strong> stores one byte per pixel; screen memory holds
 the data address divided by 64. <strong>NCM</strong> is a per-character
 option with four bits per pixel, 16-pixel-wide characters and

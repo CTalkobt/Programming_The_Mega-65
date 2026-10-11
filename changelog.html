@@ -54,6 +54,17 @@ input.</li>
 <li>Appendices: <code>$D640-$D67F</code> as the Hypervisor trap range,
 <code>$D05E</code> as the low byte of CHRCOUNT, and the RTN/RTS #$nn
 naming.</li>
+<li>Chapter 1: stated the ROM and core the book was checked against, and
+listed the features that need a ROM newer than the stable release.</li>
+<li>Added an "Updated" date to each chapter changed since first
+publication.</li>
+<li>Chapter 11: corrected the description of ROM version numbers.
+92xxxx and 99xxxx are not successive series: 92xxxx are release and beta
+ROMs, and 99xxxx are development ROMs built in parallel.</li>
+<li>Chapter 10: STQ sets N and Z from A, because the CPU runs its
+<code>$42 $42</code> prefix as two NEG instructions.</li>
+<li>Chapter 12: a SEAM screen word of <code>$FFFF</code> ends the row;
+LINESTEP must be at least, not exactly, twice CHRCOUNT.</li>
 <li>Contents page: listed Appendices A–G, each linking to its section.</li>
 <li>Added the version and this changelog to the contents page.</li>
 <li>First publication of Chapters 1–17 and the appendices.</li>
