@@ -412,10 +412,11 @@ different amounts and kinds of data.</p>
 </tbody>
 </table>
 <h3 id="what-sys-does-to-basic">What SYS does to BASIC</h3>
-<p>With plain SYS, a register you don't give a value keeps whatever it
-held when the previous SYS returned, and so does the status register;
-SYS TO sets every register you leave out to zero (MEGA65 ROM source,
-SYS). Pass every register your routine depends on. During the call, SYS
+<p>With plain SYS, a register you don't give a value isn't set to zero:
+it gets whatever was left in its save location, usually the result of
+the previous SYS, and the same goes for the status register. SYS TO sets
+every register you leave out to zero (MEGA65 ROM source, SYS). Pass
+every register your routine depends on. During the call, SYS
 switches BASIC's ROM out of <code>$2000-$BFFF</code> and tells the
 KERNAL's interrupt handler to skip BASIC's interrupt-driven features,
 such as PLAY music and MOVSPR sprite movement. They resume when the
