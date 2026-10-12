@@ -455,8 +455,9 @@ translated into characters:</p>
 <tr class="even">
 <td><code>$D619</code></td>
 <td>PETSCIIKEY</td>
-<td>The next event as PETSCII; <code>$FF</code> if it has no PETSCII
-form</td>
+<td>The next event as PETSCII; <code>$FF</code> if the queue is empty or
+the event has no PETSCII form (bit 7 of <code>$D60A</code> tells these
+apart) (<a href="https://github.com/MEGA65/mega65-core/pull/720">mega65-core PR #720</a>)</td>
 </tr>
 <tr class="odd">
 <td><code>$D60A</code> bits 0-6</td>

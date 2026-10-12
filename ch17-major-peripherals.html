@@ -286,9 +286,21 @@ second</td>
 <p>Bit 7 of <code>$D06F</code> is set in NTSC mode, so a program can
 adapt timing, as Chapters 8 and 13 showed. The user can switch modes in
 the Freezer while a program runs.</p>
-<p>Audio leaves through the 3.5mm jack, which has a headphone amplifier
-that the configuration utility can turn off for line-level equipment,
-and through the digital video connector. Chapter 13 covers the mixer
+<p>Development cores add a 15 kHz output for CRT monitors such as the
+Commodore 1084S: composite sync on the VGA connector's horizontal-sync
+pin, with RGB on its colour pins. It is enabled by the cable, which must
+bridge VGA pins 12 and 15 with a 470 Ω resistor; the wiring is otherwise
+the same as the cable used by the C64 core. With V400 set it also
+interlaces this output, though not yet correctly. It is not in release
+0.97 cores (<a href="https://github.com/MEGA65/mega65-core/pull/934">mega65-core PR #934</a>).</p>
+<p>Audio leaves through the 3.5mm jack, which has a headphone amplifier,
+and through the digital video connector. The Book says the configuration
+utility's Audio amplifier setting turns the jack's amplifier off for
+line-level equipment, but on current cores it has no effect on the
+jack: it controls only the speaker amplifier chip on R3 boards, and
+development cores rename it accordingly (MEGA65 Book, configuration utility, Audio page; <a href="https://github.com/MEGA65/mega65-core/pull/893">mega65-core PR #893</a>;
+<a href="https://github.com/MEGA65/mega65-core/issues/735">issue
+#735</a>). Chapter 13 covers the mixer
 that feeds both.</p>
 <h2 id="summary">Summary</h2>
 <ul>

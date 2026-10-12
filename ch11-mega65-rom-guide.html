@@ -1047,10 +1047,16 @@ implement.</p>
 <tr class="even">
 <td><code>$1E</code></td>
 <td>mkfile</td>
-<td>Not in 1.2</td>
-<td>Create a file</td>
-<td>Not documented</td>
-<td>Not documented</td>
+<td>Partly implemented</td>
+<td>Create a file in the current directory, as one contiguous block, so a
+D81 image made this way can be mounted. Limited: 8.3 names only, and a
+name without an extension may cause problems; normal files only; space
+is allocated in 512KB steps, and a nearly full card is not handled
+properly (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+Hyppo <code>dos.asm</code>, release 0.97 and development)</td>
+<td>Name set first with setname; Z:Y:X = size in bytes, up to 16MB</td>
+<td>C=0 and A = <code>$8D</code> if the file exists, or <code>$8E</code>
+if the directory is full</td>
 </tr>
 <tr class="odd">
 <td><code>$20</code></td>

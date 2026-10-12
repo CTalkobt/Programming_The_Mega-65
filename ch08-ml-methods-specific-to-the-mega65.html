@@ -370,6 +370,12 @@ data from attic RAM at <code>$8010000</code> to bank 4:</p>
         .word $0000     ; destination address within bank
         .byte $04       ; destination bank 4: $0040000
         .word $0000     ; modulo, unused</code></pre>
+<p>Addresses wrap within the selected megabyte during a job: a copy that
+runs past the end of a megabyte continues at its start. To let a long
+copy or fill cross a megabyte boundary, include option <code>$01</code>
+in the job, or set bit 1 of <code>$D703</code> to make that the default
+for every job. Both work from core 0.97 and are ignored in hypervisor
+mode (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>; <a href="https://github.com/MEGA65/mega65-core/pull/830">mega65-core PR #830</a>).</p>
 <p>Colour RAM at <code>$FF80000</code> is reached the same way, with
 megabyte <code>$FF</code> and bank <code>$08</code>.</p>
 <h3 id="skipping-bytes">Skipping bytes</h3>
@@ -444,7 +450,10 @@ in 256ths of a byte, which DMAgic uses for texture scaling, and options
 destination or source along a slope. The Book quotes rates of up to 20
 million pixels per second for scaling and 40 million for line drawing;
 its DMA chapter documents the parameters (MEGA65 Book, pp. P-13,
-P-14).</p>
+P-14). On release 0.97 cores a line comes out two pixels shorter than
+its count, so add 2. Development cores fix this, let the direction bit
+reverse the major axis, and add line scaling through bit 4 of option
+<code>$8F</code> or <code>$9F</code> (<a href="https://github.com/MEGA65/mega65-core/pull/887">mega65-core PR #887</a>).</p>
 <p>Not every F018 operation exists. Only copy and fill are implemented:
 the command values for swap and mix, and the minterm bits that mix used,
 do nothing useful on the MEGA65 (MEGA65 Book, pp. P-6, P-24).</p>
@@ -747,7 +756,19 @@ its own processor, it works even when the program has hung. Its R
 command, or just RETURN, shows all the CPU registers, including the
 MAPHI and MAPLO values that no instruction can read, which makes it the
 quickest way to see what a program has done to the memory map (MEGA65
-Book, pp. 14-22, O-14). The same console is available over a UART serial
+Book, pp. 14-22, O-14).</p>
+<p>Matrix Mode can also step through a program. <code>t1</code> pauses
+the CPU in trace mode, and each press of RETURN then runs one
+instruction and shows the registers; <code>t0</code> lets the program
+run again. From core 0.97, interrupts are blocked while stepping with
+<code>t1</code>, so an IRQ does not take the step into the interrupt
+handler; <code>t2</code> pauses with interrupts still allowed. The
+<code>W</code> command sets a watchpoint that stops the program when a
+chosen byte is written (MEGA65 Book, monitor appendix; <a href="https://github.com/MEGA65/mega65-core/pull/848">mega65-core PR #848</a>).</p>
+<p>On release 0.97 cores, single-stepping or
+inspecting memory from Matrix Mode while a program runs INQ, DEQ or one
+of the Q register shift instructions can make the program skip a byte
+and crash; development cores fix this (<a href="https://github.com/MEGA65/mega65-core/pull/943">mega65-core PR #943</a>). The same console is available over a UART serial
 or JTAG connection, where cross-development tools on a PC can also load
 programs and inspect memory.</p>
 <p>For larger projects, a PC-based emulator with a debugger, such as

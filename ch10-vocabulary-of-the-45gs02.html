@@ -879,7 +879,8 @@ flag bytes shared between a main program and an interrupt handler, since
 each is a single uninterruptible instruction.</p>
 <p><strong>RTN #n</strong> pops the return address as RTS does, then
 discards n further bytes, cleaning up parameters the caller pushed
-before the call.</p>
+before the call. It works only on core 0.97 and later; on earlier cores
+it fails, usually crashing the program (<a href="https://github.com/MEGA65/mega65-core/pull/791">mega65-core PR #791</a>).</p>
 <p><strong>SBC</strong> needs C set before a subtraction without borrow,
 as on the 6502.</p>
 <p><strong>STX abs,Y</strong> and <strong>STY abs,X</strong> fill gaps

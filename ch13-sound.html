@@ -33,10 +33,12 @@
 <p>The C64 had one SID. The MEGA65 has four, giving twelve voices, plus
 four channels of digitised sound played by DMA. Everything passes
 through a programmable cross-bar mixer before reaching the 3.5mm socket
-and the digital video output. The mixer also has an input reserved for
-an OPL-compatible FM synthesiser, but the MEGA65 Book notes that this
-device is not currently functional in the MEGA65 core (MEGA65 Book, p.
-V-24), so it is not covered here.</p>
+and the digital video output. The core also contains a basic OPL2 FM
+synthesiser, write-only at <code>$FE00000-$FE000FF</code>, feeding mixer
+input <code>$F</code> in mono (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>slow_devices.vhdl</code>,
+<code>audio_mixer.vhdl</code>; <a href="https://github.com/MEGA65/mega65-core/pull/879">mega65-core PR #879</a>). The MEGA65 Book still
+describes it as not functional (MEGA65 Book, p. V-24), and it is not
+covered here.</p>
 <p>The two working kinds of sound are very different. A SID synthesises
 its waveforms from a handful of register settings, so music costs almost
 no memory or CPU time. Digitised sound reproduces recorded audio, such
@@ -422,6 +424,17 @@ on SID 1 is still heard from both speakers. A program that wants a part
 to come from one side chooses a SID from the appropriate pair; the
 user's mixer settings decide how far apart the two pairs actually
 sound.</p>
+<p>Each SID can also be panned on its own. Setting SIDEXENA, bit 4 of
+<code>$D63C</code>, turns on two extra registers in every SID: offset
+<code>$1D</code> sets that SID's left-channel volume and
+<code>$1E</code> its right-channel volume, 0 to 255
+(<code>$D41D</code> and <code>$D41E</code> for SID 1). By default SIDs
+1 and 2 (<code>$D400</code>, <code>$D420</code>) are set fully right and
+SIDs 3 and 4 (<code>$D440</code>, <code>$D460</code>) fully left. With
+SIDEXENA clear, the two registers are hidden and each SID keeps that
+default panning
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>sid_6581.vhdl</code>, <code>multisid.vhdl</code>,
+<code>c65uart.vhdl</code>; release 0.97).</p>
 <h3 id="chip-models">Chip models</h3>
 <p>Commodore built two versions of the SID. The original 6581 and the
 later 8580 differ in their filters and in how combined waveforms
@@ -443,9 +456,13 @@ exiting, since it overrides the user's setting.</p>
 interrupt, which ties their tempo to the video standard: 50 frames a
 second in PAL, 60 in NTSC. The MEGA65 keeps both video modes and their
 timings, so a tune written for PAL plays 20% faster in NTSC mode. A
-player that must sound the same in both should be driven by a CIA timer,
-or check bit 7 of <code>$D06F</code> and adjust its tempo, as the SOUND
-example above does for durations.</p>
+player that must sound the same in both should be driven by a CIA timer
+whose latch value it chooses from bit 7 of <code>$D06F</code>, or adjust
+its tempo from that bit, as the SOUND example above does for durations.
+A fixed latch is not enough, because the CIA clock itself differs: about
+0.985 MHz in PAL and 1.023 MHz in NTSC. Release 0.97 cores run the NTSC
+CIA clock at about 0.99 MHz instead; development cores correct it
+(<a href="https://github.com/MEGA65/mega65-core/pull/930">mega65-core PR #930</a>).</p>
 <h2 id="sid-register-reference">SID Register Reference</h2>
 <p>Offsets are from the base of a SID, <code>$D400</code> for SID 1.
 Voices 1, 2 and 3 use the same seven-register layout at offsets
@@ -880,8 +897,7 @@ only on the MEGAphone or development boards (MEGA65 Book, p. V-24).</p>
 </tr>
 <tr class="odd">
 <td><code>$E</code></td>
-<td>Coefficient also used for the OPL FM input, <code>$F</code> (not yet
-functional)</td>
+<td>Coefficient also used for the OPL2 FM input, <code>$F</code></td>
 </tr>
 <tr class="even">
 <td><code>$F</code></td>

@@ -710,7 +710,8 @@ through a vector or a table of vectors, ideal for dispatching commands
 by number.</li>
 <li><strong>RTN #n</strong> returns like RTS and then discards n further
 bytes from the stack. A routine that takes parameters on the stack can
-clean them up as it returns.</li>
+clean them up as it returns. It needs core 0.97 or later; older cores
+crash on it (Chapter 10).</li>
 </ul>
 <p>Together with stack-relative addressing, these make it practical to
 pass parameters on the stack, as compilers for larger processors do:</p>

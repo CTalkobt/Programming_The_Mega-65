@@ -342,7 +342,10 @@ href="https://retrocogs.mega65.com/2025/08/13/vic-iv-graphics-setting-up-fcm-and
 <p>The extra screen byte extends the character number to 13 bits, so a
 screen can use up to 8,192 different characters instead of 256. The
 extra colour byte carries further per-character settings, and the second
-colour byte holds the colour itself. Ordinary monochrome characters can
+colour byte holds the colour itself. Among those settings, bit 7 of the
+first colour byte flips the character vertically and bit 6 flips it
+horizontally, so one character definition can be reused facing the other
+way (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>). Ordinary monochrome characters can
 then take their foreground from the first 32 palette entries, and the
 full-colour modes below reach the whole palette (<a
 href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
@@ -537,6 +540,11 @@ registers edit (bits 7-6), which bank text and bitmap graphics use (bits
 Text and bitplanes share a bank; sprites can use a different one, which
 allows more than 256 different colours on screen at once without
 changing the palette mid-frame (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026).</p>
+<p>Development cores add BOLDISALT, bit 4 of <code>$D053</code>. When it
+is set, the bold attribute alone selects the alternate palette, without
+reverse, and bold no longer adds 16 to the colour. It is not in release
+0.97 cores, and it is cleared at reset (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>,
+development).</p>
 <h3 id="palette-effects">Palette effects</h3>
 <p>Because the display reads the palette as it draws, changing an entry
 changes every pixel of that colour instantly. This makes some effects
@@ -768,6 +776,36 @@ the buffer</td>
 <td>1-0</td>
 <td>New X position, bits 9-8</td>
 </tr>
+<tr class="odd">
+<td>Screen byte 1</td>
+<td>7-5</td>
+<td>Y offset of 0 to 7 pixels for the following characters, drawing each one that many rows higher</td>
+</tr>
+<tr class="even">
+<td>Screen byte 1</td>
+<td>4</td>
+<td>Subtract the Y offset instead, drawing the following characters lower (core 0.97 and later)</td>
+</tr>
+<tr class="odd">
+<td>Colour byte 0</td>
+<td>3</td>
+<td>ROWMASK: draw the following characters only on the pixel rows whose bits are set in colour byte 1</td>
+</tr>
+<tr class="even">
+<td>Colour byte 1</td>
+<td>7-0</td>
+<td>The row mask, one bit per pixel row, used when ROWMASK is set</td>
+</tr>
+<tr class="odd">
+<td>Colour byte 0</td>
+<td>6</td>
+<td>Treat the following characters as background, for sprite priority</td>
+</tr>
+<tr class="even">
+<td>Colour byte 0</td>
+<td>2</td>
+<td>Treat the following characters as foreground, for sprite priority</td>
+</tr>
 </tbody>
 </table>
 <p>To draw a soldier on a patch of flowers, a row contains three
@@ -777,6 +815,15 @@ pixels let the flowers show through. Transparency stays on for the rest
 of the row, or until another GOTOX changes it (<a
 href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
 Sanderson</a>).</p>
+<p>The Y offset and the row mask together let an object move vertically
+by single pixels within a character row: offset its character, and mask
+off the rows that would otherwise spill into the row above or below. The
+offset, row mask and priority settings, like transparency, last for the
+rest of the row or until the next GOTOX (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>,
+release 0.97). On release 0.97 cores, a GOTOX with ROWMASK set whose row
+mask has bits 5 and 6 both set also switches the following characters to
+the alternate palette, as bold and reverse do; development cores fix
+this (<a href="https://github.com/MEGA65/mega65-core/pull/928">mega65-core PR #928</a>).</p>
 <h3 id="organising-layers">Organising layers</h3>
 <p>Three ways of arranging a row are common:</p>
 <ol type="1">

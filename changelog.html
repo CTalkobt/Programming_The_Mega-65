@@ -71,6 +71,23 @@ slowdown, BRK breakpoints, the RESTORE timing, Xemu's watchpoints and
 trap <code>$70</code>; the takeover procedure now uses
 <code>rom_writeenable</code> (<code>$D641</code>) rather than the
 <code>$70</code> toggle.</li>
+<li>Chapter 12: GOTOX Y offset, negative Y offset, ROWMASK and sprite
+priority bits; character flip bits; BOLDISALT (development cores).
+Chapter 13: per-SID panning with SIDEXENA. Chapter 8: Matrix Mode
+single-stepping (t1, t2, t0) and watchpoints. Chapter 17: 15 kHz CRT
+output (development cores).</li>
+<li>Checked the 50 most recently merged mega65-core pull requests against
+the book. Chapter 7 and 10: RTN #n needs core 0.97 or later. Chapter 8:
+DMA addresses wrap within a megabyte unless option <code>$01</code> or
+<code>$D703</code> bit 1 is set; on 0.97, line mode draws two pixels
+short; an INQ/DEQ problem when single-stepping on 0.97. Chapter 13: the
+OPL2 synthesiser exists, and NTSC CIA timing differs on 0.97. Chapter 16:
+<code>$D619</code> reads <code>$FF</code> when the queue is empty.
+Chapter 17: the Audio amplifier setting does not affect the 3.5mm jack
+on current cores.</li>
+<li>Chapter 11: filled in the <code>$D640</code> table's mkfile row from
+the Hypervisor source: partly implemented, with its inputs, errors and
+limits.</li>
 <li>Chapter 11: <code>$FF80</code> is always <code>$FF</code>; PR #946
 is not yet merged; corrected the summary, the error-code note and the
 trap personalities.</li>
