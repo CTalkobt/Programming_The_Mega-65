@@ -58,6 +58,23 @@ naming.</li>
 listed the features that need a ROM newer than the stable release.</li>
 <li>Added an "Updated" date to each chapter changed since first
 publication.</li>
+<li>Chapter 2: LOAD and SAVE also default to drive 8; TI counts
+microseconds, not frames; Freezer details and citations corrected.</li>
+<li>Chapter 3: corrected CHANGE, INPUT, SCNCLR, IF...ELSE, BANK, FRE(4)
+and FRE(5) (from ROM 920415), MKDIR and CHDIR, MOUNT with no file name,
+the COLOR range, DMODE, CHAR, LPEN and RMOUSE; fixed the WAIT, TRON, FIND
+and file-writing examples.</li>
+<li>Chapter 4: FIND with quotes misses keywords; CHANGE asks before
+replacing; RENUMBER can break FGOTO and FGOSUB; corrected two
+troubleshooting entries.</li>
+<li>Chapter 6: integers are stored high byte first; EDMA reverses both
+addresses with 48, not 32; dated SYS TO (920414), its I mode (920419)
+and FRE(4)/FRE(5) (920415); fixed the token dump, the sort helper's
+pointer arithmetic, and the TRAP example's explanation.</li>
+<li>Chapter 9: AND cannot split an array address, so the examples use
+MOD; plain SYS keeps registers you leave out; LOAD always uses
+<code>$2001</code>; only banks 4 and 5 are free for code; corrected the
+BASIC header listing and the SYS TO I range.</li>
 <li>Chapter 17: how the clock works on R4 and later boards: one queued
 write at a time, reads from a copy, which addresses are safe to write,
 and that hundredths of a second always read 0 on current cores, with a

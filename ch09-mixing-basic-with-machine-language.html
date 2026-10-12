@@ -30,9 +30,9 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-9-mixing-basic-with-machine-language">Programming
 the MEGA65 — Chapter 9: Mixing BASIC with Machine Language</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
-<p>Most successful MEGA65 programs are not written entirely in one
+<p>A MEGA65 program does not have to be written entirely in one
 language. BASIC 65 is excellent at the parts of a program that change
 often and run rarely: menus, setup, file handling, scoring, game logic
 that runs once a frame. Machine language is excellent at the parts that
@@ -108,7 +108,7 @@ With that in mind, the main places for machine code are:</p>
 <td>2.25KB</td>
 <td><code>SYS $1600</code> from any bank</td>
 <td>The Book's recommended home for routines; also the only range usable
-with <code>SYS TO ... I1</code></td>
+with <code>SYS TO ... I1</code> in ROMs 920414 to 920418</td>
 </tr>
 <tr class="even">
 <td>After the BASIC program in bank 0</td>
@@ -117,7 +117,7 @@ with <code>SYS TO ... I1</code></td>
 <td>Moves if the program is edited; ideal for single-file programs</td>
 </tr>
 <tr class="odd">
-<td>Banks 1 to 5, <code>$x2000-$x7FFF</code></td>
+<td>Banks 4 and 5, <code>$x2000-$x7FFF</code></td>
 <td>24KB per bank</td>
 <td><code>SYS $42000</code>, or BANK and SYS</td>
 <td>Reserve banks 4 and 5 with MEM; shared with BASIC's graphics</td>
@@ -140,8 +140,10 @@ with <code>SYS TO ... I1</code></td>
 <p>The area from <code>$1600</code> to <code>$1EFF</code> lies below the
 start of BASIC text, and during SYS it is always visible, whatever bank
 BASIC has selected. The Book recommends it for machine-code subroutines
-called from BASIC, and it is the only range usable with SYS TO's
-BASIC-active mode, described later (MEGA65 Book, pp. 14-18, 14-19). The
+called from BASIC (MEGA65 Book, pp. 14-18, 14-19). In ROMs 920414 to
+920418 it was also the only range usable with SYS TO's BASIC-active
+mode, described later; from 920419 that mode works anywhere SYS can
+reach (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). The
 MEGA65 team's own unit-test module for BASIC programs loads here too (<a
 href="https://www.scribd.com/document/743829404/Mega65-Developer-Guide">MEGA65
 Developer Guide</a>).</p>
@@ -151,14 +153,16 @@ will be used alongside other software should keep its footprint small or
 use another bank.</p>
 <h3 id="after-the-basic-program">After the BASIC program</h3>
 <p>Machine code can be appended to the end of a BASIC program in bank 0
-and saved with it as one file. This is how most single-file MEGA65
-programs are built, and the next section shows how. The only limitation
+and saved with it as one file. This is a common way to build a
+single-file program, and the next section shows how. The only limitation
 is that the code moves if the BASIC program above it changes length, so
 it suits finished programs better than ones still being edited.</p>
 <h3 id="banks-4-and-5">Banks 4 and 5</h3>
-<p>For anything larger, the other banks offer 24KB each in the
+<p>For anything larger, banks 4 and 5 offer 24KB each in the
 <code>$2000-$7FFF</code> window that SYS maps from the selected bank.
-Banks 4 and 5 are the usual choice, reserved with MEM as described in
+Banks 1 to 3 are not available: bank 1 holds BASIC's arrays and strings,
+and banks 2 and 3 hold the ROM (MEGA65 Book, memory chapter). Banks 4
+and 5 are reserved with MEM as described in
 Chapter 6 so BASIC's graphics commands leave them alone. Code at
 <code>$42000</code> is called with <code>SYS $42000</code>, or with
 <code>BANK 4 : SYS $2000</code>. Code at <code>$40000-$41FFF</code> or
@@ -180,12 +184,14 @@ else. The standard way is to begin the file with a one-line BASIC
 program whose only job is to call the machine code that follows it. This
 is called a BASIC header, or a BASIC stub.</p>
 <p>The line we want is:</p>
-<pre><code>10 BANK 0:SYS $2012</code></pre>
+<pre><code>10 BANK0:SYS$2012</code></pre>
 <p>The <code>BANK 0</code> makes the SYS address refer to bank 0
 whatever BANK setting the user left behind. Early MEGA65 ROMs required
 it before a SYS like this, and the Book recommends it as best practice
 on all versions (MEGA65 Book, p. 14-18). <code>$2012</code> is the
-address immediately after the header, worked out below.</p>
+address immediately after the header, worked out below. The line has no
+spaces, because spaces typed in a line are stored too, one byte each,
+and would move the address.</p>
 <h3 id="building-it-byte-by-byte">Building it byte by byte</h3>
 <p>Using the program format from Chapter 6, the line becomes:</p>
 <table>
@@ -257,8 +263,9 @@ next    .word 0         ; end of program
 
 start   ; machine code begins here, at $2012</code></pre>
 <p>The address in the SYS is text, so the assembler cannot fill it in
-automatically unless it can convert a number to hex digits. Most MEGA65
-assemblers can, and many ship a ready-made header macro. Writing the
+automatically unless it can convert a number to hex digits; check your
+assembler's documentation, which may also offer a ready-made header
+macro. Writing the
 address in hex rather than decimal makes the arithmetic easy either way:
 four digits, always five characters with the <code>$</code>.</p>
 <h3 id="using-the-header">Using the header</h3>
@@ -267,13 +274,13 @@ address, <code>$2001</code>. On the MEGA65 that file loads and lists
 like any BASIC program:</p>
 <pre><code>LOAD &quot;MYPROG&quot;
 LIST
-10 BANK 0:SYS $2012
+10 BANK0:SYS$2012
 RUN</code></pre>
-<p>The load address matters. A program that loads at <code>$2001</code>
-runs in MEGA65 mode. A program that loads at <code>$0801</code>, the
-C64's start of BASIC, makes the MEGA65 switch to C64 mode, which is how
-C64 software runs unchanged. A MEGA65 program must therefore always
-start at <code>$2001</code>.</p>
+<p>The header must be built for <code>$2001</code>. LOAD and DLOAD
+always put a BASIC program at <code>$2001</code>, whatever load address
+the file has, so a header built for another address, such as the C64's
+<code>$0801</code>, would point its SYS at the wrong place (MEGA65 ROM
+source, LOAD). C64 programs are run in GO64 mode instead.</p>
 <p>When the machine code returns with RTS, BASIC carries on with the
 rest of line 10 and then finds the end of the program. Further BASIC
 lines can be added between the header and the code, as the worked
@@ -317,8 +324,8 @@ it uses the load address stored in the file:</p>
 20 BLOAD &quot;HELPERS&quot;                  : REM TO ITS OWN ADDRESS</code></pre>
 <p>Because BLOAD does not restart the program, it can be called from
 inside a running program, which is the usual way to load overlays or
-level data. Check DS afterwards, as described in Chapter 6, since a
-missing file is reported by the drive.</p>
+level data. A missing file stops the program with an error unless TRAP
+is set, as in Chapter 6; check DS for other drive problems.</p>
 <h3 id="boot-and-raw-files">BOOT and raw files</h3>
 <p>BOOT combines BLOAD and SYS: it loads a PRG file and starts executing
 at its load address. With no file name it runs AUTOBOOT.C65, the
@@ -405,7 +412,10 @@ different amounts and kinds of data.</p>
 </tbody>
 </table>
 <h3 id="what-sys-does-to-basic">What SYS does to BASIC</h3>
-<p>Any register not given a value is set to zero. During the call, SYS
+<p>With plain SYS, a register you don't give a value keeps whatever it
+held when the previous SYS returned, and so does the status register;
+SYS TO sets every register you leave out to zero (MEGA65 ROM source,
+SYS). Pass every register your routine depends on. During the call, SYS
 switches BASIC's ROM out of <code>$2000-$BFFF</code> and tells the
 KERNAL's interrupt handler to skip BASIC's interrupt-driven features,
 such as PLAY music and MOVSPR sprite movement. They resume when the
@@ -431,8 +441,9 @@ registers, plus two extra abilities (MEGA65 Book, pp. B-256, 14-18,
 </tr>
 <tr class="even">
 <td><code>I1</code></td>
-<td>Keep BASIC active during the call, so PLAY and MOVSPR continue; the
-routine must lie in <code>$1600-$1EFF</code></td>
+<td>Keep BASIC active during the call, so PLAY and MOVSPR continue. In
+ROMs 920414 to 920418 the routine had to lie in
+<code>$1600-$1EFF</code>; from 920419 it can be anywhere</td>
 </tr>
 <tr class="odd">
 <td><code>O(offset)</code></td>
@@ -479,8 +490,10 @@ split it across the registers and let the routine use
 <code>[zp],Z</code> addressing:</p>
 <pre><code>10 DIM D&amp;(999)
 20 P=POINTER(D&amp;(0))
-30 SYS $1600, P AND 255, INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)</code></pre>
-<p>The routine stores A, X, Y and Z into four bytes of the base page,
+30 SYS $1600, MOD(P,256), INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)</code></pre>
+<p>The low byte uses MOD because an array's address is at least
+<code>$10000</code>, and AND accepts only values up to 65,535. The
+routine stores A, X, Y and Z into four bytes of the base page,
 then reads or writes <code>[zp],Z</code>. Byte arrays are the easiest
 type to share this way, because each element is exactly one byte and the
 elements are stored one after another.</p>
@@ -534,7 +547,7 @@ byte array, and the routine fills the array in place. The results then
 appear in the array with no PEEKs at all:</p>
 <pre><code>10 DIM R&amp;(255)
 20 P=POINTER(R&amp;(0))
-30 SYS $1600, P AND 255, INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
+30 SYS $1600, MOD(P,256), INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
 40 FOR I=0 TO 255 : PRINT R&amp;(I); : NEXT</code></pre>
 <p>Writing directly into floating-point or integer variables is possible
 too, but it means encoding values in BASIC's internal formats. Byte
@@ -549,7 +562,7 @@ through it can take part in a calculation:</p>
 through the USR vector to a machine-language routine, and uses whatever
 the routine leaves behind as the function's value. The vector is the two
 bytes at <code>$02F8</code>, low byte first, read in the system bank;
-the Book's own example installs a routine at <code>$1800</code> (MEGA65
+the Book's POKE entry sets it to a routine at <code>$1800</code> (MEGA65
 Book, p. B-194):</p>
 <pre><code>10 BANK 128
 20 POKE $02F8, 0, 24                   : REM USR VECTOR = $1800</code></pre>
@@ -672,7 +685,7 @@ since it is part of Q.</p>
 40 FOR I=0 TO 999 : D&amp;(I)=INT(RND(1)*256) : NEXT
 50 P=POINTER(D&amp;(0))
 60 POKE $1600, 1000 AND 255 : POKE $1601, INT(1000/256)
-70 SYS $1610, P AND 255, INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
+70 SYS $1610, MOD(P,256), INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
 80 RREG ,,,, RS
 90 IF (RS AND 1)=0 THEN PRINT &quot;FAILED&quot; : STOP
 100 S=PEEK($1602)+256*PEEK($1603)+65536*PEEK($1604)
@@ -734,11 +747,11 @@ comes from the selected bank, and <code>$C000-$FFFF</code> is ROM and
 I/O. Attic RAM is out of reach.</li>
 <li><strong>Placement.</strong> Bank 0 <code>$1600-$1EFF</code> is the
 Book's recommended home for routines; code appended to the program suits
-single-file releases; other banks hold up to 24KB each in their
+single-file releases; banks 4 and 5 hold up to 24KB each in their
 <code>$2000-$7FFF</code> window; attic RAM stores overlays.</li>
-<li><strong>BASIC header.</strong> <code>10 BANK 0:SYS $2012</code> at
-<code>$2001</code> makes machine code load and run like a BASIC program.
-A program must load at <code>$2001</code> to stay in MEGA65 mode.</li>
+<li><strong>BASIC header.</strong> <code>10 BANK0:SYS$2012</code> at
+<code>$2001</code> makes machine code load and run like a BASIC program;
+LOAD always puts a BASIC program at <code>$2001</code>.</li>
 <li><strong>Loading.</strong> BLOAD for files, with R for raw data and
 flat addresses for attic RAM; BOOT to load and run in one step; DATA and
 POKE with a checksum for typed-in listings; EDMA for overlays.</li>

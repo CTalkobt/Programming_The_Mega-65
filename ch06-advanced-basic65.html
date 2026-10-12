@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch05-mega65-architecture.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch07-45gs02-machine-language.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-6-advanced-basic-65">Programming
 the MEGA65 — Chapter 6: Advanced BASIC 65</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 4 treated BASIC 65 as a language: how to structure programs,
 debug them and make them run well. This chapter treats it as a program,
@@ -138,8 +138,9 @@ entirely.</p>
 <h3 id="example-checking-memory">Example: checking memory</h3>
 <p>FRE reports more than free space on the MEGA65. <code>FRE(0)</code>
 and <code>FRE(1)</code> give the free bytes in banks 0 and 1,
-<code>FRE(4)</code> and <code>FRE(5)</code> return the reservation
-bitfields for banks 4 and 5 in the same format as MEM, and
+<code>FRE(4)</code> and <code>FRE(5)</code>, from ROM 920415, return
+the reservation bitfields for banks 4 and 5 in the same format as MEM
+(<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), and
 <code>FRE(-1)</code> returns the ROM version (MEGA65 Book, p. B-117).
 This program reserves 16KB of bank 4 and confirms it:</p>
 <pre><code>10 MEM 3,0                            : REM RESERVE $40000-$43FFF
@@ -147,7 +148,8 @@ This program reserves 16KB of bank 4 and confirms it:</p>
 30 PRINT FRE(1);&quot;BYTES FREE FOR VARIABLES&quot;
 40 PRINT &quot;BANK 4 RESERVED BLOCKS: &quot;;HEX$(FRE(4))
 50 PRINT &quot;ROM VERSION&quot;;FRE(-1)</code></pre>
-<p>Line 40 shows at least <code>03</code>, the two blocks reserved in
+<p>Line 40 shows at least <code>0003</code> (HEX$ always gives four
+digits), the two blocks reserved in
 line 10; other bits may be set if the system is using parts of bank 4.
 In 80 by 50 text mode, for example, the first 8KB of bank 4 always holds
 screen data, whether or not MEM reserved it (MEGA65 Book, p. B-164).
@@ -196,8 +198,8 @@ LIST reverses the process.</p>
 <code>$80</code> is END and <code>$9E</code> is SYS, for example. BASIC
 65 has far more keywords than there are single-byte codes, so most of
 its extensions use two bytes: a prefix byte followed by a code.
-Statements added since the C128 use the prefix <code>$FE</code>, so BANK
-is stored as <code>$FE $02</code> and CURSOR as <code>$FE $41</code>. A
+Extended statements use the prefix <code>$FE</code>, a scheme inherited
+from the C128's BASIC 7.0, so BANK is stored as <code>$FE $02</code> and CURSOR as <code>$FE $41</code>. A
 small number of additional functions use a different prefix. Chapter 3
 gives each keyword's token alongside its description.</p>
 <p>Everything that is not a keyword is stored as PETSCII text, including
@@ -206,8 +208,9 @@ converted to a number each time the line runs. Hexadecimal constants
 such as <code>$3000</code> are stored the same way, as five
 characters.</p>
 <h3 id="a-worked-example">A worked example</h3>
-<p>The one-line program <code>10 BANK 0:SYS $3000</code> is stored like
-this:</p>
+<p>The one-line program <code>10 BANK0:SYS$3000</code>, typed without
+spaces, is stored like this. Spaces typed in a line are stored too, one
+byte each, so a version with spaces would be two bytes longer:</p>
 <pre><code>$2001:  10 20             link: next line at $2010
 $2003:  0a 00             line number 10
 $2005:  fe 02             BANK
@@ -283,8 +286,9 @@ where those entries live and how quickly BASIC finds them.</p>
 </tbody>
 </table>
 <p>As on the C64, only the first two characters of a name are
-significant, so <code>TOTAL</code> and <code>TOP</code> are the same
-variable. Byte variables are new to BASIC 65 and are most useful in
+significant, so <code>PX1</code> and <code>PX2</code> are the same
+variable. A name must also not contain a keyword: <code>TOTAL</code>
+and <code>TOP</code> both begin with TO and cannot be used at all. Byte variables are new to BASIC 65 and are most useful in
 arrays, where they take a fifth of the space of floating-point
 elements.</p>
 <p>Two byte arrays are predefined. <code>T@&amp;()</code> is mapped onto
@@ -297,7 +301,8 @@ start, so a program with many variables slows down noticeably, and
 variables created late are found last. Since ROM 920279, BASIC 65 stores
 one-letter scalar variables such as <code>A</code>, <code>B%</code> and
 <code>C$</code> at an address computed from the name, so they are found
-immediately with no search.</p>
+immediately with no search; from ROM 920286 this covers every one-letter
+name of every type (MEGA65 ROM source history).</p>
 <p>The practical lesson is simple: give the variables used inside your
 busiest loops one-letter names. Longer names still work, but they are
 found the old way.</p>
@@ -332,20 +337,21 @@ forces a collection when it will not be noticed.</p>
 <h3 id="examples-looking-inside-variables">Examples: looking inside
 variables</h3>
 <p>POINTER gives the address of a variable's value. An integer is two
-bytes, low byte first; a floating-point variable is five bytes; a
+bytes, high byte first, unlike most 16-bit values on the MEGA65 (MEGA65
+ROM source; the Book's POINTER entry says the opposite); a floating-point variable is five bytes; a
 string's POINTER is the address of its three-byte descriptor, which
 holds the length and then the text's address as an offset in bank 1
 (MEGA65 Book, p. B-193).</p>
 <pre><code>10 BANK 0                             : REM SCALARS ARE IN BANK 0
 20 A%=1234 : P=POINTER(A%)
-30 PRINT &quot;A% AT $&quot;;HEX$(P);&quot;:&quot;;PEEK(P);PEEK(P+1)   : REM 210 4
+30 PRINT &quot;A% AT $&quot;;HEX$(P);&quot;:&quot;;PEEK(P);PEEK(P+1)   : REM 4 210
 40 N$=&quot;MEGA65&quot; : D=POINTER(N$)
 50 L=PEEK(D) : S=WPEEK(D+1)           : REM LENGTH, TEXT OFFSET
 60 BANK 1                             : REM STRING TEXT IS IN BANK 1
 70 FOR I=0 TO L-1 : PRINT CHR$(PEEK(S+I)); : NEXT : PRINT
 80 BANK 128</code></pre>
-<p>Line 30 prints 210 and 4, because 1234 is <code>$04D2</code> stored
-low byte first. Lines 40 to 70 rebuild the string from its descriptor. A
+<p>Line 30 prints 4 and 210, because 1234 is <code>$04D2</code> stored
+high byte first. Lines 40 to 70 rebuild the string from its descriptor. A
 string's text can move whenever garbage collection runs, so a program
 should call POINTER again rather than keep an old text address. Array
 element addresses, in contrast, stay fixed while the program runs.</p>
@@ -477,11 +483,12 @@ in the window above. The value is multiplied by 256 and added to the CPU
 address. To run a routine stored at <code>$54000</code>, in bank 5
 beyond the reach of ordinary SYS:</p>
 <pre><code>SYS TO $2000, O($520)                 : REM $2000 + $52000 = $54000</code></pre>
-<p>The I argument, <code>I(1)</code>, keeps BASIC's ROM and
-interrupt-driven features running during the call, so PLAY music and
-MOVSPR movement continue. The price is that the routine must lie between
-<code>$1600</code> and <code>$1EFF</code>, and I and O cannot be
-combined.</p>
+<p>The I argument, <code>I(1)</code>, keeps BASIC's interrupt-driven
+features running during the call, so PLAY music and MOVSPR movement
+continue. I and O cannot be combined. SYS TO arrived in ROM 920414. In
+920414 to 920418, a routine called with I had to lie between
+<code>$1600</code> and <code>$1EFF</code>; from 920419 it can be
+anywhere SYS can reach (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <h3 id="example-saving-and-restoring-the-screen">Example: saving and
 restoring the screen</h3>
 <p>EDMA moves memory far faster than any FOR loop. This program copies
@@ -493,11 +500,15 @@ B-91):</p>
 30 PRINT &quot;PRESS A KEY&quot;
 40 GETKEY A$
 50 EDMA 0, 80*25, $8000000, 2048      : REM COPY IT BACK</code></pre>
-<p>A length of 0 means 65,536 bytes. Adding 32 to the command, bit 5,
-runs the operation backwards, which is what overlapping copies to a
-higher address need. This shifts the top row of the screen one character
-to the right:</p>
-<pre><code>10 EDMA 32, 79, 2048, 2049            : REM REVERSE COPY, SAFE FOR OVERLAP</code></pre>
+<p>A length of 0 means 65,536 bytes. EDMA uses the F018B job format, in
+which bit 4 of the command runs the source backwards and bit 5 the
+destination. An overlapping copy to a higher address needs both, so add
+48, and give the last byte of each range instead of the first. Adding
+only 32 reverses the destination alone, which mirrors the data (MEGA65
+ROM source, EDMA; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). This shifts the top row of the screen one
+character to the right:</p>
+<pre><code>10 EDMA 48, 79, 2126, 2127            : REM BACKWARDS COPY, SAFE FOR OVERLAP</code></pre>
 <h3 id="example-data-files-in-attic-ram">Example: data files in attic
 RAM</h3>
 <p>BLOAD and BSAVE switch to flat addressing when given an address above
@@ -599,10 +610,10 @@ and asks again rather than stopping:</p>
 900 PRINT &quot;ERROR&quot;;ER;&quot;IN LINE&quot;;EL;&quot;: &quot;;ERR$(ER)
 910 RESUME 20</code></pre>
 <p>The file name is a string expression, so it goes in parentheses, as
-the BLOAD reference requires (MEGA65 Book, p. B-29). Line 40 handles the
-common case of a missing file, which the drive reports through DS; the
-TRAP handler catches anything BASIC itself rejects, such as an invalid
-file name.</p>
+the BLOAD reference requires (MEGA65 Book, p. B-29). A missing file
+raises a BASIC FILE NOT FOUND error, which the TRAP handler at line 900
+reports, as it does for anything else BASIC rejects. Line 40 catches drive
+errors that still let the load finish.</p>
 <h3 id="example-finding-where-a-calculation-fails">Example: finding
 where a calculation fails</h3>
 <p>RESUME with a line number lets a program record how far it got before
@@ -639,11 +650,14 @@ in A, X, Y and Z:</p>
 30 REM ... FILL THE ARRAY ...
 40 P=POINTER(A%(0))
 50 BANK 4
-60 SYS $2000, P AND 255, INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
+60 SYS $2000, MOD(P,256), INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
 70 BANK 128</code></pre>
-<p>The routine stores the four registers into a zero-page pointer and
-works through the array with <code>[zp],Z</code> addressing, as shown in
-Chapter 5. It needs no knowledge of where BASIC keeps anything, because
+<p>The low byte uses MOD because an array's address is at least
+<code>$10000</code>, and AND accepts only values up to 65,535. The
+routine stores the four registers into a zero-page pointer and works
+through the array with <code>[zp],Z</code> addressing, as shown in
+Chapter 5, remembering that each integer element is stored high byte
+first. It needs no knowledge of where BASIC keeps anything, because
 POINTER has already worked that out, and it will keep working across ROM
 versions.</p>
 <p>A few rules keep such helpers safe:</p>
@@ -688,7 +702,8 @@ them running, which suits short routines called often while music plays
 60 NEXT
 70 PLAY                               : REM STOP THE MUSIC</code></pre>
 <p>The routine sits at <code>$1800</code>, inside the
-<code>$1600-$1EFF</code> range that interrupt mode requires. POKE
+<code>$1600-$1EFF</code> range that interrupt mode required in ROMs
+920414 to 920418, so it works on every ROM that has SYS TO. POKE
 accepts several values in a row, so line 20 places a four-byte routine
 in one statement.</p>
 <h3 id="example-one-command-start-up">Example: one-command start-up</h3>

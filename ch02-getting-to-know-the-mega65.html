@@ -30,7 +30,7 @@ MEGA65</title>
 <h1
 id="programming-the-mega65--chapter-2-getting-to-know-the-mega65">Programming
 the MEGA65 — Chapter 2: Getting to Know the MEGA65</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Before programming any computer, it pays to know its everyday tools
 well. On the MEGA65 those tools are richer than on a C64: the keyboard
@@ -76,8 +76,9 @@ input (MEGA65 Book, pp. 2-13, 3-8).</p>
 <p>The MEGA65 can produce either 50 Hz "PAL" or 60 Hz "NTSC" video, even
 on a modern digital display. The choice matters to programmers as well
 as to viewers: it sets the frame rate that raster interrupts, music
-players and BASIC's jiffy timer count against, as Chapters 8 and 13
-explain. A program can tell which is in use from bit 7 of
+players and the jiffy durations used by SOUND count against, as
+Chapters 8 and 13 explain. BASIC's TI timer is not affected: it counts
+microseconds. A program can tell which is in use from bit 7 of
 <code>$D06F</code>, which is set in NTSC mode.</p>
 <h2 id="the-keyboard">The Keyboard</h2>
 <p>The MEGA65 keyboard follows the Commodore layout: letters and numbers
@@ -160,7 +161,7 @@ work in C64 mode</td>
 </tr>
 </tbody>
 </table>
-<p>NO SCROLL, ALT, F9 to F14 and HELP are not available in C64 mode.</p>
+<p>NO SCROLL, ALT and F9 to F14 are not available in C64 mode.</p>
 <h3 id="arrow-keys-and-cursor-keys">Arrow keys and cursor keys</h3>
 <p>The four cursor keys at the bottom right move the cursor, and repeat
 when held. SHIFT with the right and down keys moves left and up, as on a
@@ -217,12 +218,13 @@ program runs</td>
 </tbody>
 </table>
 <p>Some programs take over RUN/STOP and RESTORE, so these combinations
-do not always work. The Freezer and Matrix Mode are handled by the
-Hypervisor, so they work even then. The complete list of control and
+do not always work. The Freezer is started by the Hypervisor, which
+keeps it reachable even then (MEGA65 Book, Hypervisor services
+appendix, freeze services). The complete list of control and
 MEGA codes is in the Book (MEGA65 Book, p. E-3).</p>
 <h2 id="the-screen-editor">The Screen Editor</h2>
 <p>The screen editor is the part of the ROM that handles typing. Like
-Commodore editors since the PET, it is a full-screen editor: move the
+the C64's, it is a full-screen editor: move the
 cursor anywhere on the screen, change what is there, and press RETURN to
 enter that line. That makes editing a BASIC line as simple as listing
 it, changing it in place and pressing RETURN.</p>
@@ -332,9 +334,10 @@ set (MEGA65 Book, pp. 3-11, 3-12).</p>
 <p>The Freezer is a menu that can interrupt anything the MEGA65 is
 doing. Hold RESTORE for about a second and release it: the border
 flickers, the running program stops where it is, and the Freezer menu
-appears. Because the Freezer runs under the Hypervisor rather than the
-KERNAL, it works even when a program has disabled interrupts or switched
-the ROM out (MEGA65 Book, p. 3-12).</p>
+appears (MEGA65 Book, p. 3-12). The Hypervisor, not the KERNAL, starts
+the Freezer, which is why it works even when a program has disabled
+interrupts or switched the ROM out (MEGA65 Book, Hypervisor services
+appendix, freeze services).</p>
 <table>
 <thead>
 <tr class="header">
@@ -367,7 +370,7 @@ the ROM out (MEGA65 Book, p. 3-12).</p>
 </table>
 <p>The Freezer also mounts disks and disk images, shows version
 information through the MEGAINFO utility, and can change the CPU speed
-and video settings for the frozen program.</p>
+(F) and video mode (V) for the frozen program (<a href="https://github.com/MEGA65/mega65-freezemenu">Freezer source</a>, <code>freezer.c</code>).</p>
 <h3 id="freeze-slots">Freeze slots</h3>
 <p>The Freezer can store several complete machine states in freeze
 slots. Move to an unused slot with the cursor-right key and press F7;
@@ -386,8 +389,8 @@ ports, and resume.</p>
 sessions. To reach it, switch the MEGA65 off, hold ALT and switch it on
 again; the utility menu appears, and 1 starts the configuration utility.
 The left and right cursor keys move between pages, up and down select a
-setting, and RETURN or SPACE changes it. A 1351 or Amiga mouse in port 1
-also works (MEGA65 Book, p. 4-3).</p>
+setting, and RETURN or SPACE changes it. A mouse in port 1 also works
+(MEGA65 Book, p. 4-3).</p>
 <table>
 <thead>
 <tr class="header">
@@ -460,7 +463,7 @@ card is ignored. The SD card holds the ROM, the configuration, system
 files and the user's software, normally as D81 disk images. New cards
 should be SDHC, between 4GB and 32GB (MEGA65 Book, pp. 2-3, 4-9).</p>
 <h3 id="disk-images-and-drives">Disk images and drives</h3>
-<p>Most MEGA65 software comes as D81 files: images of 3.5" Commodore
+<p>Much MEGA65 software comes as D81 files: images of 3.5" Commodore
 1581 disks, stored on the SD card. Mounting an image makes it behave
 exactly like a real disk in drive 8. Images are mounted from the
 Freezer, or from BASIC with the MOUNT command. The MEGA65 also has a
@@ -501,8 +504,9 @@ real 3.5" floppy drive, and the IEC serial port accepts Commodore 1541,
 </tr>
 </tbody>
 </table>
-<p>The D in DLOAD and DSAVE stands for disk: unlike LOAD and SAVE, they
-default to drive 8 without needing a device number. Chapter 3 describes
+<p>The D in DLOAD and DSAVE stands for disk. In BASIC 65, LOAD and SAVE
+also use drive 8 by default, but DLOAD and DSAVE accept drive and unit
+options and are the commands the Book recommends. Chapter 3 describes
 every disk command.</p>
 <h2 id="summary">Summary</h2>
 <ul>

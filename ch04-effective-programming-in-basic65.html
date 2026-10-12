@@ -30,7 +30,7 @@ BASIC 65</title>
 <h1
 id="programming-the-mega65--chapter-4-effective-programming-in-basic-65">Programming
 the MEGA65 — Chapter 4: Effective Programming in BASIC 65</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 3 described each keyword. This chapter is about putting them
 together: how to write BASIC 65 programs that are easy to read, easy to
@@ -136,7 +136,8 @@ quicker.</p>
 </tr>
 <tr class="even">
 <td>Find every use of a variable or word</td>
-<td><code>FIND "SCORE"</code></td>
+<td><code>FIND "HS"</code> for a variable; <code>FIND /PRINT/</code>
+for a keyword</td>
 </tr>
 <tr class="odd">
 <td>Rename a variable throughout</td>
@@ -160,11 +161,16 @@ quicker.</p>
 </tr>
 </tbody>
 </table>
-<p>RENUMBER updates every GOTO, GOSUB and other reference to the lines
-it moves, so it is safe to use at any time. CHANGE is equally thorough,
-which means it should be given a string that cannot also appear inside a
-longer name: changing <code>A</code> would also change
-<code>AB</code>.</p>
+<p>RENUMBER updates every GOTO, GOSUB and similar reference to the
+lines it moves. It cannot fix line numbers a program calculates, as with
+FGOTO and FGOSUB, and it uses banks 4 and 5 as working space (MEGA65
+Book, FGOTO, FGOSUB and MEM). With quotes, FIND and CHANGE search plain
+text, which finds variable names but not keywords: a keyword is stored
+as a token, so search for it between other delimiters, as in
+<code>FIND /PRINT/</code>. CHANGE shows each match and asks Y, N or *
+(all) before replacing it; answering * changes every later match too, so
+give it a string that cannot also appear inside a longer name: changing
+<code>A</code> would also change <code>AB</code>.</p>
 <h3 id="layout">Layout</h3>
 <p>BASIC 65 tolerates spaces, and using them costs only a little memory.
 A few conventions make listings readable:</p>
@@ -193,7 +199,8 @@ B-131).</p>
 <h3 id="inspect-variables">Inspect variables</h3>
 <p>After a program stops, its variables keep their values. PRINT them in
 direct mode, change them if needed, and continue with CONT, provided no
-program line has been edited in the meantime. A STOP placed in the
+program line has been edited in the meantime and the program did not
+stop with an error. A STOP placed in the
 program acts as a breakpoint:</p>
 <pre><code>200 IF X &gt; 319 THEN PRINT &quot;X OUT OF RANGE:&quot;; X : STOP</code></pre>
 <h3 id="trace-execution">Trace execution</h3>
@@ -227,25 +234,29 @@ stops is more useful than letting errors pass silently:</p>
 </tr>
 <tr class="even">
 <td>A variable is unexpectedly zero</td>
-<td>Its name differs only after the first two characters from another
-variable, or it is misspelled</td>
+<td>It is misspelled</td>
 </tr>
 <tr class="odd">
+<td>Two variables seem to change each other</td>
+<td>Their names share the first two characters, so BASIC treats them as
+one variable</td>
+</tr>
+<tr class="even">
 <td><code>?OUT OF DATA</code></td>
 <td>A READ loop runs further than the DATA, or a RESTORE is missing</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>A disk command fails without an error</td>
 <td>DS was not checked; print <code>DS$</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>POKEs to <code>$D020</code> or similar do nothing</td>
 <td>BANK is not 128</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>A program behaves differently after editing</td>
-<td>CONT was used after a change, or variables kept stale values; use
-RUN</td>
+<td>It was restarted with GOTO, which keeps the old variable values
+(editing does not clear them); use RUN</td>
 </tr>
 </tbody>
 </table>

@@ -30,7 +30,7 @@ Guide</title>
 <h1
 id="programming-the-mega65--chapter-3-basic-65-reference-guide">Programming
 the MEGA65 — Chapter 3: BASIC 65 Reference Guide</h1>
-<p>Oct 4, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every keyword in BASIC 65: commands,
 functions, reserved variables and secondary keywords. It is meant to be
@@ -89,8 +89,8 @@ programmer supplies.</p>
 the keywords BASIC 65 shares with earlier Commodore BASICs and many of
 its own.</li>
 <li><strong>Two bytes beginning <code>$FE</code></strong>, for most
-statements added since the C128, such as BANK
-(<code>$FE $02</code>).</li>
+extended statements, a scheme BASIC 65 inherits from the C128's BASIC
+7.0, such as BANK (<code>$FE $02</code>).</li>
 <li><strong>Two bytes beginning <code>$CE</code></strong>, for most
 added functions, such as POINTER (<code>$CE $0A</code>).</li>
 <li><strong>Combinations</strong> for compound keywords, such as GOTO
@@ -416,7 +416,8 @@ pp. B-134, B-263, B-96</p>
 otherwise the statements after ELSE run, if there is an ELSE. A line
 number after THEN acts as a GOTO.</p>
 <p>Format:
-<code>IF expression THEN statements [ELSE statements]</code></p>
+<code>IF expression THEN statements [: ELSE statements]</code>. A colon
+must come before ELSE.</p>
 <pre><code>10 INPUT &quot;ENTER A NUMBER&quot;; V
 20 IF V &lt; 0 THEN PRINT &quot;NEGATIVE&quot; : ELSE PRINT &quot;NOT NEGATIVE&quot;</code></pre>
 <h3 id="begin-bend">BEGIN, BEND</h3>
@@ -495,7 +496,7 @@ read is XORed with the optional third value, then ANDed with the mask,
 and the wait ends when the result is not zero.</p>
 <p>Format: <code>WAIT address, andmask [, xormask]</code></p>
 <pre><code>10 BANK 128
-20 WAIT 211, 1 : REM WAIT FOR THE SHIFT KEY</code></pre>
+20 WAIT $D611, 1 : REM WAIT FOR THE LEFT SHIFT KEY</code></pre>
 <h3 id="vsync">VSYNC</h3>
 <p>Token <code>$FE $54</code> · Book p. B-280</p>
 <p>Waits until the video display reaches a raster line: 0-311 on PAL,
@@ -545,7 +546,7 @@ with the failing statement highlighted.</p>
 runs; TROFF turns it off.</p>
 <p>Format: <code>TRON</code> / <code>TROFF</code></p>
 <pre><code>10 TRON
-20 FOR I = 85 TO 90 : PRINT I; EXP(I) : NEXT
+20 FOR I = 80 TO 88 : PRINT I; EXP(I) : NEXT
 30 TROFF</code></pre>
 <h2 id="program-editing">Program Editing</h2>
 <h3 id="auto">AUTO</h3>
@@ -580,11 +581,17 @@ without loading it. P pauses after each screenful.</p>
 <p>Token <code>$FE $2B</code> · Book p. B-110</p>
 <p>Lists every line of the program that contains a string.</p>
 <p>Format: <code>FIND "string" [, line range]</code></p>
-<pre><code>FIND &quot;SCORE&quot;</code></pre>
+<pre><code>FIND &quot;HS&quot;
+FIND /PRINT/</code></pre>
+<p>With quotes, FIND searches plain text, which finds variable names but
+not keywords, because a keyword is stored as a token; another delimiter,
+as in the second line, finds the keyword (MEGA65 Book, FIND).</p>
 <h3 id="change">CHANGE</h3>
 <p>Token <code>$FE $2C</code> · Book p. B-42</p>
-<p>Replaces every occurrence of one string with another throughout the
-program, or within a range of lines.</p>
+<p>Finds each occurrence of one string, throughout the program or
+within a range of lines, lists the line and asks whether to replace it:
+Y replaces it, * replaces this and every later match, RETURN stops, and
+any other key skips it.</p>
 <p>Format: <code>CHANGE "find" TO "replace" [, line range]</code></p>
 <pre><code>CHANGE &quot;XX$&quot; TO &quot;UU$&quot;, 2000-2700</code></pre>
 <h3 id="new">NEW</h3>
@@ -688,8 +695,9 @@ to use it.</p>
 <h2 id="keyboard-and-screen-input">Keyboard and Screen Input</h2>
 <h3 id="input">INPUT</h3>
 <p>Token <code>$85</code> · Book p. B-138</p>
-<p>Prints an optional prompt and a question mark, then waits for the
-user to type values for one or more variables and press RETURN.</p>
+<p>Prints an optional prompt, followed by a question mark if the prompt
+ends with a semicolon (a comma leaves it out), then waits for the user
+to type values for one or more variables and press RETURN.</p>
 <p>Format:
 <code>INPUT [prompt &lt;, / ;&gt;] variable [, variable ...]</code></p>
 <pre><code>10 INPUT &quot;NAME, AGE&quot;; NA$, AG%</code></pre>
@@ -770,8 +778,8 @@ such as its width.</p>
 20 PRINT RWINDOW(2) : REM SCREEN WIDTH</code></pre>
 <h3 id="scnclr">SCNCLR</h3>
 <p>Token <code>$E8</code> · Book p. B-233</p>
-<p>Clears the current text window, or a graphics screen when one is
-active.</p>
+<p>Without an argument, clears the current text window; with a colour,
+fills the graphics screen with that colour.</p>
 <p>Format: <code>SCNCLR [colour]</code></p>
 <pre><code>SCNCLR</code></pre>
 <h3 id="font">FONT</h3>
@@ -930,7 +938,8 @@ disturbing the others. HASBIT returns -1 or 0.</p>
 <h3 id="bank">BANK</h3>
 <p>Token <code>$FE $02</code> · Book p. B-26</p>
 <p>Selects which memory bank commands with 16-bit addresses use. Banks 0
-to 5 are RAM; bank 128, the default, is the system view with ROM and
+to 5 are chip RAM, though banks 2 and 3 hold the ROM and are
+write-protected; bank 128, the default, is the system view with ROM and
 I/O.</p>
 <p>Format: <code>BANK number</code></p>
 <pre><code>BANK 0 : POKE $4000, 1 : BANK 128</code></pre>
@@ -982,7 +991,9 @@ floating-point accumulator.</p>
 <p>Token <code>$B8</code> · Book p. B-117</p>
 <p>Returns free memory or other system information: <code>FRE(0)</code>
 and <code>FRE(1)</code> give free bytes for program and variables,
-<code>FRE(4)</code> and <code>FRE(5)</code> the MEM reservations, and
+<code>FRE(4)</code> and <code>FRE(5)</code> (from ROM 920415) which 8KB
+blocks of banks 4 and 5 are in use, whether reserved by MEM, a graphics
+screen or the system (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), and
 <code>FRE(-1)</code> the ROM version.</p>
 <p>Format: <code>FRE(n)</code></p>
 <pre><code>PRINT FRE(0); &quot;BYTES FREE FOR PROGRAM&quot;; FRE(-1)</code></pre>
@@ -1077,9 +1088,12 @@ DCLOSE closes one channel, or every file on a unit.</p>
 / <code>APPEND# channel, filename [,D drive] [,U unit]</code> /
 <code>DCLOSE# channel</code> or <code>DCLOSE [U unit]</code></p>
 <pre><code>10 DOPEN#2, &quot;SCORES&quot;, W
-20 PRINT#2, &quot;ALICE&quot;, 1200
+20 PRINT#2, &quot;ALICE&quot; &quot;,&quot; 1200
 30 DCLOSE#2
-40 APPEND#2, &quot;SCORES&quot; : PRINT#2, &quot;BOB&quot;, 900 : DCLOSE#2</code></pre>
+40 APPEND#2, &quot;SCORES&quot; : PRINT#2, &quot;BOB&quot; &quot;,&quot; 900 : DCLOSE#2</code></pre>
+<p>The comma is written as a string: a comma between PRINT# items, as in
+PRINT, writes spaces to the next tab stop, not a comma, and INPUT# would
+then read the whole line as one value.</p>
 <h3 id="print-input-line-input-get">PRINT#, INPUT#, LINE INPUT#,
 GET#</h3>
 <p>Tokens <code>$98</code>, <code>$84</code>, <code>$E5 $84</code>,
@@ -1180,16 +1194,19 @@ start of a line is a shortcut.</p>
 <p>Tokens <code>$FE $51</code>, <code>$FE $4B</code> · Book pp. B-168,
 B-46</p>
 <p>MKDIR creates a subdirectory, a partition of a given number of
-tracks, on a floppy or D81 image. CHDIR changes the current directory;
-<code>".."</code> goes back up.</p>
+tracks, on a floppy or D81 image, and moves into it. CHDIR changes the
+current directory: <code>"/"</code> returns to the root of a disk, and
+<code>".."</code> goes up a level only on the SD card (U12).</p>
 <p>Format: <code>MKDIR dirname, L size [,U unit]</code> /
 <code>CHDIR dirname [,U unit]</code></p>
-<pre><code>10 MKDIR &quot;SUBDIR&quot;, L5
-20 CHDIR &quot;SUBDIR&quot;</code></pre>
+<pre><code>10 MKDIR &quot;SUBDIR&quot;, L5   : REM CREATE IT AND MOVE INTO IT
+20 CHDIR &quot;/&quot;              : REM BACK TO THE ROOT</code></pre>
 <h3 id="mount">MOUNT</h3>
 <p>Token <code>$FE $49</code> · Book p. B-171</p>
 <p>Mounts a D81 or D64 disk image from the SD card as unit 8, or unit 9
-with U9. Without a file name it shows the mounted images; MOUNT OFF
+with U9. Without a file name, it gives the drives back to the
+physical floppy (from ROM 920414): unit 8 becomes the internal drive and
+unit 9 is unmounted unless a unit is given (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). MOUNT OFF
 unmounts.</p>
 <p>Format: <code>MOUNT filename [,U unit]</code> /
 <code>MOUNT [U unit]</code> / <code>MOUNT OFF [U unit]</code></p>
@@ -1224,8 +1241,9 @@ program was loaded from.</p>
 <pre><code>10 DU = RDISK(1)
 20 BLOAD &quot;MYRESOURCE&quot;, U(DU) : REM LOAD FROM THE SAME UNIT</code></pre>
 <h2 id="colour">Colour</h2>
-<p>Colours are palette entry numbers, 0 to 255. The first 16 are the C64
-colours: 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7
+<p>Colours are palette entry numbers: 0 to 31 for COLOR and FOREGROUND,
+whose values 16 to 31 select the first 16 colours in bold, and 0 to 255
+for BACKGROUND, BORDER and PEN. The first 16 are the C64 colours: 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7
 yellow and so on.</p>
 <h3 id="color-foreground">COLOR, FOREGROUND</h3>
 <p>Tokens <code>$E7</code>, <code>$FE $39</code> · Book pp. B-56,
@@ -1288,8 +1306,10 @@ colour.</p>
 <p>Tokens <code>$FE $35</code>, <code>$FE $36</code> · Book pp. B-77,
 B-82</p>
 <p>DMODE sets how drawing combines with what is already there, such as
-solid or complemented, and the line thickness. DPAT sets a dash pattern
-for lines.</p>
+solid or complemented, and whether lines use the DPAT pattern (style
+1). The stencil and thickness arguments are accepted but have no effect
+(MEGA65 ROM source, DMODE). DPAT sets a dash pattern for lines, used only
+when DMODE's style is 1.</p>
 <p>Format: <code>DMODE jam, complement, stencil, style, thick</code> /
 <code>DPAT type [, number, pattern ...]</code></p>
 <pre><code>10 DPAT 0, 4, %00110011, %00111100, %00001111, %11110000</code></pre>
@@ -1334,8 +1354,8 @@ colour.</p>
 <pre><code>30 CIRCLE 160, 100, 50 : PAINT 160, 100, 0</code></pre>
 <h3 id="char">CHAR</h3>
 <p>Token <code>$E0</code> · Book p. B-43</p>
-<p>Draws text on a graphics screen at a character position, scaled by
-height and width.</p>
+<p>Draws text on a graphics screen, at a column given in characters and
+a row given in pixels, scaled by height and width.</p>
 <p>Format:
 <code>CHAR column, row, height, width, direction, string [, charset address]</code></p>
 <pre><code>10 SCREEN 640, 400, 2
@@ -1487,16 +1507,18 @@ above 255 mean the button is pressed.</p>
 <pre><code>10 X = POT(1) : B = X &gt; 255 : V = X AND 255</code></pre>
 <h3 id="lpen">LPEN</h3>
 <p>Token <code>$CE $04</code> · Book p. B-163</p>
-<p>Reads a light pen's X (0) or Y (1) position. Light pens need a CRT
-display.</p>
+<p>Reads the latched light pen X (0) or Y (1) position. The Book
+describes a light pen on port 1 with a CRT display, but the current core
+latches only touch input from the on-screen keyboard; see Chapter
+16.</p>
 <p>Format: <code>LPEN(coordinate)</code></p>
 <pre><code>PRINT LPEN(0), LPEN(1)</code></pre>
 <h3 id="mouse-rmouse">MOUSE, RMOUSE</h3>
 <p>Tokens <code>$FE $3E</code>, <code>$FE $3F</code> · Book pp. B-173,
 B-217</p>
 <p>MOUSE ON starts the mouse driver, with the pointer drawn by a sprite;
-RMOUSE reads the position and buttons, giving -1 if no mouse is
-connected.</p>
+RMOUSE reads the position and buttons, giving -1 if the mouse driver is
+off.</p>
 <p>Format: <code>MOUSE ON [{, port, sprite, hotspot, pos}]</code> /
 <code>MOUSE OFF</code> / <code>RMOUSE x, y, buttons</code></p>
 <pre><code>10 MOUSE ON, 1, 1
