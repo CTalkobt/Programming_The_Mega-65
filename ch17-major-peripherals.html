@@ -219,6 +219,42 @@ can store a few settings. It is small, 64 bytes on R3 boards and only 16
 on R4 and later, and the Book suggests it for machine configuration, so
 programs should use it sparingly (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026, <code>mega65r4_i2c.vhdl</code>). Boards from R4
 onward have extra RTC registers, documented in the Book.</p>
+<h3 id="the-clock-on-r4-and-later-boards">The clock on R4 and later
+boards</h3>
+<p>On R4, R5 and R6 boards the CPU does not reach the clock chip, an
+RV-3032, directly. The core reads the chip's registers over its I2C bus
+again and again, a full pass taking a few milliseconds, and keeps a
+copy. Reading <code>$FFD71xx</code> returns that copy. Writing queues
+the value and the core sends it to the chip on its next pass, but it
+holds only one pending write at a time (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>mega65r4_i2c.vhdl</code>, September 2026). In practice:</p>
+<ul>
+<li><strong>Write one byte at a time.</strong> A second write made before
+the first has been sent replaces it, so a loop that writes several bytes
+of the battery-backed RAM at full speed stores only the last one. Pause
+between writes; a fiftieth of a second is ample.</li>
+<li><strong>Read back after a pause too.</strong> A read straight after a
+write still shows the old value until the core's next pass.</li>
+<li><strong>Write only the RAM.</strong> The 64-byte block from
+<code>$FFD7140</code> follows the chip's own register layout: the 16
+bytes of RAM are at <code>$FFD7150-$FFD715F</code>, and
+<code>$FFD714D-$FFD714F</code> are the chip's EEPROM control registers,
+where a write can start an EEPROM operation. The block read from
+<code>$FFD71D0</code> upward includes the chip's configuration, such as
+its power management. Writes to any of these go straight to the chip, so
+leave them alone; reading them is harmless (<a
+href="https://github.com/torvalds/linux/blob/master/drivers/rtc/rtc-rv3032.c">Linux
+RV-3032 driver</a>).</li>
+<li><strong>Hundredths of a second are not available.</strong>
+<code>$FFD7117</code> is meant to hold them, but current cores never
+copy the value from the chip, so it always reads 0. Use a CIA timer or
+the raster for fine timing.</li>
+</ul>
+<p>Saving four bytes of settings in BASIC therefore looks like this:</p>
+<pre><code>10 FOR I = 0 TO 3
+20 READ V : POKE $FFD7150 + I, V
+30 SLEEP 0.05                     : REM LET THE CORE SEND IT
+40 NEXT
+50 DATA 1, 2, 3, 4</code></pre>
 <h2 id="video-and-audio-outputs">Video and Audio Outputs</h2>
 <p>The MEGA65 drives a VGA connector and a digital video connector at
 the same time. The digital output can also carry sound, which the

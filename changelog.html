@@ -58,6 +58,10 @@ naming.</li>
 listed the features that need a ROM newer than the stable release.</li>
 <li>Added an "Updated" date to each chapter changed since first
 publication.</li>
+<li>Chapter 17: how the clock works on R4 and later boards: one queued
+write at a time, reads from a copy, which addresses are safe to write,
+and that hundredths of a second always read 0 on current cores, with a
+BASIC example that writes the battery-backed RAM safely.</li>
 <li>Chapter 14: DSAVE cannot save to unit 12, while LOAD and TYPE can;
 d81attach0/1 are deprecated in favour of attach; corrected what the SD
 card utility copies; removed an unsupported claim about loadfile_attic.
