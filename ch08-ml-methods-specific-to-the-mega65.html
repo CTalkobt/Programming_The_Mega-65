@@ -128,8 +128,19 @@ skeleton's own MAP.</p>
 programs that want every byte of chip RAM. It also removes I/O from
 <code>$D000-$DFFF</code> by clearing bits 0-2 of <code>$01</code>, moves
 colour data so the first 2KB of colour RAM can be used as general
-memory, and disables the ROM write-protection on banks 2 and 3 with
-Hypervisor trap <code>$70</code> (MEGA65 Book, pp. 14-39, 14-42).</p>
+memory, and disables the ROM write-protection on banks 2 and 3 (MEGA65
+Book, pp. 14-39, 14-42).</p>
+<p>For that last step, use the Hypervisor's <code>rom_writeenable</code>
+service, which always leaves the ROM writable:</p>
+<pre><code>        lda #$02
+        sta $d641       ; rom_writeenable
+        clv             ; single-cycle instruction after the trap</code></pre>
+<p>The Book's example uses trap <code>$70</code> on <code>$D640</code>
+instead, but that service toggles the protection: if something has
+already switched it off, it switches it back on, and the program's
+writes to <code>$20000-$3FFFF</code> are then silently ignored.
+<code>LDA #$00 : STA $D641</code> turns the protection back on (MEGA65
+Book, Hypervisor services appendix; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo <code>mem.asm</code>).</p>
 <p>After this the program owns the machine. The KERNAL is gone, so the
 hardware vectors at <code>$FFFA-$FFFF</code> are now plain RAM in bank
 0. The program must store its own NMI and IRQ vectors there before it
@@ -225,13 +236,13 @@ speed (MEGA65 Book, pp. B-106, B-225, B-245).</p>
 <h3 id="things-that-change-speed-for-you">Things that change speed for
 you</h3>
 <p>A program cannot always assume the speed it set is the speed it gets.
-Activity on the IEC serial bus slows the CPU temporarily so that drive
-timing works, and the user can change speed in the Freezer.</p>
+RUN/STOP-RESTORE resets the speed to 40.5 MHz (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), and the user can
+change speed in the Freezer.</p>
 <p>Nor is 1 MHz an exact copy of a C64. At 1, 2 and 3.5 MHz each
 instruction takes the 6502's number of cycles, but the memory accesses
 inside it may fall on different cycles, and timing can differ by up to
 about 7 microseconds. That is harmless for nearly all software,
-including most fast loaders, but tricks that depend on the exact cycle
+including many fast loaders, but tricks that depend on the exact cycle
 of a write, such as VIC-II variable screen positioning, are unlikely to
 work (MEGA65 Book, p. K-5). Timing-critical code should synchronise to
 the raster rather than counting cycles, at any speed.</p>
@@ -599,8 +610,8 @@ Hypervisor</h2>
 <p>The KERNAL loads files from disk drives and disk images. The
 Hypervisor can load files straight from the SD card's FAT32 file system,
 without a disk image, and it works even when a takeover program has
-switched the KERNAL out. It can also load directly into attic RAM, which
-the KERNAL cannot.</p>
+switched the KERNAL out. It can also load directly into attic RAM; the
+KERNAL can too only from ROM 920398, through SETBNK's 28-bit form.</p>
 <p>All Hypervisor services follow the same convention: put the service
 number in A, write it to <code>$D640</code>, and follow with CLV. The
 CPU may or may not execute the byte after the trap when the service
@@ -672,10 +683,12 @@ error   ; A holds the error code, e.g. $88 file not found
 
         .align 256      ; the name must start a page (syntax varies)
 fname   .text &quot;LEVEL1.BIN&quot;, 0</code></pre>
-<p>Many assemblers' text directives produce PETSCII rather than ASCII.
-Upper-case letters, digits and the full stop have the same codes in
-both, so names written in capitals are safe; lower-case letters are
-not.</p>
+<p>The Hypervisor ignores case when it matches names, but it needs
+ASCII codes. Many assemblers' text directives produce PETSCII, which
+swaps the cases: a PETSCII directive such as ACME's <code>!pet</code>
+turns capitals into codes <code>$C1-$DA</code>, which the Hypervisor
+will not match. Use a directive that stores text unconverted (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+Hyppo <code>dos.asm</code>).</p>
 <p>The file is loaded exactly as stored. A file saved as a PRG carries a
 two-byte load address at the front, and the load call places those two
 bytes in memory too; for raw data it is simpler to save files without
@@ -692,7 +705,8 @@ usually means a hung machine with no message. The MEGA65 offers several
 tools for finding out what happened, each suited to a different kind of
 problem.</p>
 <h3 id="the-built-in-monitor">The built-in monitor</h3>
-<p>The MONITOR introduced in Chapter 7 is a full C128-style monitor.
+<p>The MONITOR introduced in Chapter 7 is an extended version of the
+C65's monitor (MEGA65 Book, p. O-6).
 Beyond assembling and disassembling, it can display and change
 registers, fill, compare, transfer and search memory, and load and save
 memory to disk. Because it understands 28-bit addresses, it can inspect
@@ -700,10 +714,13 @@ attic RAM, colour RAM and the I/O personalities directly. The MEGA65
 Book lists every command (MEGA65 Book, p. O-6).</p>
 <p>The simplest breakpoint is a BRK instruction. Place one where you
 want execution to stop, run the program, and the monitor appears with
-the registers as they were at that point. Replace the BRK with the
+the registers as they were at that point. This works only while the
+KERNAL and its vectors are in place, because the KERNAL's BRK handler
+starts the monitor; a takeover program's BRK goes to its own interrupt
+handler. Replace the BRK with the
 original instruction afterwards. Check the stack pointer and B in the
-register display first: a wrong B or a runaway stack explains a large
-share of crashes.</p>
+register display first: a wrong B or a runaway stack is a common cause
+of crashes.</p>
 <h3 id="the-border-as-a-probe">The border as a probe</h3>
 <p>For timing problems and code that runs inside interrupts, the oldest
 trick still works best. An <code>INC $D020</code> at the start of a
@@ -712,7 +729,8 @@ different colour while the routine runs. The height of the coloured band
 shows how much of the frame the routine takes, and a band that stops
 moving shows where a program has hung.</p>
 <h3 id="the-freezer">The Freezer</h3>
-<p>Holding RESTORE stops any program and opens the Freezer, which saves
+<p>Holding RESTORE for about a second and releasing it stops any program
+and opens the Freezer, which saves
 the complete machine state. From there you can examine memory in the
 frozen program, change settings, or resume. This works even when a
 takeover program has disabled interrupts and switched the KERNAL out,
@@ -720,10 +738,12 @@ because the Freezer runs under the Hypervisor rather than the
 KERNAL.</p>
 <h3 id="matrix-mode-and-remote-debugging">Matrix Mode and remote
 debugging</h3>
-<p>Matrix Mode is a debugging console provided by the Hypervisor. Hold
-MEGA and press TAB to open it over the running display, and press the
-same combination again to close it. Because it belongs to the Hypervisor
-rather than the program, it works even when the program has hung. Its R
+<p>Matrix Mode is a debugging console run by a small helper processor in
+the core, separate from the main CPU; the Hypervisor only switches it on
+and off (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>monitor_top.v</code>; MEGA65 Book, monitor
+appendix). Hold MEGA and press TAB to open it over the running display,
+and press the same combination again to close it. Because it runs on
+its own processor, it works even when the program has hung. Its R
 command, or just RETURN, shows all the CPU registers, including the
 MAPHI and MAPLO values that no instruction can read, which makes it the
 quickest way to see what a program has done to the memory map (MEGA65
@@ -731,9 +751,12 @@ Book, pp. 14-22, O-14). The same console is available over a UART serial
 or JTAG connection, where cross-development tools on a PC can also load
 programs and inspect memory.</p>
 <p>For larger projects, a PC-based emulator with a debugger, such as
-Xemu, is often quicker still. It allows breakpoints on memory access as
-well as execution, which is the fastest way to find out which piece of
-code is overwriting a variable. Emulators are not cycle-exact in every
+Xemu, is often quicker still. Its monitor offers an execution
+breakpoint and a watchpoint that stops when a chosen byte changes, the
+fastest way to find out which piece of code is overwriting a variable;
+Matrix Mode's W command does the same on real hardware (<a
+href="https://github.com/lgblgblgb/xemu">Xemu</a>; MEGA65 Book, monitor
+appendix). An emulator's timing may not match the hardware in every
 detail, so timing-critical code should always be checked on real
 hardware.</p>
 <h2 id="summary">Summary</h2>

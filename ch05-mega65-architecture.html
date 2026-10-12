@@ -177,8 +177,9 @@ real C64. From C64 mode, POKE 0,65 switches to full speed, which is
 often the quickest way to make an old BASIC program dramatically
 faster.</p>
 <p>At 40.5 MHz, instruction cycle counts differ from the 6502's, so code
-that relies on exact timing must run at 1 MHz. Chapter 10 gives timings
-for every instruction. The practical consequence is simple: at full
+that relies on exact timing must run at 1 MHz. Chapter 7 discusses
+timing, and the MEGA65 Book's instruction-set appendix gives the cycle
+counts. The practical consequence is simple: at full
 speed, code that was too slow in BASIC on a C64 is often fast enough on
 a MEGA65 without any machine language at all.</p>
 <h2 id="the-28-bit-address-space">The 28-Bit Address Space</h2>
@@ -246,7 +247,9 @@ Bank 0 is <code>$00000-$0FFFF</code>, bank 1 is
 </table>
 <p>Two details trip people up. First, the first 2KB of colour RAM also
 appears at <code>$001F800-$001FFFF</code>, where the C65 kept its colour
-RAM. Writing to that range writes to colour RAM, not chip RAM. Second,
+RAM. Writes to that range go to colour RAM as well as the chip RAM
+underneath, and reads come from colour RAM, so it can't be used as
+ordinary chip RAM (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>). Second,
 the ROM is not a separate chip: it is loaded into chip RAM at boot and
 then protected. Software that disables the protection can patch the ROM,
 or reclaim that 128KB as ordinary RAM.</p>
@@ -335,8 +338,8 @@ what can see it.</p>
 </tbody>
 </table>
 <h3 id="chip-ram">Chip RAM</h3>
-<p>Chip RAM lives inside the FPGA. The term comes from the Amiga, where
-it meant the same thing: memory the custom chips can reach. Anything the
+<p>Chip RAM lives inside the FPGA. The Book explains the name: it is the
+memory the CPU can reach at full speed (MEGA65 Book, memory chapter). Anything the
 VIC-IV must display, such as a screen, a bitmap, a character set or
 sprite data, has to be in chip RAM. Because it is internal it also runs
 at full CPU speed with no wait states.</p>
@@ -349,8 +352,10 @@ current one into chip RAM with a DMA job.</p>
 <p>The CPU can reach attic RAM in two ways: through a 32-bit pointer
 using the <code>[zp],Z</code> addressing mode, or by mapping it into the
 64KB window with MAP. For large transfers DMA is usually the better
-choice. Early development boards had no attic RAM, so software meant for
-every MEGA65 variant should check for it rather than assume it.</p>
+choice. Release boards, the development kit and Xemu have attic RAM, but
+the Nexys FPGA boards that can run the MEGA65 core do not, so software
+meant for every MEGA65 variant should check for it rather than assume it
+(MEGA65 Book, memory map appendix).</p>
 <h3 id="colour-ram">Colour RAM</h3>
 <p>On the C64, colour RAM is a separate 1KB of 4-bit memory at
 <code>$D800</code>. On the MEGA65 it is 8 bits wide and much larger, at
@@ -370,9 +375,9 @@ placing a different file on the SD card, and the C64-mode KERNAL and
 BASIC are part of the same image.</p>
 <h2 id="banking">Banking</h2>
 <p>Three separate mechanisms decide what appears in the CPU's 64KB
-window, and a fourth lets the CPU bypass the window altogether. Each was
-added by a different generation of machine, and all of them are active
-at once. MAP takes precedence over every other banking mechanism (MEGA65
+window, and a fourth lets the CPU bypass the window altogether. They
+come from the C64, the C65 and the MEGA65, and all of them are active at
+once. MAP takes precedence over every other banking mechanism (MEGA65
 Book, p. K-7), but only for the 8KB blocks it actually maps. For every
 block MAP leaves unmapped, the older mechanisms decide:</p>
 <table>
@@ -476,11 +481,15 @@ implemented on the MEGA65</td>
 <p>Bits 1 and 2 are not banking bits: bit 1 enables external video
 sync (genlock), and bit 2 chooses whether colours 0-15 come from the
 palette ROM or palette RAM.
-<code>$D030</code> exists only when the VIC-III or VIC-IV personality is
-active, as described in the next section. CRAM2K deserves a warning:
-while it is set, the CIAs at <code>$DC00</code> and <code>$DD00</code>
-are hidden behind colour RAM, so keyboard scanning and timer interrupts
-stop working.</p>
+The ROM-banking form of <code>$D030</code> exists only in the VIC-III
+and VIC-IV personalities, described in the next section; in the C64
+personality, <code>$D030</code> is the C128's 2 MHz register instead.
+CRAM2K deserves a warning: while it is set, the CIA registers at
+<code>$DC00</code> and <code>$DD00</code> are replaced by colour RAM, so
+the keyboard can't be scanned and CIA interrupts can't be read or
+acknowledged, though the timers keep running (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>iomapper.vhdl</code>).</p>
 <h3 id="the-map-instruction">The MAP instruction</h3>
 <p>MAP is the general-purpose mechanism. It divides the 64KB window into
 eight 8KB blocks and lets each block be redirected by adding an offset
@@ -697,7 +706,8 @@ the general DOS trap at <code>$D640</code>:</p>
         sta $d640       ; trap into the Hypervisor
         clv
         bcc failed      ; carry clear means the call failed</code></pre>
-<p>The trap registers exist only in the MEGA65 I/O personality. Chapter
+<p>The trap registers exist only in the MEGA65 I/O personalities, the
+normal one and the Ethernet one (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>). Chapter
 11 lists every Hypervisor function, and Chapter 14 shows how to use the
 file services to read and write SD card files directly.</p>
 <p>Because the Hypervisor saves and restores the complete machine state,
@@ -908,15 +918,15 @@ the real benefit is in machine language, where it replaces some of the
 most frequently written subroutines in 6502 programming with a handful
 of loads and stores.</p>
 <h2 id="summary">Summary</h2>
-<p>The MEGA65 is easiest to understand as layers, each added by a
-different generation and each still active:</p>
+<p>The MEGA65 is easiest to understand as layers, built up from the C64
+through the C65 to the MEGA65, and all still active:</p>
 <ul>
 <li><strong>The 45GS02</strong> runs 6502 and 4510 code unchanged, adds
 a Z register, a movable base page, a 16-bit stack, 32-bit pointers and
 the 32-bit Q register, and runs at 1, 2, 3.5 or 40.5 MHz.</li>
 <li><strong>The 28-bit address space</strong> holds 384KB of chip RAM
-that the VIC-IV can see, 8MB of attic RAM that it cannot, 32KB or more
-of 8-bit colour RAM, a 128KB ROM loaded into chip RAM, the I/O
+that the VIC-IV can see, 8MB of attic RAM that it cannot, 32KB of 8-bit
+colour RAM, a 128KB ROM loaded into chip RAM, the I/O
 personalities and the Hypervisor.</li>
 <li><strong>Banking</strong> decides what the CPU sees in its 64KB
 window. <code>$D030</code> and the C64 port at <code>$01</code> decide

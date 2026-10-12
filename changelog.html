@@ -58,6 +58,25 @@ naming.</li>
 listed the features that need a ROM newer than the stable release.</li>
 <li>Added an "Updated" date to each chapter changed since first
 publication.</li>
+<li>Chapter 1: colour RAM is 32KB; the internal card slot takes a
+full-size SD card; sourced the project's founding and the C65's two
+SIDs.</li>
+<li>Chapter 5: corrected attic RAM (only Nexys boards lack it), the
+colour RAM window, CRAM2K, <code>$D030</code> in the C64 personality,
+and which personalities have the Hypervisor traps; removed an
+unsupported claim about the name chip RAM.</li>
+<li>Chapter 8: Matrix Mode runs on its own helper processor; Hypervisor
+file names are case-insensitive but must be ASCII; corrected the IEC
+slowdown, BRK breakpoints, the RESTORE timing, Xemu's watchpoints and
+trap <code>$70</code>; the takeover procedure now uses
+<code>rom_writeenable</code> (<code>$D641</code>) rather than the
+<code>$70</code> toggle.</li>
+<li>Chapter 11: <code>$FF80</code> is always <code>$FF</code>; PR #946
+is not yet merged; corrected the summary, the error-code note and the
+trap personalities.</li>
+<li>Chapter 16: JOYSWAP does not swap paddles or extra buttons; RMOUSE
+cannot detect a missing mouse; the mouse driver runs in the KERNAL's
+interrupt; fixed the mouse example.</li>
 <li>Chapter 2: LOAD and SAVE also default to drive 8; TI counts
 microseconds, not frames; Freezer details and citations corrected.</li>
 <li>Chapter 3: corrected CHANGE, INPUT, SCNCLR, IF...ELSE, BANK, FRE(4)

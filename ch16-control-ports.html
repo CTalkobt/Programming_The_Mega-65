@@ -92,8 +92,7 @@ active low. The ports are read through CIA 1:</p>
 </tbody>
 </table>
 <p>The same CIA registers scan the keyboard, which is why holding a
-joystick in port 1 can produce stray key presses, and why many C64 games
-use port 2.</p>
+joystick in port 1 can produce stray key presses.</p>
 <h3 id="from-basic">From BASIC</h3>
 <p>JOY decodes a port for you: the low four bits give a direction from 1
 (up) clockwise to 8 (up and left), 0 when centred, and each fire button
@@ -125,8 +124,9 @@ usable.</p>
 <h2 id="multi-button-controllers">Multi-Button Controllers</h2>
 <p>The vast majority of Commodore and Atari joysticks have one fire
 button. Some controllers have more, and because the 9-pin port has only
-one fire line, the extra buttons are signalled in other ways. The MEGA65
-recognises two protocols (MEGA65 Book, pp. B-143, B-144):</p>
+one fire line, the extra buttons are signalled in other ways. BASIC's
+JOY function recognises two protocols, decoding them in the ROM rather
+than in hardware (MEGA65 Book, pp. B-143, B-144):</p>
 <table>
 <thead>
 <tr class="header">
@@ -289,8 +289,9 @@ language that needs them should follow the protocol's own
 specification.</p>
 <h2 id="more-joysticks-and-port-options">More Joysticks and Port
 Options</h2>
-<p>The MEGA65 has two joystick ports and no user port, so the C64's
-four-player adapters, which plug into the user port, cannot be used.
+<p>The MEGA65 has two joystick ports and no user port (MEGA65 Book,
+setting up, connectors), so the C64's four-player adapters, which plug
+into the user port, cannot be used.
 Games for more than two players need another input, such as the keyboard
 matrix described below, or players sharing a port in turn. The MEGA65
 does provide some extra control over the two ports it has, in register
@@ -322,10 +323,13 @@ use</td>
 </tr>
 </tbody>
 </table>
-<p>JOYSWAP is the hardware behind the Freezer's J command. Because the
-swap and rotation happen in hardware, they apply to every way of reading
-the ports, including JOY, the CIA registers and the paddle lines, so a
-program needs no special code to support them.</p>
+<p>JOYSWAP is the hardware behind the Freezer's J command. The swap and
+rotation are applied to the joystick switch lines, so they affect the
+CIA registers and JOY's directions and fire button with no special code.
+They do not affect the paddle lines: POT, mice, and buttons 2 and 3 of a
+multi-button controller still follow the physical ports (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>keymapper.vhdl</code>).</p>
 <p>Two hardware routes go further, and both are for experimenters rather
 than for software meant to run on every MEGA65:</p>
 <ul>
@@ -399,15 +403,17 @@ keyboard (MEGA65 Book, p. 4-4).</p>
 <p>BASIC 65 includes a complete mouse driver. MOUSE ON starts it, with a
 sprite as the pointer; RMOUSE reads the position and buttons; MOUSE OFF
 stops it:</p>
-<pre><code>10 MOUSE ON, 1, 1 : REM MOUSE IN PORT 1, SPRITE 1 AS POINTER
+<pre><code>10 MOUSE ON, 1    : REM MOUSE IN PORT 1, SPRITE 0 AS POINTER
 20 DO
 30 RMOUSE X, Y, B
-40 IF X &lt; 0 THEN PRINT &quot;NO MOUSE&quot; : EXIT
-50 IF B THEN PRINT &quot;CLICK AT&quot;; X; Y
-60 LOOP
-70 MOUSE OFF</code></pre>
-<p>The driver runs in BASIC's interrupt, so the pointer moves smoothly
-while the program does other work.</p>
+40 IF B THEN PRINT &quot;CLICK AT&quot;; X; Y
+50 LOOP</code></pre>
+<p>Sprite 0 holds a mouse-pointer image after start-up; another sprite
+needs pointer data loaded first (MEGA65 Book, MOUSE). The driver runs in
+the KERNAL's raster interrupt, so the pointer moves smoothly while the
+program does other work (MEGA65 ROM source, editor_irq). RMOUSE returns
+-1 only when the driver is off; it cannot tell whether a mouse is
+actually plugged in. Press RUN/STOP to end the loop, then MOUSE OFF.</p>
 <h2 id="light-pens">Light Pens</h2>
 <p>A light pen detects the moment the display's beam passes under its
 tip, and the video chip latches the position. LPEN(0) and LPEN(1) return

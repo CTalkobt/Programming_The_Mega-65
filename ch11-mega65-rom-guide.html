@@ -32,8 +32,7 @@ the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
 DOS, the monitor, the character sets, and a complete set of C64 ROMs for
-C64 mode. It is the largest system ROM Commodore ever designed, and
-unlike the C64's it is still changing: new releases appear regularly,
+C64 mode, in a 128KB image. Unlike the C64's, it is still changing: new releases appear regularly,
 fixing bugs and adding features.</p>
 <p>That makes the question "which parts can I call?" more important than
 it was on the C64. On a C64, programmers called almost any ROM routine
@@ -156,10 +155,10 @@ Chapter 6. Such programs should say which version they need. Programs
 that keep to the interfaces in this chapter rarely need to check at
 all.</p>
 <p>As on every Commodore machine since the C64, the byte at
-<code>$FF80</code> holds a KERNAL version number (<a
-href="https://www.pagetable.com/?p=926">pagetable.com</a>). It
-distinguishes KERNAL revisions, but it is not the six-digit ROM version
-shown in the banner.</p>
+<code>$FF80</code> is set aside for a KERNAL version number (<a
+href="https://www.pagetable.com/?p=926">pagetable.com</a>). On the MEGA65
+it is always <code>$FF</code>, the C65's "not released" value, so it
+says nothing about the ROM version (MEGA65 ROM source, jump table).</p>
 <p>From ROM 920417, the KERNAL's VERSIONQ routine at <code>$FF2F</code>
 returns the six-digit ROM version shown in the banner (see <a
 href="#extended-entries">Extended entries</a>). It loads the version
@@ -877,8 +876,8 @@ written.</p>
 <h3 id="hardware-vectors">Hardware vectors</h3>
 <p>Separate from the RAM vectors are the CPU's own vectors at the top of
 the KERNAL ROM: NMI at <code>$FFFA</code>, RESET at <code>$FFFC</code>
-and IRQ/BRK at <code>$FFFE</code>. They point into the KERNAL, which
-then jumps through the RAM vectors. A takeover program that switches the
+and IRQ/BRK at <code>$FFFE</code>. They point into the KERNAL; for NMI
+and IRQ, it then jumps through the RAM vectors. A takeover program that switches the
 KERNAL out replaces them with its own, as shown in Chapter 8.</p>
 <h3 id="basic-vectors-and-usr">BASIC vectors and USR</h3>
 <p>BASIC 65 has its own vectors, which belong to BASIC rather than the
@@ -896,8 +895,8 @@ X, Y and Z, and the write is followed by CLV, because the CPU may or may
 not execute the byte after the trap when the service returns. On return,
 carry set means success; carry clear means failure, with an error code
 in A. Registers not used for results are preserved, and the trap
-registers exist only in the MEGA65 I/O personality (MEGA65 Book, pp.
-N-4, N-5).</p>
+registers exist only in the MEGA65 I/O personalities, the normal one
+and the Ethernet one (MEGA65 Book, pp. N-4, N-5; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>).</p>
 <p>Most services use <code>$D640</code>. A few use other trap registers:
 <code>$D641</code> for ROM write-protection, <code>$D642</code> for
 configuration and freeze-slot services, <code>$D643</code> for serial
@@ -1297,18 +1296,18 @@ cards, not on floppy disks or disk images (MEGA65 Book, pp. N-10,
 N-38).</p>
 <h3 id="versions">Versions</h3>
 <p>Hyppo is updated with the MEGA65 core, independently of the ROM. In
-August 2026, for example, a mega65-core pull request filled in
-getdisksize, getcwd, mkdir, rmdir, seekfile and rename, finished fstat,
-and added long file name support to mkfile (<a
-href="https://github.com/MEGA65/mega65-core/pull/946">mega65-core PR
-#946</a>). A program should therefore call getversion first and treat
+August 2026, for example, a pull request was opened against mega65-core
+to fill in getdisksize (the Book's getdrivesize), getcwd, mkdir, rmdir,
+seekfile and rename, finish fstat, and add long file name support to
+mkfile; it had not been merged at the time of writing (<a href="https://github.com/MEGA65/mega65-core/pull/946">mega65-core PR #946</a>). A program should therefore call getversion first and treat
 error <code>$82</code>, not implemented, as an expected result for newer
 services rather than as a failure of the program.</p>
 <h3 id="error-codes">Error codes</h3>
-<p>The Book lists these error codes (MEGA65 Book, pp. N-7, N-8). The
-core sources also define lower-numbered codes, such as <code>$10</code>
-for an invalid address, which setname returns when Y is above
-<code>$7E</code>.</p>
+<p>The Book lists these error codes (MEGA65 Book, pp. N-7, N-8). Its
+table also has lower-numbered codes for partition, argument and
+read/write errors, such as <code>$10</code> for an invalid address,
+which setname returns when Y is above <code>$7E</code>, and it notes that
+the list may not be exhaustive.</p>
 <table>
 <thead>
 <tr class="header">
@@ -1415,7 +1414,7 @@ to release</td>
 </tr>
 <tr class="even">
 <td>Use the Hypervisor for SD card files</td>
-<td>Its function numbers are stable and its version can be checked</td>
+<td>Its services are documented and its version can be checked</td>
 </tr>
 <tr class="odd">
 <td>Check versions only where a feature demands it</td>
@@ -1428,7 +1427,8 @@ fail</td>
 </tr>
 <tr class="odd">
 <td>Prefer flat addressing and DMA to MAP in cooperative code</td>
-<td>The ROM's map settings are internal and cannot be read back</td>
+<td>The ROM's map settings are internal, and the CPU cannot read MAP back
+directly; only the Hypervisor's get_mapping can</td>
 </tr>
 </tbody>
 </table>
@@ -1466,22 +1466,25 @@ interfaces.</p>
 supported ROM interface. BASIC 65 internals, ROM layout and KERNAL zero
 page are private and change between releases.</li>
 <li><strong>Layout and versions.</strong> The 128KB ROM lives at
-<code>$20000-$3FFFF</code>. Versions are six-digit numbers in two
-series, 92xxxx and 99xxxx; <code>$FF80</code> holds a separate KERNAL
-version byte.</li>
-<li><strong>Jump table.</strong> The 39 C64 entries at
-<code>$FF81-$FFF3</code> are unchanged. The C65-derived extended block
-runs from SPIN_SPOUT at <code>$FF4D</code> to PRIMM at
-<code>$FF7D</code>, with C128-style calls at C65 addresses and bank
-numbers passed in Z.</li>
+<code>$20000-$3FFFF</code>. Versions are six-digit numbers: 92xxxx for
+release and beta ROMs, 99xxxx for development ROMs built alongside them.
+VERSIONQ returns the version from ROM 920417; <code>$FF80</code> is
+always <code>$FF</code>.</li>
+<li><strong>Jump table.</strong> The 39 entries at
+<code>$FF81-$FFF3</code> sit at the C64's addresses, though a few hold
+different routines or take different arguments. The extended block runs
+from VERSIONQ at <code>$FF2F</code> to PRIMM at <code>$FF7D</code>: the
+MEGA65's own additions, then the C65-derived block from SPIN_SPOUT at
+<code>$FF4D</code>, with C128-style calls at C65 addresses.</li>
 <li><strong>RAM vectors.</strong> CINV, CBINV and NMINV at
 <code>$0314-$0319</code> and the I/O vectors up to <code>$0333</code>
-follow the C64 layout; VECTOR and RESTOR manage them safely. Interrupt
-routines chained through CINV must preserve Z and B themselves.</li>
+follow the C64 layout; VECTOR and RESTOR manage them safely. The
+KERNAL saves A, X, Y, Z and B before jumping through CINV, so a routine
+that chains on to the old handler needn't preserve them.</li>
 <li><strong>Hypervisor.</strong> Even-numbered functions in A, a write
 to <code>$D640</code>, CLV, and carry for success. Hyppo 1.2 leaves
-directory creation, renaming, seeking and all task services
-unimplemented; check the version before relying on newer services, and
+directory creation, renaming, seeking and the services for creating and
+switching tasks unimplemented; check the version before relying on newer services, and
 treat error <code>$82</code> as "not available".</li>
 <li><strong>Portability.</strong> Use interfaces, bring your own base
 page, and confine any unavoidable ROM dependency to one labelled place
