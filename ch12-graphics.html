@@ -357,7 +357,11 @@ laid out for this, so SEAM programs move SCRNPTR to their own area.</p>
 <code>$FFFF</code> marks the end of a row: the VIC-IV stops drawing the
 row there, and the next row starts straight after the marker instead of
 LINESTEP bytes after the start of this one. Rows ended this way can
-therefore have different lengths. A program that only wants ordinary
+therefore have different lengths, and LINESTEP does not matter for them.
+That makes it easy to build a screen one line at a time: write each
+line's characters followed by <code>$FFFF</code>, and the next line
+follows on directly. This works in release cores as well as
+development. A program that only wants ordinary
 characters must never store <code>$FFFF</code> in screen memory, so
 character <code>$1FFF</code> cannot be combined with all of the high
 screen-byte bits set (<a

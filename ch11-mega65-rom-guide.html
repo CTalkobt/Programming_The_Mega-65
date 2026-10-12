@@ -720,6 +720,32 @@ the C128: LDA_FAR, STA_FAR and CMP_FAR take the bank in the Z register,
 and JSRFAR and JMPFAR take their target and register values from base
 page locations <code>$02</code>-<code>$09</code>. The inputs and outputs
 come from the MEGA65 Book's KERNAL Jump Table appendix.</p>
+<h4 id="where-the-far-calls-run">Where the far calls run</h4>
+<p>The far-call routines don't run from ROM. They exist to change the
+memory map, and code running in the KERNAL at <code>$E000-$FFFF</code>
+could map itself out halfway through. So the KERNAL's start-up routine
+copies them into bank 0 RAM from <code>$0380</code>, below
+<code>$2000</code>, where they stay visible whatever the mapping, and
+the jump-table entries at <code>$FF6E</code> (JSRFAR) and
+<code>$FF71</code> (JMPFAR) simply jump to those copies. Disassembling
+<code>$FF6E</code> therefore shows a JMP into page 3 (MEGA65 ROM source,
+<code>install</code> and the RAM-copied far-call block).</p>
+<p>Always call them through the jump table, never at their RAM
+addresses. The jump-table addresses are the ROM's promise; where the
+copies land is an internal detail, decided by the size of the code ahead
+of them, and it changes when that code changes. It has already happened
+between two released ROMs. For SYS TO, ROM 920414 added a MAP-offset
+version of JSRFAR, which BASIC reaches through the reserved entry
+<code>$FF38</code>, and four bytes of code to support it. On the stable
+ROM 920413, JMPFAR's copy starts at <code>$03BB</code>; on 920414 and
+later it starts at <code>$03BF</code>, and the MAP-offset entry at
+<code>$0397</code> does not exist at all (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>; MEGA65 ROM source). A
+program that called <code>$03BB</code> directly would work on the stable
+ROM and jump into the middle of an instruction on every beta since, and
+the reverse holds for a program built against a beta. Calling
+<code>$FF71</code> works on both. As with every jump-table call, the
+KERNAL ROM must be mapped at <code>$E000-$FFFF</code> to reach the
+entry.</p>
 <h3 id="example-printing-with-primm">Example: printing with PRIMM</h3>
 <p>PRIMM reads the bytes after the JSR as a string, prints them, and
 returns to the instruction after the terminating zero:</p>

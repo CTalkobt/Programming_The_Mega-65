@@ -71,6 +71,11 @@ slowdown, BRK breakpoints, the RESTORE timing, Xemu's watchpoints and
 trap <code>$70</code>; the takeover procedure now uses
 <code>rom_writeenable</code> (<code>$D641</code>) rather than the
 <code>$70</code> toggle.</li>
+<li>Chapter 11: explained that the far-call routines run from a RAM copy at
+<code>$0380</code>, and why programs must call them through the jump
+table: their RAM addresses moved between ROMs 920413 and 920414.</li>
+<li>Chapter 12: a row ended by <code>$FFFF</code> ignores LINESTEP, which
+makes it easy to build a screen one line at a time.</li>
 <li>Chapter 12: GOTOX Y offset, negative Y offset, ROWMASK and sprite
 priority bits; character flip bits; BOLDISALT (development cores).
 Chapter 13: per-SID panning with SIDEXENA. Chapter 8: Matrix Mode
