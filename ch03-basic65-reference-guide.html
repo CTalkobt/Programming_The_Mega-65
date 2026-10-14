@@ -30,7 +30,7 @@ Guide</title>
 <h1
 id="programming-the-mega65--chapter-3-basic-65-reference-guide">Programming
 the MEGA65 — Chapter 3: BASIC 65 Reference Guide</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 14, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every keyword in BASIC 65: commands,
 functions, reserved variables and secondary keywords. It is meant to be
@@ -357,15 +357,17 @@ are set by BASIC. Each is described in the alphabetical list below.</p>
 </tr>
 <tr class="odd">
 <td><code>↑</code></td>
-<td>The power operator in expressions; at the start of a line, RUN</td>
+<td>The power operator in expressions; at the start of a line, load
+and run the file named after it</td>
 </tr>
 <tr class="even">
 <td><code>←</code></td>
-<td>At the start of a line, SAVE</td>
+<td>At the start of a line, SAVE the program under the file name after
+it</td>
 </tr>
 <tr class="odd">
 <td><code>/</code></td>
-<td>At the start of a line, LOAD</td>
+<td>At the start of a line, LOAD the file named after it</td>
 </tr>
 <tr class="even">
 <td><code>@</code></td>
@@ -381,7 +383,10 @@ are set by BASIC. Each is described in the alphabetical list below.</p>
 type <code>$</code> to list the disk, move the cursor to a program's
 line, type <code>↑</code> over the start of it and press RETURN, and the
 program loads and runs. Everything except the quoted file name on the
-line is ignored (MEGA65 Book, p. 6-13).</p>
+line is ignored (MEGA65 Book, p. 6-13). They can also be typed by hand,
+as in <code>↑"GAME"</code>. A file name is needed: <code>↑</code> on
+its own is not a short form of RUN for the program already in memory,
+and gives <code>?MISSING FILE NAME ERROR</code>.</p>
 <h2 id="program-flow">Program Flow</h2>
 <h3 id="do-loop-while-until-exit">DO, LOOP, WHILE, UNTIL, EXIT</h3>
 <p>Tokens <code>$EB</code>, <code>$EC</code>, <code>$FD</code>,
@@ -562,7 +567,16 @@ turns it off.</p>
 reference to match. The arguments give the new first number, the
 increment and the range of lines to renumber.</p>
 <p>Format: <code>RENUMBER [C] [{new, inc, range}]</code></p>
-<pre><code>RENUMBER 100, 10 : REM START AT 100, STEPS OF 10</code></pre>
+<p>With <code>C</code> (“crunch”), RENUMBER also removes the spaces
+around the line numbers it rewrites, so <code>GOTO 100</code> becomes
+<code>GOTO100</code>. This saves memory but can't be undone. ROM 920404
+added the <code>C</code> flag, and ROM 920405 removed the older
+<code>RENUMBER100</code> form (no space) that did the same thing,
+because it was too easy to trigger by accident (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">ROM
+changelog</a>).</p>
+<pre><code>RENUMBER 100, 10 : REM START AT 100, STEPS OF 10
+RENUMBER C 100   : REM THE SAME, AND REMOVE SPACES AROUND LINE NUMBERS</code></pre>
 <h3 id="delete">DELETE</h3>
 <p>Token <code>$F7</code> · Book p. B-69</p>
 <p>Deletes a range of program lines. Given a file name, it deletes files
