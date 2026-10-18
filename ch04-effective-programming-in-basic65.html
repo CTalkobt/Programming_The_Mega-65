@@ -30,7 +30,7 @@ BASIC 65</title>
 <h1
 id="programming-the-mega65--chapter-4-effective-programming-in-basic-65">Programming
 the MEGA65 — Chapter 4: Effective Programming in BASIC 65</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 3 described each keyword. This chapter is about putting them
 together: how to write BASIC 65 programs that are easy to read, easy to
@@ -40,76 +40,49 @@ proper loops, multi-line blocks, error trapping and editing tools, and a
 program that uses them is both shorter and far easier to work on.</p>
 <p>The chapter covers:</p>
 <ul>
-<li>Structured programming with DO/LOOP, BEGIN/BEND and subroutines</li>
-<li>Editing tools that save typing and mistakes</li>
-<li>Debugging with TRON, HELP and TRAP</li>
-<li>Making programs run fast</li>
-<li>Making programs survive bad input and missing files</li>
+<li>How to become fluent in BASIC 65, and the tools that make writing
+programs quicker</li>
+<li>The kinds of program you might write, and who will use them</li>
+<li>Designing a program, from the problem to working code</li>
+<li>Habits that make a program easy to use, change and trust</li>
+<li>Debugging with HELP, STOP, TRON and TRAP</li>
+<li>Worked examples of input, output, calculation, strings, sorting,
+data structures and dates</li>
+<li>Making BASIC 65 run faster</li>
 </ul>
-<h2 id="structured-programming">Structured Programming</h2>
-<h3 id="loops-without-goto">Loops without GOTO</h3>
-<p>A C64 program that waits for a key typically reads like this:</p>
-<pre><code>10 GET A$ : IF A$ = &quot;&quot; THEN 10</code></pre>
-<p>It works, but every such line adds a jump to follow when reading the
-program. BASIC 65's DO ... LOOP says what it means and needs no line
-number:</p>
-<pre><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
-<p>The condition can go at either end. With WHILE or UNTIL after DO, it
-is tested before each pass, so the body may never run; after LOOP, it is
-tested after each pass, so the body always runs at least once. A DO ...
-LOOP with no condition repeats until an EXIT, which suits loops whose
-stopping point is in the middle:</p>
-<pre><code>10 DO
-20 INPUT &quot;COMMAND (Q TO QUIT)&quot;; C$
-30 IF C$ = &quot;Q&quot; THEN EXIT
-40 GOSUB 1000 : REM PROCESS THE COMMAND
-50 LOOP
-60 PRINT &quot;BYE&quot;</code></pre>
-<p>Use FOR ... NEXT when the number of passes is known in advance, and
-DO ... LOOP for everything else.</p>
-<h3 id="blocks-with-begin-and-bend">Blocks with BEGIN and BEND</h3>
-<p>On the C64, everything after THEN had to fit on one line, so longer
-actions meant jumping elsewhere. BEGIN and BEND let THEN and ELSE
-control a block of any length:</p>
-<pre><code>100 IF SC &gt; HI THEN BEGIN
-110 HI = SC
-120 PRINT &quot;NEW HIGH SCORE!&quot;
-130 SOUND 1, 7382, 30
-140 BEND : ELSE PRINT &quot;SCORE:&quot;; SC</code></pre>
-<p>The Book notes a quirk: statements after BEND on the same line belong
-to the block's control flow, so keep anything that must always run on a
-separate line (MEGA65 Book, p. B-28).</p>
-<h3 id="subroutines">Subroutines</h3>
-<p>GOSUB and RETURN remain the way to break a program into pieces. A few
-habits make subroutines easy to work with:</p>
-<ul>
-<li><strong>Give each a fixed home</strong>, such as 1000 for input,
-2000 for drawing and 3000 for disk access, and a REM line stating what
-it expects and returns.</li>
-<li><strong>Pass values in agreed variables</strong>, such as X and Y
-for a position, since BASIC subroutines have no parameters.</li>
-<li><strong>Jump over them</strong> at the end of the main program with
-END or GOTO, so execution never falls into a subroutine by
-accident.</li>
-</ul>
-<p>ON ... GOSUB and FGOSUB select a subroutine by number, which replaces
-chains of IF statements:</p>
-<pre><code>10 GETKEY K$ : K = INSTR(&quot;WASD&quot;, K$)
-20 IF K THEN ON K GOSUB 1000, 1100, 1200, 1300
-30 GOTO 10</code></pre>
-<h3 id="functions">Functions</h3>
-<p>DEF FN defines a one-line numeric function, which keeps a repeated
-formula in one place:</p>
-<pre><code>10 DEF FN RN(X) = INT(RND(0) * X) + 1 : REM RANDOM 1 TO X
-20 PRINT FN RN(6), FN RN(100)</code></pre>
-<h3 id="data-in-data-statements">Data in DATA statements</h3>
-<p>Tables of fixed values belong in DATA statements rather than in long
-chains of assignments. READ them into arrays at the start of the
-program, and use RESTORE with a line number to re-read a particular
-table. This keeps the logic of the program separate from its data, so
-changing a level layout or a list of prices does not touch the code.</p>
-<h2 id="writing-and-editing-efficiently">Writing and Editing
-Efficiently</h2>
+<p>Every example program in this chapter was run in the Xemu emulator
+with BASIC 65 ROM 920418. Where a result is shown, it is the result Xemu
+printed.</p>
+<h2 id="how-to-become-fluent-in-basic-65">How to Become Fluent in BASIC
+65</h2>
+<p>BASIC is a language, and like any language it is learned by reading
+and writing it, not only by studying its vocabulary. Chapter 3 is the
+vocabulary. Fluency comes from using it.</p>
+<h3 id="start-small">Start small</h3>
+<p>Begin with a handful of keywords, such as PRINT, INPUT, IF, FOR, DO
+and GOSUB, and write short programs that do one thing. Add new keywords
+as a program needs them. Some keywords you may never need, just as
+there are words in any language that you never use.</p>
+<h3 id="experiment-in-direct-mode">Experiment in direct mode</h3>
+<p>Any statement typed without a line number runs at once, so trying an
+idea costs nothing. Before writing a line into a program, try the
+expression on its own:</p>
+<pre><code>PRINT INSTR(&quot;JANFEBMAR&quot;, &quot;FEB&quot;)
+ 4
+PRINT USING &quot;#####.##&quot;; 12.257
+   12.26</code></pre>
+<p>After an error, HELP lists the line and highlights the statement that
+failed (MEGA65 Book, p. B-131). Keep experiments away from programs that
+matter: save the program first, or work on a copy.</p>
+<h3 id="read-other-programs">Read other programs</h3>
+<p>The examples in Chapter 3 and in the MEGA65 Book are short and each
+shows one idea. Longer programs show how the ideas fit together. LIST
+any BASIC program you load, including those shared by other owners on
+the <a href="https://files.mega65.org/">MEGA65 Filehost</a>, and work out
+how it does what it does. Borrow the techniques you like, and try a
+second way of solving the same problem: there is rarely only one.</p>
+<h3 id="writing-and-editing-efficiently">Writing and editing
+efficiently</h3>
 <p>BASIC 65 has editing commands that earlier Commodore BASICs lacked.
 Used together, they make typing in and reshaping a program much
 quicker.</p>
@@ -171,26 +144,432 @@ as a token, so search for it between other delimiters, as in
 (all) before replacing it; answering * changes every later match too, so
 give it a string that cannot also appear inside a longer name: changing
 <code>A</code> would also change <code>AB</code>.</p>
-<h3 id="layout">Layout</h3>
-<p>BASIC 65 tolerates spaces, and using them costs only a little memory.
-A few conventions make listings readable:</p>
-<ul>
-<li>One statement per line where practical, except for short, closely
-related ones.</li>
-<li>REM lines to head each section and each subroutine.</li>
-<li>Line numbers in steps of 10, with each major section starting on a
-round hundred or thousand.</li>
-<li>Short variable names, chosen so that they do not contain keywords:
-<code>TOTAL</code> contains <code>TO</code>, and <code>SCORE</code>
-contains <code>OR</code>, and both cause syntax errors.</li>
-</ul>
 <h3 id="saving-often">Saving often</h3>
 <p><code>DSAVE "@NAME"</code> overwrites the previous version in one
 step. For bigger changes, save under a new name first, such as
 <code>"GAME2"</code>, so there is always a working version to go back
 to. The Freezer's freeze slots can also capture the whole machine,
 program and all, at any moment.</p>
-<h2 id="debugging">Debugging</h2>
+<h2 id="programs-systems-and-people">Programs, Systems, and People</h2>
+<p>Before designing a program, it helps to know what kind of program it
+is and who will use it. The names below matter less than the
+distinctions.</p>
+<h3 id="kinds-of-program">Kinds of program</h3>
+<ul>
+<li><strong>Stand-alone programs</strong> hold everything they need,
+such as their graphics, sounds and data, in one file. Most games and
+small utilities are like this, and they are the easiest to write and
+share.</li>
+<li><strong>Program systems</strong> are several programs that share
+data files on a disk: one program adds records to a file, another
+searches it, a third prints reports. Each part is simpler than one large
+program would be, but the parts must agree on the layout of every file,
+and each must check the data it reads, since another program wrote
+it.</li>
+<li><strong>Families of programs</strong> share a design but not their
+data: a set of quizzes, or levels of a game, each in its own file and
+each built from the same template. Once the template works, each new
+member is quick to write.</li>
+</ul>
+<p>A program system needs a way to move from one program to the next.
+<code>RUN "NAME"</code> loads and runs another program but clears all
+variables first (MEGA65 Book, p. B-229). DLOAD in a running program
+replaces the program and starts the new one at its first line, keeping
+the variables, arrays and strings, so the programs can pass values to
+each other (MEGA65 Book, p. B-74). Files on disk are the other way to
+pass data, and the only way that survives switching the machine off.</p>
+<h3 id="who-will-use-the-program">Who will use the program</h3>
+<p>A program written for yourself can assume you know how to use it. One
+written for anyone else cannot, and a MEGA65 program shared with other
+owners meets a range of machines and people:</p>
+<ul>
+<li><strong>Different ROM versions.</strong> BASIC 65 is still being
+developed, and a keyword or behaviour your program relies on may be
+missing or different in an older ROM. <code>FRE(-1)</code> returns the
+ROM version as a six-digit number (MEGA65 Book, p. B-117), so a program
+can check it and warn the user. Chapter 11 explains version checks in
+more detail.</li>
+<li><strong>Different disk setups.</strong> The program may be run from
+the internal drive, an SD card disk image or a second unit. A program
+that keeps its unit number in one variable, rather than writing
+<code>U8</code> everywhere, adapts easily.</li>
+<li><strong>Users who do not program.</strong> They need prompts that
+say what to type, menus instead of commands, and messages instead of
+BASIC errors. The section on Serious and Less Serious Programming covers
+these.</li>
+</ul>
+<h2 id="program-design">Program Design</h2>
+<p>Experienced programmers plan small programs almost without noticing.
+Larger ones need the planning written down. This section shows the
+steps for a single program and then for a system. Many working programs
+are untidy, and that is not a disaster, but a little planning makes a
+program much easier to finish and to change.</p>
+<h3 id="designing-a-program">Designing a program</h3>
+<p>Take a number guessing game as an example. The computer thinks of a
+number from 1 to 99, and the player guesses until they find it. After a
+wrong guess, the computer says whether the guess was too small or too
+large; after the right one, it says how many guesses it took.</p>
+<p>Writing it takes four steps, whether they are written down or done in
+your head:</p>
+<ol type="1">
+<li><strong>Understand the problem.</strong> This one is simple. Many
+are not, and a program cannot be clearer than its author's idea of what
+it should do.</li>
+<li><strong>Express it in a way a computer can follow.</strong> An
+outline in plain English is usually enough: <em>choose X; set the count
+to 0; repeat: get a guess, add 1 to the count, say whether it was too
+small or too large; until the guess is X; print the count</em>. Flow
+charts show the same thing as boxes and arrows, but are slow to draw and
+to change.</li>
+<li><strong>Write it in BASIC.</strong> With DO ... LOOP, the outline
+turns into BASIC 65 almost line for line. A larger program is written
+and tested a part at a time, each part as a subroutine.</li>
+<li><strong>Test it and improve it.</strong></li>
+</ol>
+<pre><code>10 SCNCLR : PRINT &quot;GUESS MY NUMBER (1-99)&quot;
+20 X = INT(RND(0) * 99) + 1 : N = 0
+30 DO
+40 INPUT &quot;YOUR GUESS&quot;; G : N = N + 1
+50 IF G &lt; X THEN PRINT &quot;TOO SMALL&quot;
+60 IF G &gt; X THEN PRINT &quot;TOO LARGE&quot;
+70 LOOP UNTIL G = X
+80 PRINT &quot;GOT IT IN&quot;; N; &quot;TRIES&quot;</code></pre>
+<pre><code>GUESS MY NUMBER (1-99)
+YOUR GUESS? 50
+TOO LARGE
+YOUR GUESS? 25
+TOO SMALL
+YOUR GUESS? 37
+GOT IT IN 3 TRIES</code></pre>
+<p>Testing shows what to improve. A guess of 150 or 2.5 is counted as a
+guess, and the game ends after one round. This version rejects guesses
+outside the range, and offers another game:</p>
+<pre><code>10 DO
+20 SCNCLR : PRINT &quot;GUESS MY NUMBER (1-99)&quot;
+30 X = INT(RND(0) * 99) + 1 : N = 0
+40 DO
+50 INPUT &quot;YOUR GUESS&quot;; G
+60 IF G &lt; 1 OR G &gt; 99 OR G &lt;&gt; INT(G) THEN PRINT &quot;1 TO 99, PLEASE&quot; : ELSE BEGIN
+70 N = N + 1
+80 IF G &lt; X THEN PRINT &quot;TOO SMALL&quot;
+90 IF G &gt; X THEN PRINT &quot;TOO LARGE&quot;
+100 BEND
+110 LOOP UNTIL G = X
+120 PRINT &quot;GOT IT IN&quot;; N; &quot;TRIES&quot;
+130 PRINT &quot;PLAY AGAIN (Y/N)?&quot;
+140 GETKEY A$
+150 LOOP WHILE A$ = &quot;Y&quot;</code></pre>
+<p>RND(0) seeds from the system clock, so each game has a different
+number (MEGA65 Book, p. B-218). To test with the same number every time,
+seed with a negative number first, such as <code>X = RND(-1)</code>, and
+use <code>RND(1)</code> afterwards.</p>
+<h3 id="structured-programming">Structured programming</h3>
+<p>BASIC 65 has the statements that make a program's structure visible
+in its listing. Using them consistently is most of what program design
+means in practice.</p>
+<h4 id="loops-without-goto">Loops without GOTO</h4>
+<p>A C64 program that waits for a key typically reads like this:</p>
+<pre><code>10 GET A$ : IF A$ = &quot;&quot; THEN 10</code></pre>
+<p>It works, but every such line adds a jump to follow when reading the
+program. BASIC 65's DO ... LOOP says what it means and needs no line
+number:</p>
+<pre><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
+<p>The condition can go at either end. With WHILE or UNTIL after DO, it
+is tested before each pass, so the body may never run; after LOOP, it is
+tested after each pass, so the body always runs at least once. A DO ...
+LOOP with no condition repeats until an EXIT, which suits loops whose
+stopping point is in the middle:</p>
+<pre><code>10 DO
+20 INPUT &quot;COMMAND (Q TO QUIT)&quot;; C$
+30 IF C$ = &quot;Q&quot; THEN EXIT
+40 GOSUB 1000 : REM PROCESS THE COMMAND
+50 LOOP
+60 PRINT &quot;BYE&quot;</code></pre>
+<p>Use FOR ... NEXT when the number of passes is known in advance, and
+DO ... LOOP for everything else.</p>
+<h4 id="blocks-with-begin-and-bend">Blocks with BEGIN and BEND</h4>
+<p>On the C64, everything after THEN had to fit on one line, so longer
+actions meant jumping elsewhere. BEGIN and BEND let THEN and ELSE
+control a block of any length:</p>
+<pre><code>100 IF SC &gt; HI THEN BEGIN
+110 HI = SC
+120 PRINT &quot;NEW HIGH SCORE!&quot;
+130 SOUND 1, 7382, 30
+140 BEND : ELSE PRINT &quot;SCORE:&quot;; SC</code></pre>
+<p>The Book notes a quirk: statements after BEND on the same line belong
+to the block's control flow, so keep anything that must always run on a
+separate line (MEGA65 Book, p. B-28).</p>
+<h4 id="subroutines">Subroutines</h4>
+<p>GOSUB and RETURN remain the way to break a program into pieces. A few
+habits make subroutines easy to work with:</p>
+<ul>
+<li><strong>Give each a fixed home</strong>, such as 1000 for input,
+2000 for drawing and 3000 for disk access, and a REM line stating what
+it expects and returns.</li>
+<li><strong>Pass values in agreed variables</strong>, such as X and Y
+for a position, since BASIC subroutines have no parameters.</li>
+<li><strong>Jump over them</strong> at the end of the main program with
+END or GOTO, so execution never falls into a subroutine by
+accident.</li>
+</ul>
+<p>ON ... GOSUB and FGOSUB select a subroutine by number, which replaces
+chains of IF statements:</p>
+<pre><code>10 GETKEY K$ : K = INSTR(&quot;WASD&quot;, K$)
+20 IF K THEN ON K GOSUB 1000, 1100, 1200, 1300
+30 GOTO 10</code></pre>
+<h4 id="functions">Functions</h4>
+<p>DEF FN defines a one-line numeric function, which keeps a repeated
+formula in one place:</p>
+<pre><code>10 DEF FN RN(X) = INT(RND(0) * X) + 1 : REM RANDOM 1 TO X
+20 PRINT FN RN(6), FN RN(100)</code></pre>
+<h4 id="data-in-data-statements">Data in DATA statements</h4>
+<p>Tables of fixed values belong in DATA statements rather than in long
+chains of assignments. READ them into arrays at the start of the
+program, and use RESTORE with a line number to re-read a particular
+table. This keeps the logic of the program separate from its data, so
+changing a level layout or a list of prices does not touch the code.</p>
+<h3 id="designing-a-system">Designing a system</h3>
+<p>A program system, such as a club membership list with programs to
+add, search and print members, needs three more steps before any code is
+written.</p>
+<p><strong>Ask whether it is feasible.</strong> Estimate how much data
+there will be and where it will live. In Xemu with ROM 920418, a new
+program has about 55,000 bytes free for its own lines and another 55,000
+for variables, which <code>FRE(0)</code> and <code>FRE(1)</code> report
+(MEGA65 Book, p. B-117). More data than that must stay in disk files and
+be read a record at a time. Estimate the speed too: a search through a
+few hundred records in memory is quick, but reading them from disk for
+every search may not be. If in doubt, write a short test program that
+does the slowest part, and time it with TI.</p>
+<p><strong>Write a solution in outline.</strong> Decide the files first:
+what each record holds, in what order, and how the end of the file is
+marked. Then decide which program reads and writes each file.</p>
+<p><strong>Write the programs in modules.</strong> Each module is a
+subroutine with one way in and one way out, so it can be tested on its
+own and changed without breaking the others. Where a decision depends
+on several conditions, a condition table is easier to check than a
+chain of IF statements. Each column is one case; the actions marked X
+are taken when its conditions hold. This one decides what to do with a
+new score and a high-score table:</p>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Table full?</td>
+<td>N</td>
+<td>Y</td>
+<td>Y</td>
+</tr>
+<tr class="even">
+<td>Score above the lowest in the table?</td>
+<td>–</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr class="odd">
+<td>Remove the lowest score</td>
+<td></td>
+<td>X</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Insert the new score in order</td>
+<td>X</td>
+<td>X</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Say “no high score”</td>
+<td></td>
+<td></td>
+<td>X</td>
+</tr>
+</tbody>
+</table>
+<p>A table makes it easy to see that every case is covered, and each
+column becomes one branch of the code.</p>
+<h2 id="serious-and-less-serious-programming">Serious and Less Serious
+Programming</h2>
+<p>There is no single right way to write a program. A game for yourself
+can be as informal as you like. A program others will use, or one you
+will come back to in a year, repays some care. This section lists the
+things worth thinking about.</p>
+<h3 id="conventions">Conventions</h3>
+<p>BASIC 65 tolerates spaces, and using them costs only a little memory.
+A few conventions make listings readable:</p>
+<ul>
+<li>One statement per line where practical, except for short, closely
+related ones.</li>
+<li>REM lines to head each section and each subroutine. Do not put a
+REM on a line that GOTO or GOSUB jumps to, so it can be deleted
+later without breaking the jump.</li>
+<li>Line numbers in steps of 10, with each major section starting on a
+round hundred or thousand. Keep a standard subroutine at the same line
+number in every program, so it can be MERGEd without clashes.</li>
+<li>Short variable names, chosen so that they do not contain keywords:
+<code>TOTAL</code> contains <code>TO</code>, and <code>SCORE</code>
+contains <code>OR</code>, and both cause syntax errors. Only the first
+two characters count, so <code>COUNT</code> and <code>CO</code> are the
+same variable.</li>
+<li>A convention for working variables. All BASIC variables are global,
+so a subroutine that uses I as a loop counter will change the I of a
+loop that calls it. Reserve some names, such as those ending in 9, for
+use inside subroutines only.</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<p>REM lines at the head of a subroutine are its documentation: what it
+does, which variables it reads, which it sets and which it uses for
+working. A program for other people also needs instructions, either
+on screen or in a text file on the same disk, that say how to start it,
+what each option does and what files it needs.</p>
+<h3 id="ease-of-change">Ease of change</h3>
+<p>A value written directly into the code, such as a unit number or the
+size of a table, is <em>hard-coded</em>; a value kept in a variable set
+at the start is <em>soft-coded</em>. Soft-coded programs are easier to
+change, and in BASIC 65 they are also faster, because a number
+written in the program text is converted from its characters every time
+the line runs, while a variable already holds the value (see <a
+href="#keep-constants-in-variables">Keep constants in
+variables</a>):</p>
+<pre><code>10 DV = 8 : MX = 100 : REM DISK UNIT, MOST RECORDS
+...
+500 DOPEN#1, &quot;MEMBERS&quot;, U(DV)</code></pre>
+<p>A program can go further and ask for its settings at the start, or
+read them from a small file.</p>
+<h3 id="error-messages">Error messages</h3>
+<p>A message to the user should say what was wrong and what to do about
+it. Showing messages in the same place, the same way, makes them easy
+to notice. This subroutine shows the text in EM$ in reverse on the
+bottom line for three seconds, then clears it:</p>
+<pre><code>9000 REM SHOW EM$ ON THE BOTTOM LINE
+9010 CURSOR 0, 24 : PRINT CHR$(18); EM$; CHR$(146);
+9020 SLEEP 3
+9030 CURSOR 0, 24 : PRINT SPC(LEN(EM$));
+9040 RETURN</code></pre>
+<p>Call it with <code>EM$ = "NAME TOO LONG" : GOSUB 9000</code>.
+CHR$(18) and CHR$(146) turn reverse on and off, and SLEEP waits the
+given number of seconds (MEGA65 Book, p. B-242).</p>
+<h3 id="easy-input">Easy input</h3>
+<p>INPUT is fine for many programs, but it lets the user type anything,
+and a letter typed where a number is expected gives a
+<code>?REDO FROM START</code>. A prompt that says what to type, and
+what form it takes, prevents most mistakes:</p>
+<pre><code>100 PRINT &quot;ENTER THE DISCOUNT PERCENTAGE&quot;
+110 INPUT &quot;(FOR EXAMPLE 13.25)&quot;; PC</code></pre>
+<p>For full control, read the keys one at a time with GETKEY and accept
+only the ones that make sense; <a href="#input">Input</a>, under
+Examples in BASIC 65, shows a routine that does this.</p>
+<h3 id="menus">Menus</h3>
+<p>A menu lets the user pick an action with a single key. GETKEY waits
+for the key, INSTR turns it into a number, and ON ... GOSUB runs the
+matching subroutine:</p>
+<pre><code>100 DO
+110 PRINT &quot;1 NEW GAME  2 HIGH SCORES  Q QUIT&quot;
+120 GETKEY K$ : K = INSTR(&quot;12Q&quot;, K$)
+130 IF K = 3 THEN EXIT
+140 ON K GOSUB 1000, 2000
+150 LOOP</code></pre>
+<p>A key that is not in the list gives K = 0, and ON ... GOSUB with 0
+does nothing, so the menu simply waits again. If each option is a
+separate program, the menu can load it with DLOAD, keeping the
+variables, as described under <a href="#kinds-of-program">Kinds of
+program</a>.</p>
+<h3 id="tidy-output">Tidy output</h3>
+<p>Columns of numbers are easier to read when they line up. PRINT USING
+formats a number to a fixed width and number of decimal places, so
+there is no need for the string-handling routines older BASICs needed;
+<a href="#output">Output</a>, under Examples in BASIC 65, shows it.</p>
+<h3 id="libraries-of-subroutines">Libraries of subroutines</h3>
+<p>Subroutines that are useful in many programs, such as the input
+routine and the message routine above, can be kept in one program file
+and added to a new program with MERGE. Give the library high line
+numbers and its own variable names, so it does not clash with the
+programs that use it.</p>
+<p>Before writing a library routine, check whether BASIC 65 already has
+it. Many routines that C64 programmers wrote for themselves are
+built-in keywords: HEX$ and DEC convert between hexadecimal and decimal
+(MEGA65 Book, pp. B-132, B-66), PRINT USING formats numbers, MOD gives
+remainders, INSTR searches strings, and MID$ can replace part of a
+string.</p>
+<h3 id="testing">Testing</h3>
+<p>Testing every possible input is rarely possible, so test the ones
+most likely to fail:</p>
+<ul>
+<li><strong>Boundary values</strong>, such as 0, 1, the largest value
+allowed and one more than that, negative numbers and fractions.</li>
+<li><strong>Empty and awkward input</strong>, such as just pressing
+RETURN, a very long string, or a comma or quotation mark, which INPUT
+treats specially.</li>
+<li><strong>Generated data.</strong> A loop can feed a routine a range
+of values, and RND can make up random ones. Seed RND with a negative
+number so that the same test data comes back on every run (MEGA65 Book,
+p. B-218).</li>
+</ul>
+<p>It is hard to test your own program fairly, because you avoid the
+mistakes you know it cannot handle. Ask someone else to try it.</p>
+<h3 id="validation">Validation</h3>
+<p>Validation checks that data has the right form before the program
+uses it: a month between 1 and 12, a name that is not empty, a number
+that is a whole number. It cannot tell whether the data is right, only
+whether it could be.</p>
+<p>A check digit catches most typing mistakes in a reference number.
+The old ten-digit ISBN is an example: multiply the first nine digits by
+1 to 9, add the results, and the remainder after dividing by 11 is the
+tenth digit, with X standing for 10. A single wrong digit, or two
+neighbouring digits swapped, gives a different check digit:</p>
+<pre><code>10 I$ = &quot;030640615&quot; : S = 0
+20 FOR J = 1 TO 9 : S = S + J * VAL(MID$(I$, J, 1)) : NEXT
+30 C = MOD(S, 11) : C$ = MID$(&quot;0123456789X&quot;, C + 1, 1)
+40 PRINT I$ + C$</code></pre>
+<pre><code>0306406152</code></pre>
+<h3 id="robust-programs">Robust programs</h3>
+<p>A program used by other people meets input and situations its author
+did not expect. Four habits deal with most of them:</p>
+<ul>
+<li><strong>Validate input.</strong> Check that a number is in range and
+a string is not empty before using it, and ask again if not.</li>
+<li><strong>Check every disk operation.</strong> Test DS after DOPEN,
+DLOAD and similar commands, and show <code>DS$</code> if it is not
+zero.</li>
+<li><strong>Trap the rest.</strong> A TRAP handler that reports the
+problem and returns to a safe point, such as the main menu, is better
+than a program that stops with an error.</li>
+<li><strong>Leave the machine as you found it.</strong> Restore BANK
+128, the palette, the screen mode and SPEED before the program ends, and
+close every file.</li>
+</ul>
+<p>This input routine combines several of them:</p>
+<pre><code>1000 REM INPUT A NUMBER FROM LO TO HI INTO N
+1010 DO
+1020 INPUT &quot;NUMBER&quot;; N$
+1030 N = VAL(N$)
+1040 LOOP UNTIL N &gt;= LO AND N &lt;= HI AND N$ &lt;&gt; &quot;&quot;
+1050 RETURN</code></pre>
+<p>Reading the input as a string and converting it with VAL means a
+typed letter never produces a REDO FROM START message or stops the
+program.</p>
+<h2 id="debugging-basic-65-programs">Debugging BASIC 65 Programs</h2>
+<p>Errors come in three kinds:</p>
+<ul>
+<li><strong>Syntax errors</strong> are lines BASIC cannot understand.
+BASIC reports them when the line runs, not when it is typed, so a
+mistake in a rarely used branch can wait a long time to appear.</li>
+<li><strong>Run-time errors</strong> are lines that are correct BASIC
+but are given values they cannot handle, such as a division by zero or
+an array index out of range. <a
+href="ch03-basic65-reference-guide.html#error-handling">Error
+Handling</a> in Chapter 3 lists every error and its cause.</li>
+<li><strong>Logic errors</strong> give no message at all: the program
+runs, but does the wrong thing. These are the hardest to find, and most
+of this section is about them.</li>
+</ul>
 <h3 id="read-the-message">Read the message</h3>
 <p>When BASIC stops with an error, it names the error and the line. HELP
 then lists that line and highlights the statement that failed, which
@@ -218,7 +597,9 @@ stops is more useful than letting errors pass silently:</p>
 <pre><code>10 TRAP 9000
 ...
 9000 PRINT ERR$(ER); &quot; IN LINE&quot;; EL : STOP</code></pre>
-<p>Chapter 6 shows fuller error handling with RESUME.</p>
+<p><a href="ch03-basic65-reference-guide.html#catching-errors-in-a-program">Catching
+errors in a program</a> in Chapter 3 explains how TRAP and RESUME work
+together, and Chapter 6 shows fuller error handling.</p>
 <h3 id="common-mistakes">Common mistakes</h3>
 <table>
 <thead>
@@ -242,25 +623,236 @@ stops is more useful than letting errors pass silently:</p>
 one variable</td>
 </tr>
 <tr class="even">
-<td><code>?OUT OF DATA</code></td>
-<td>A READ loop runs further than the DATA, or a RESTORE is missing</td>
+<td>A loop ends early, or never ends</td>
+<td>A subroutine it calls uses the same loop variable</td>
 </tr>
 <tr class="odd">
+<td>A function gives 0, or <code>?BAD SUBSCRIPT</code></td>
+<td>FN was left out, so <code>RN(6)</code> is read as an element of
+the array RN</td>
+</tr>
+<tr class="even">
+<td>The program runs into the wrong code</td>
+<td>A subroutine lacks its RETURN, or the main program lacks an END
+before the subroutines</td>
+</tr>
+<tr class="odd">
+<td><code>?OUT OF DATA</code>, or data read in the wrong order</td>
+<td>A READ loop runs further than the DATA, a RESTORE is missing, or
+DATA lines were given the wrong numbers</td>
+</tr>
+<tr class="even">
+<td>A condition is true when it should be false</td>
+<td>Missing parentheses around a comparison combined with AND or OR;
+see <a
+href="ch03-basic65-reference-guide.html#precedence">Precedence</a> in
+Chapter 3</td>
+</tr>
+<tr class="odd">
+<td>A negative number rounds the wrong way</td>
+<td>INT, and assignment to an integer variable, round down, so -1.5
+becomes -2, not -1</td>
+</tr>
+<tr class="even">
 <td>A disk command fails without an error</td>
 <td>DS was not checked; print <code>DS$</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>POKEs to <code>$D020</code> or similar do nothing</td>
 <td>BANK is not 128</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>A program behaves differently after editing</td>
 <td>It was restarted with GOTO, which keeps the old variable values
 (editing does not clear them); use RUN</td>
 </tr>
 </tbody>
 </table>
-<h2 id="making-programs-fast">Making Programs Fast</h2>
+<p>Some behaviour differs from C64 BASIC and can surprise a C64
+programmer. <code>ASC("")</code> returns 0 instead of raising an error
+(MEGA65 Book, p. B-21). <code>MOD</code> with a positive divisor is never
+negative: <code>MOD(-17, 5)</code> is 3, not -2. And RND starts from a
+different seed each time the machine is switched on, so a program that
+relied on the C64's repeatable sequence must seed RND itself (MEGA65
+Book, p. B-218).</p>
+<h2 id="examples-in-basic-65">Examples in BASIC 65</h2>
+<p>The examples below show common programming tasks in BASIC 65. They
+are short enough to type in, and each is a starting point to change and
+extend.</p>
+<h3 id="input">Input</h3>
+<p>This subroutine reads up to ML characters into IN$, accepting only
+the characters listed in OK$. DEL removes the last character, and
+RETURN ends the input. Any other key is ignored, so the user cannot
+move the cursor about the screen or type a letter into a number:</p>
+<pre><code>10 OK$ = &quot;0123456789&quot; : ML = 5
+20 GOSUB 1000 : PRINT : PRINT &quot;YOU TYPED&quot;; VAL(IN$)
+30 END
+1000 REM READ UP TO ML CHARACTERS FROM OK$ INTO IN$
+1010 IN$ = &quot;&quot;
+1020 DO
+1030 GETKEY K$
+1040 IF K$ = CHR$(13) THEN EXIT
+1050 IF K$ = CHR$(20) AND IN$ &lt;&gt; &quot;&quot; THEN IN$ = LEFT$(IN$, LEN(IN$) - 1) : PRINT K$;
+1060 IF INSTR(OK$, K$) &gt; 0 AND LEN(IN$) &lt; ML THEN IN$ = IN$ + K$ : PRINT K$;
+1070 LOOP
+1080 RETURN</code></pre>
+<p>Typing <code>1</code>, <code>2</code>, <code>A</code>,
+<code>3</code>, DEL, <code>4</code>, <code>5</code> and RETURN gives
+<code>1245</code>: the A is ignored and DEL removes the 3. For a name,
+set OK$ to the letters and a space; for a decimal number, add a full
+stop to OK$ and check that IN$ holds only one.</p>
+<h3 id="output">Output</h3>
+<p>PRINT USING prints a value to a pattern. Each <code>#</code> is one
+character position, and a full stop in a numeric pattern places the
+decimal point, rounding the value to fit (MEGA65 Book, p. B-200). A
+string printed with a pattern is cut or padded to its width, so names
+and prices line up in columns:</p>
+<pre><code>10 FOR I = 1 TO 3 : READ D$, P
+20 PRINT USING &quot;############&quot;; D$;
+30 PRINT USING &quot;#####.##&quot;; P : NEXT
+40 DATA &quot;COFFEE&quot;, 3.5, &quot;CAKE&quot;, 12.257, &quot;TEA&quot;, 1234.5</code></pre>
+<pre><code>COFFEE          3.50
+CAKE           12.26
+TEA          1234.50</code></pre>
+<p>PRINT USING also takes C-style patterns, such as
+<code>"%7.2F"</code> for a number seven characters wide with two
+decimal places, and <code>"%4X"</code> for hexadecimal. A value too
+large for its pattern is printed as asterisks.</p>
+<h3 id="calculations">Calculations</h3>
+<p>To round a number to two decimal places for later use, rather than
+just for printing, multiply, add a half, take INT and divide:</p>
+<pre><code>10 X = 2.675 : PRINT INT(X * 100 + .5) / 100</code></pre>
+<pre><code> 2.68</code></pre>
+<p>MOD gives the remainder of a division (MEGA65 Book, p. B-169). It is
+the way to wrap a value around, such as a position on a circular track
+or an hour on a clock, and to test whether one number divides another:
+<code>IF MOD(Y, 4) = 0</code>. HEX$ and DEC convert to and from
+hexadecimal:</p>
+<pre><code>PRINT DEC(&quot;ABCD&quot;), HEX$(43981)
+ 43981    ABCD</code></pre>
+<h3 id="string-handling">String handling</h3>
+<p>These lines reverse a string, count its words and replace part of
+it. INSTR takes an optional starting position, so a loop can find each
+space in turn (MEGA65 Book, p. B-141). MID$ used as a statement
+replaces characters in a string variable without changing its length
+(MEGA65 Book, p. B-167):</p>
+<pre><code>10 A$ = &quot;PROGRAMMING THE MEGA65&quot;
+20 R$ = &quot;&quot; : FOR I = LEN(A$) TO 1 STEP -1 : R$ = R$ + MID$(A$, I, 1) : NEXT : PRINT R$
+30 W = 0 : P = 1
+40 DO : P = INSTR(A$, &quot; &quot;, P) : IF P = 0 THEN EXIT
+50 W = W + 1 : P = P + 1 : LOOP
+60 PRINT W + 1; &quot;WORDS&quot;
+70 MID$(A$, 13, 3) = &quot;OUR&quot; : PRINT A$
+80 PRINT INSTR(A$, &quot;MEGA&quot;)</code></pre>
+<pre><code>56AGEM EHT GNIMMARGORP
+ 3 WORDS
+PROGRAMMING OUR MEGA65
+ 17</code></pre>
+<h3 id="sorting-searching-and-shuffling">Sorting, searching and
+shuffling</h3>
+<p>This program fills an array with the numbers 1 to 10, shuffles them,
+sorts them again and then searches for one. The shuffle swaps each
+element with a randomly chosen one at or below it, which gives every
+order the same chance. The sort is an insertion sort: each element in
+turn moves down past the larger elements before it. It is simple and
+quick for a few hundred items, and quickest of all when the data is
+already nearly in order. The search is a binary search, which halves
+the part of a sorted array still to be searched at each step, so it
+needs at most seven steps for a hundred items:</p>
+<pre><code>10 N = 10 : DIM A(N) : X = RND(-7)
+20 FOR I = 1 TO N : A(I) = I : NEXT
+30 FOR I = N TO 2 STEP -1
+40 J = INT(RND(1) * I) + 1
+50 T = A(I) : A(I) = A(J) : A(J) = T
+60 NEXT
+70 FOR I = 1 TO N : PRINT A(I); : NEXT : PRINT
+100 FOR I = 2 TO N
+110 T = A(I) : J = I - 1
+120 DO WHILE J &gt; 0
+130 IF A(J) &lt;= T THEN EXIT
+140 A(J + 1) = A(J) : J = J - 1
+150 LOOP
+160 A(J + 1) = T
+170 NEXT
+180 FOR I = 1 TO N : PRINT A(I); : NEXT : PRINT
+200 K = 7 : LO = 1 : HI = N : F = 0
+210 DO WHILE LO &lt;= HI AND F = 0
+220 M = INT((LO + HI) / 2)
+230 IF A(M) = K THEN F = M : ELSE IF A(M) &lt; K THEN LO = M + 1 : ELSE HI = M - 1
+240 LOOP
+250 PRINT K; &quot;FOUND AT&quot;; F</code></pre>
+<pre><code> 8  7  5  3  1  2  6  10  9  4
+ 1  2  3  4  5  6  7  8  9  10
+ 7 FOUND AT 7</code></pre>
+<p>Line 10 seeds RND with -7, so the shuffle is the same on every run;
+use <code>RND(0)</code> instead for a different one each time. To sort
+strings, use a string array: the comparisons work the same way. F is 0
+if the value is not found.</p>
+<h3 id="data-structures">Data structures</h3>
+<p>Arrays are BASIC's only data structure, but they can be used to
+build others. <em>Parallel arrays</em> keep related values at the same
+index, here a name and a score. A <em>two-dimensional array</em> holds a
+grid, such as a game board. A <em>stack</em> is an array with a
+variable, SP, that points to its top item: adding an item increases SP,
+and taking one decreases it, so items come off in the reverse of the
+order they went on:</p>
+<pre><code>10 READ N : DIM N$(N), S(N)
+20 FOR I = 1 TO N : READ N$(I), S(I) : NEXT
+30 B = 1 : FOR I = 2 TO N : IF S(I) &gt; S(B) THEN B = I
+40 NEXT : PRINT &quot;BEST: &quot;; N$(B); S(B)
+50 DATA 4, &quot;ANN&quot;, 320, &quot;BOB&quot;, 450, &quot;CAL&quot;, 120, &quot;DEE&quot;, 410
+100 DIM B$(2, 2) : REM A 3 BY 3 BOARD
+110 B$(1, 1) = &quot;X&quot; : B$(0, 2) = &quot;O&quot;
+120 FOR R = 0 TO 2 : FOR C = 0 TO 2
+130 IF B$(R, C) = &quot;&quot; THEN PRINT &quot;.&quot;; : ELSE PRINT B$(R, C);
+140 NEXT : PRINT : NEXT
+200 DIM ST(20) : SP = 0 : REM A STACK
+210 FOR I = 1 TO 3 : SP = SP + 1 : ST(SP) = I * 10 : NEXT
+220 DO WHILE SP &gt; 0 : PRINT ST(SP); : SP = SP - 1 : LOOP : PRINT</code></pre>
+<pre><code>BEST: BOB 450
+..O
+.X.
+...
+ 30  20  10</code></pre>
+<p>The first item in a DATA list, here 4, says how many records follow,
+so the DIM is the right size and adding a record means changing only
+the DATA. <a
+href="ch03-basic65-reference-guide.html#arrays">Arrays</a> in Chapter 3
+gives the rules for array sizes.</p>
+<h3 id="processing-dates">Processing dates</h3>
+<p>DT$ gives today's date from the real-time clock in the form
+<code>DD-MMM-YYYY</code>, such as <code>15-OCT-2026</code> (MEGA65
+Book, p. B-87). This program splits such a date into numbers, finds the
+day of the week and counts the days to Christmas:</p>
+<pre><code>10 D$ = &quot;15-OCT-2026&quot; : REM OR D$ = DT$
+20 D = VAL(LEFT$(D$, 2))
+30 M = (INSTR(&quot;JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC&quot;, MID$(D$, 4, 3)) + 2) / 3
+40 Y = VAL(RIGHT$(D$, 4))
+50 PRINT D; M; Y
+60 GOSUB 1000 : PRINT MID$(&quot;SUNMONTUEWEDTHUFRISAT&quot;, W * 3 + 1, 3)
+70 GOSUB 2000 : N1 = DN
+80 D = 25 : M = 12 : Y = 2026 : GOSUB 2000
+90 PRINT DN - N1; &quot;DAYS TO CHRISTMAS&quot;
+100 END
+1000 REM DAY OF WEEK W (0 = SUNDAY) OF D, M, Y
+1010 Y1 = Y : IF M &lt; 3 THEN Y1 = Y - 1
+1020 W = MOD(Y1 + INT(Y1/4) - INT(Y1/100) + INT(Y1/400) + VAL(MID$(&quot;032503514624&quot;, M, 1)) + D, 7)
+1030 RETURN
+2000 REM DAY NUMBER DN OF D, M, Y
+2010 Y1 = Y : M1 = M : IF M1 &lt; 3 THEN Y1 = Y1 - 1 : M1 = M1 + 12
+2020 DN = 365 * Y1 + INT(Y1/4) - INT(Y1/100) + INT(Y1/400) + INT(153 * (M1 - 3) / 5 + .4) + D
+2030 RETURN</code></pre>
+<pre><code> 15  10  2026
+THU
+ 71 DAYS TO CHRISTMAS</code></pre>
+<p>The subroutine at 2000 turns a date into a count of days, so the
+difference between two counts is the number of days between them.
+Both subroutines follow the Gregorian calendar's leap-year rule, and
+they also give the right day for 1 January 2000 (Saturday) and 29
+February 2024 (Thursday). A date stored as <code>YYYYMMDD</code>, such as
+<code>20261015</code>, sorts into date order as a plain number or
+string, which <code>DD-MMM-YYYY</code> does not.</p>
+<h2 id="making-basic-65-run-faster">Making BASIC 65 Run Faster</h2>
 <p>MEGA65 mode runs at 40.5 MHz, so BASIC 65 is already far faster than
 C64 BASIC. When more speed is needed, these techniques help, roughly in
 order of effect.</p>
@@ -271,11 +863,68 @@ than guessing:</p>
 <pre><code>10 CLR TI
 20 FOR I = 1 TO 10000 : X = X + 1 : NEXT
 30 PRINT TI; &quot;SECONDS&quot;</code></pre>
+<p>The table shows how long some loops of 2,000 passes took in Xemu with
+ROM 920418, at 40.5 MHz. Real hardware gives different times, so treat
+them as a comparison between the lines, not as absolute speeds:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Loop body</th>
+<th>Seconds</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>X = X + 1</code></td>
+<td>0.21</td>
+</tr>
+<tr class="even">
+<td><code>XX = XX + 1</code></td>
+<td>0.26</td>
+</tr>
+<tr class="odd">
+<td><code>ZZ = ZZ + 1</code>, created after ten other variables</td>
+<td>0.32</td>
+</tr>
+<tr class="even">
+<td><code>X% = X% + 1</code></td>
+<td>0.24</td>
+</tr>
+<tr class="odd">
+<td><code>X = X + 1 : REM A LONG COMMENT INSIDE THE LOOP</code></td>
+<td>0.28</td>
+</tr>
+<tr class="even">
+<td><code>X = X + 1.5</code></td>
+<td>0.28</td>
+</tr>
+<tr class="odd">
+<td><code>X = X + O</code>, with O set to 1.5 before the loop</td>
+<td>0.20</td>
+</tr>
+<tr class="even">
+<td><code>Y = SIN(I * π / 180)</code></td>
+<td>0.64</td>
+</tr>
+<tr class="odd">
+<td><code>Y = S(MOD(I, 360))</code>, from a table of sines</td>
+<td>0.43</td>
+</tr>
+</tbody>
+</table>
 <h3 id="use-fast-variables">Use fast variables</h3>
 <p>A variable whose name is a single letter, with or without a type
 symbol, is a fast variable: BASIC 65 finds it without searching (MEGA65
 Book, p. B-7). Give the variables used in the busiest loops one-letter
-names, such as I, X, Y and C$.</p>
+names, such as I, X, Y and C$. Other variables are found by searching
+them in the order they were created, so a two-letter variable created
+late is slower still, as the ZZ line shows. Create the busiest ones
+first, for example by setting them to 0 at the start of the
+program.</p>
+<p>Integer variables save memory in arrays, but they do not make
+arithmetic faster: BASIC 65 calculates in floating point, so an integer
+variable is converted each time it is used, and <code>X%</code> is
+slower than <code>X</code>.</p>
 <h3 id="keep-the-cpu-at-full-speed">Keep the CPU at full speed</h3>
 <p>Check that nothing has slowed the CPU: SPEED with no argument selects
 40.5 MHz, and RSPEED reports the current speed. Programs that run in C64
@@ -283,8 +932,23 @@ mode can use <code>POKE 0,65</code>.</p>
 <h3 id="move-work-out-of-loops">Move work out of loops</h3>
 <p>Calculate values that do not change before the loop starts, and use
 tables read from DATA instead of repeated arithmetic. A table of 360
-sine values, read once, is much faster than calling SIN in every
-pass.</p>
+sine values, read once, is much faster than calling SIN in every pass.
+A REM inside a loop is skipped on every pass, so put comments before
+or after the loop instead.</p>
+<h3 id="keep-constants-in-variables">Keep constants in variables</h3>
+<p>When BASIC 65 stores a program line, it turns keywords into tokens
+but leaves numbers as the characters you typed. A <code>1.5</code> in a
+line is stored as the three characters <code>1</code>, <code>.</code>
+and <code>5</code>, and every time the line runs, the interpreter reads
+them one at a time and builds the number from them: multiplying by ten
+for each digit, noting where the decimal point falls, and checking for
+an exponent. A variable needs none of that. BASIC finds it, directly
+for a one-letter name or by searching the variable table for a longer
+one, and copies out a value that is already in the form it calculates
+with. In the timings above, <code>X = X + O</code> ran in 0.20 seconds
+against 0.28 for <code>X = X + 1.5</code>. Set constants used in busy
+loops, such as a step size or a screen width, to variables before the
+loop starts.</p>
 <h3 id="use-the-commands-that-do-the-work-in-hardware">Use the commands
 that do the work in hardware</h3>
 <p>Several BASIC 65 commands hand work to the MEGA65's hardware or to
@@ -329,50 +993,37 @@ statements:</p>
 reclaim the old ones when memory runs low. Avoid building strings a
 character at a time inside fast loops, and reuse string variables rather
 than creating many.</p>
+<h3 id="remove-spaces-last">Remove spaces last</h3>
+<p>Removing the spaces from a line, and joining short lines into longer
+ones, makes little difference: the loop above ran about 4% faster
+without spaces. It also makes the program much harder to read, so do it,
+if at all, only to a finished program, and keep the readable version.</p>
 <h3 id="when-basic-is-not-enough">When BASIC is not enough</h3>
 <p>If a routine is still too slow after these steps, rewrite just that
 routine in machine language and call it with SYS, as Chapter 9
 describes. Usually only a small part of a program needs this.</p>
-<h2 id="robust-programs">Robust Programs</h2>
-<p>A program used by other people meets input and situations its author
-did not expect. Four habits deal with most of them:</p>
-<ul>
-<li><strong>Validate input.</strong> Check that a number is in range and
-a string is not empty before using it, and ask again if not.</li>
-<li><strong>Check every disk operation.</strong> Test DS after DOPEN,
-DLOAD and similar commands, and show <code>DS$</code> if it is not
-zero.</li>
-<li><strong>Trap the rest.</strong> A TRAP handler that reports the
-problem and returns to a safe point, such as the main menu, is better
-than a program that stops with an error.</li>
-<li><strong>Leave the machine as you found it.</strong> Restore BANK
-128, the palette, the screen mode and SPEED before the program ends, and
-close every file.</li>
-</ul>
-<p>This input routine combines several of them:</p>
-<pre><code>1000 REM INPUT A NUMBER FROM LO TO HI INTO N
-1010 DO
-1020 INPUT &quot;NUMBER&quot;; N$
-1030 N = VAL(N$)
-1040 LOOP UNTIL N &gt;= LO AND N &lt;= HI AND N$ &lt;&gt; &quot;&quot;
-1050 RETURN</code></pre>
-<p>Reading the input as a string and converting it with VAL means a
-typed letter never produces a REDO FROM START message or stops the
-program.</p>
 <h2 id="summary">Summary</h2>
 <ul>
-<li><strong>Structure.</strong> DO ... LOOP with WHILE, UNTIL and EXIT
-replaces most GOTOs; BEGIN and BEND give IF multi-line blocks;
-subroutines and DEF FN keep repeated code in one place.</li>
-<li><strong>Editing.</strong> AUTO, RENUMBER, FIND, CHANGE, DELETE,
-MERGE, KEY and IMPORT make writing and reshaping programs quick.</li>
+<li><strong>Fluency.</strong> Start with a few keywords, experiment in
+direct mode, read other programs, and use AUTO, RENUMBER, FIND, CHANGE,
+DELETE, MERGE, KEY and IMPORT to write and reshape programs
+quickly.</li>
+<li><strong>Programs and people.</strong> Know whether you are writing a
+stand-alone program, a system or a family of programs, and who will run
+it, on which ROM and disk setup.</li>
+<li><strong>Design.</strong> Understand the problem, outline it, write
+it, then test and improve it. DO ... LOOP, BEGIN and BEND, subroutines
+and DEF FN give the program a visible structure; a system needs a
+feasibility check, file layouts and modules.</li>
+<li><strong>Care.</strong> Use conventions, document subroutines,
+soft-code settings, give clear messages and menus, validate input,
+test boundary values and leave the machine as you found it.</li>
 <li><strong>Debugging.</strong> HELP shows the failing statement; STOP
 and CONT inspect state; TRON and TROFF trace; TRAP catches errors.</li>
 <li><strong>Speed.</strong> Measure with TI, use one-letter variables,
-keep the CPU at 40.5 MHz, move work out of loops, and use EDMA, SETBIT,
-WPOKE, the screen arrays and graphics commands.</li>
-<li><strong>Robustness.</strong> Validate input, check DS, trap errors
-and restore the machine's state.</li>
+keep constants in variables, move work out of loops, keep the CPU at
+40.5 MHz, and use EDMA, SETBIT, WPOKE, the screen arrays and graphics
+commands.</li>
 </ul>
 <p>Chapter 5 turns from BASIC to the machine underneath it.</p>
 <nav class="chapnav"><span><a href="ch03-basic65-reference-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch05-mega65-architecture.html">Next &rarr;</a></span></nav>
