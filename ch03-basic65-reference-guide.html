@@ -30,12 +30,18 @@ Guide</title>
 <h1
 id="programming-the-mega65--chapter-3-basic-65-reference-guide">Programming
 the MEGA65 — Chapter 3: BASIC 65 Reference Guide</h1>
-<p>Oct 4, 2026 · Updated Oct 14, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 15, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every keyword in BASIC 65: commands,
 functions, reserved variables and secondary keywords. It is meant to be
 consulted rather than read through. Chapter 4 shows how to use the
 language well, and Chapter 6 explains how BASIC 65 works internally.</p>
+<p>The chapter has two parts. BASIC Syntax describes the parts every
+program is built from: numbers and literals, variables, operators,
+functions, expressions and statements. It ends with Error Handling,
+which explains how errors are reported and caught and lists every error
+message by number. The keyword entries follow, grouped by category,
+starting with Categories at a Glance.</p>
 <p>The entries summarise the official BASIC 65 reference in the MEGA65
 Book, which gives every keyword a full page or more with all parameters,
 remarks and examples (MEGA65 Book, Appendix B). Each entry here gives
@@ -82,127 +88,58 @@ mark a choice of one. Where a format allows a list of optional arguments
 in braces, as in <code>RREG [{areg, xreg, yreg}]</code>, arguments can
 be skipped with empty commas. Lower-case words stand for values the
 programmer supplies.</p>
-<h3 id="tokens">Tokens</h3>
-<p>Tokens come in four forms:</p>
-<ul>
-<li><strong>One byte</strong>, <code>$80</code> to <code>$FD</code>, for
-the keywords BASIC 65 shares with earlier Commodore BASICs and many of
-its own.</li>
-<li><strong>Two bytes beginning <code>$FE</code></strong>, for most
-extended statements, a scheme BASIC 65 inherits from the C128's BASIC
-7.0, such as BANK (<code>$FE $02</code>).</li>
-<li><strong>Two bytes beginning <code>$CE</code></strong>, for most
-added functions, such as POINTER (<code>$CE $0A</code>).</li>
-<li><strong>Combinations</strong> for compound keywords, such as GOTO
-written as GO TO (<code>$CB $A4</code>) or SETBIT
-(<code>$FE $2D $FE $4E</code>, SET followed by BIT).</li>
-</ul>
-<p>Reserved variables such as DS, ER and TI have no token: they are
-stored as their names.</p>
-<h3 id="keywords-in-variable-names">Keywords in variable names</h3>
-<p>BASIC 65 recognises keywords anywhere in a line, even inside what was
-meant as a variable name. A variable called <code>SCORE</code> contains
-the keyword <code>OR</code>, and <code>TOTAL</code> contains
-<code>TO</code>; both cause syntax errors. Short variable names avoid
-the problem, and Chapter 6 explains why one-letter names are also the
-fastest.</p>
-<h2 id="categories-at-a-glance">Categories at a Glance</h2>
+<h2 id="basic-syntax">BASIC Syntax</h2>
+<p>This section sets out the rules that every keyword is used under. It
+starts with the smallest parts and builds up: numbers and literals, the
+variables that hold values, the operators and functions that work on
+them, the expressions they combine into, and the statements and program
+lines that make up a program. It ends with what happens when a program
+goes wrong.</p>
+<h3 id="numbers-and-literals">Numbers and Literals</h3>
+<p>A literal is a value written out in full in a program or command,
+such as <code>42</code> or <code>"HELLO"</code>. The Book calls literals
+constants, because they never change while the program runs, unlike
+variables (MEGA65 Book, p. B-6).</p>
 <table>
 <thead>
 <tr class="header">
-<th>Category</th>
-<th>Keywords</th>
+<th>Form</th>
+<th>Examples</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Program flow</td>
-<td>DO, LOOP, WHILE, UNTIL, EXIT, FOR, TO, STEP, NEXT, IF, THEN, ELSE,
-BEGIN, BEND, GOTO, GOSUB, FGOTO, FGOSUB, ON, RETURN, END, STOP, CONT,
-SLEEP, WAIT, VSYNC</td>
+<td>Decimal integer</td>
+<td><code>32000</code>, <code>-55</code></td>
 </tr>
 <tr class="even">
-<td>Error handling and debugging</td>
-<td>TRAP, RESUME, ER, EL, <code>ERR$</code>, HELP, TRON, TROFF</td>
+<td>Decimal with a fraction</td>
+<td><code>3.14</code>, <code>-7654.321</code></td>
 </tr>
 <tr class="odd">
-<td>Program editing</td>
-<td>AUTO, RENUMBER, DELETE, LIST, FIND, CHANGE, NEW, KEY, EDIT,
-HIGHLIGHT, MERGE, IMPORT</td>
+<td>Decimal with an exponent</td>
+<td><code>1.5E03</code>, <code>7.7E-02</code></td>
 </tr>
 <tr class="even">
-<td>Variables and data</td>
-<td>LET, DIM, CLR, DATA, READ, RESTORE, DEF FN, FN, POINTER, REM</td>
+<td>Hexadecimal</td>
+<td><code>$D020</code>, <code>$FF</code></td>
 </tr>
 <tr class="odd">
-<td>Keyboard and screen input</td>
-<td>INPUT, LINE INPUT, GET, GETKEY</td>
+<td>Binary</td>
+<td><code>%11010010</code>, <code>%101</code></td>
 </tr>
 <tr class="even">
-<td>Text output</td>
-<td>PRINT, PRINT USING, USING, SPC, TAB, POS, CMD, CURSOR, RCURSOR,
-WINDOW, RWINDOW, SCNCLR, FONT, CHARDEF</td>
-</tr>
-<tr class="odd">
-<td>Strings</td>
-<td>ASC, <code>CHR$</code>, <code>LEFT$</code>, <code>MID$</code>,
-<code>RIGHT$</code>, LEN, INSTR, <code>STR$</code>, VAL,
-<code>RPT$</code>, <code>HEX$</code>, DEC, <code>STRBIN$</code>,
-DECBIN</td>
-</tr>
-<tr class="even">
-<td>Numbers</td>
-<td>ABS, INT, SGN, SQR, EXP, LOG, LOG10, LOG2, SIN, COS, TAN, ATN, MOD,
-RND, AND, OR, NOT, XOR</td>
-</tr>
-<tr class="odd">
-<td>Memory and machine language</td>
-<td>PEEK, POKE, WPEEK, WPOKE, SETBIT, CLRBIT, HASBIT, BANK, MEM, EDMA,
-DMA, SYS, RREG, USR, FRE, BLOAD, BSAVE, BVERIFY, BOOT, MONITOR</td>
-</tr>
-<tr class="even">
-<td>Disk and files</td>
-<td>DIR, DIRECTORY, CATALOG, DLOAD, DSAVE, DVERIFY, LOAD, SAVE, VERIFY,
-RUN, OPEN, CLOSE, DOPEN, DCLOSE, APPEND, PRINT#, INPUT#, LINE INPUT#,
-GET#, RECORD, FREAD#, FWRITE#, COPY, CONCAT, RENAME, SCRATCH, ERASE,
-LOCK, UNLOCK, BACKUP, COLLECT, FORMAT, HEADER, DCLEAR, DISK, MKDIR,
-CHDIR, MOUNT, TYPE, SET, DS, <code>DS$</code>, ST, RDISK</td>
-</tr>
-<tr class="odd">
-<td>Colour</td>
-<td>COLOR, FOREGROUND, BACKGROUND, BORDER, PALETTE, RCOLOR,
-RPALETTE</td>
-</tr>
-<tr class="even">
-<td>Bitmap graphics</td>
-<td>GRAPHIC, SCREEN, PEN, RPEN, DMODE, DPAT, DOT, LINE, BOX, CIRCLE,
-ELLIPSE, POLYGON, PAINT, CHAR, CUT, GCOPY, PASTE, PIXEL, VIEWPORT,
-RGRAPHIC, LOADIFF, SAVEIFF</td>
-</tr>
-<tr class="odd">
-<td>Sprites</td>
-<td>SPRITE, MOVSPR, SPRCOLOR, SPRSAV, COLLISION, BUMP, RSPRITE, RSPPOS,
-RSPCOLOR, RSPRSYS</td>
-</tr>
-<tr class="even">
-<td>Sound</td>
-<td>SOUND, PLAY, TEMPO, ENVELOPE, FILTER, VOL, RPLAY</td>
-</tr>
-<tr class="odd">
-<td>Controllers</td>
-<td>JOY, POT, LPEN, MOUSE, RMOUSE</td>
-</tr>
-<tr class="even">
-<td>System</td>
-<td>FAST, SPEED, RSPEED, GO64, FREEZER, INFO, <code>DT$</code>, TI,
-<code>TI$</code>, T@&amp;, C@&amp;, OFF</td>
+<td>String</td>
+<td><code>"X"</code>, <code>"TEXT"</code></td>
 </tr>
 </tbody>
 </table>
-<h2 id="special-keywords-and-symbols">Special Keywords and Symbols</h2>
-<p>Some of BASIC 65's most useful features are not words at all, so they
-never appear in an alphabetical list. They are gathered here.</p>
-<h3 id="number-prefixes">Number prefixes</h3>
+<p>The number after <code>E</code> is a power of ten, and says how many
+places to move the decimal point: <code>1.5E03</code> is 1500 and
+<code>7.7E-02</code> is 0.077. The symbol <code>π</code> is also a
+numeric literal, standing for pi: <code>STR$(π)</code> returns the digits
+<code>3.1415927</code> (MEGA65 Book, p. B-254).</p>
+<h4 id="number-prefixes">Number prefixes</h4>
 <table>
 <thead>
 <tr class="header">
@@ -231,7 +168,40 @@ never appear in an alphabetical list. They are gathered here.</p>
 <code>PRINT $C000</code> prints 49152. The functions <code>HEX$</code>,
 <code>DEC</code>, <code>STRBIN$</code> and <code>DECBIN</code> convert
 between these forms and strings at run time.</p>
-<h3 id="type-suffixes">Type suffixes</h3>
+<h4 id="string-literals">String literals</h4>
+<p>A string literal is text between double quotes. The quotes mark where
+it begins and ends and are not part of it, so <code>"HELLO"</code> has
+five characters. A string can hold from 0 to 255 characters (MEGA65
+Book, p. B-7). It cannot contain a double quote; use
+<code>CHR$(34)</code> to add one in an expression, as in
+<code>PRINT CHR$(34); "HI"; CHR$(34)</code>.</p>
+<p>Typing the opening quote also puts the screen editor into quote
+mode, in which cursor movements, colour changes and other control keys
+are stored in the string as characters instead of acting straight away.
+Chapter 2 describes quote mode.</p>
+<h3 id="variables">Variables</h3>
+<p>A variable is a named value that a program can change as it runs.
+Variables need no declaration. A numeric variable reads as 0 and a
+string variable as the empty string <code>""</code> until a value is
+assigned to it (MEGA65 Book, pp. B-6, B-7):</p>
+<pre><code>X = 1 : PRINT X : X = X + 1 : PRINT X</code></pre>
+<p>A variable name follows these rules (MEGA65 Book, p. B-6):</p>
+<ul>
+<li>It starts with a letter, and any further characters are letters or
+digits.</li>
+<li>It can be any length, but only the first two characters count:
+<code>COUNT</code> and <code>CO</code> are the same variable. (The
+Book's own example, <code>SPEED</code> and <code>SP</code>, doesn't work
+in BASIC 65, because SPEED is a keyword.)</li>
+<li>A type symbol may follow: <code>%</code>, <code>&amp;</code> or
+<code>$</code>. Each type has its own set of names, so <code>AB</code>,
+<code>AB%</code>, <code>AB&amp;</code> and <code>AB$</code> are four
+different variables.</li>
+<li>A parenthesis after the name makes it an array element, as in
+<code>AB(3)</code>.</li>
+<li>It cannot contain a keyword, as the next sections explain.</li>
+</ul>
+<h4 id="type-suffixes">Type suffixes</h4>
 <p>A variable's type is set by the symbol after its name (MEGA65 Book,
 p. B-7):</p>
 <table>
@@ -275,7 +245,31 @@ after a name: <code>%101</code> is a binary constant, while
 <code>A%</code> is an integer variable. A single letter followed by its
 type symbol, such as <code>A</code>, <code>B%</code> or <code>C$</code>,
 is a fast variable: BASIC 65 finds it without searching.</p>
-<h3 id="screen-arrays">Screen arrays</h3>
+<h4 id="keywords-in-variable-names">Keywords in variable names</h4>
+<p>BASIC 65 recognises keywords anywhere in a line, even inside what was
+meant as a variable name. A variable called <code>SCORE</code> contains
+the keyword <code>OR</code>, and <code>TOTAL</code> contains
+<code>TO</code>; both cause syntax errors. Short variable names avoid
+the problem, and Chapter 6 explains why one-letter names are also the
+fastest.</p>
+<h4 id="arrays">Arrays</h4>
+<p>An array holds many values of one type under one name. Each value,
+or element, is picked out by an index in parentheses: <code>A(7)</code>,
+<code>NA$(I)</code>, <code>BO$(1, 2)</code>. Indexes start at 0 and can
+be any numeric expression, which lets a loop work through every element
+in turn (MEGA65 Book, p. B-7):</p>
+<pre><code>10 DIM NA$(2)
+20 NA$(0) = &quot;DEFT&quot; : NA$(1) = &quot;GARDNERS&quot; : NA$(2) = &quot;LYDON&quot;
+30 FOR I = 0 TO 2 : PRINT &quot;HELLO, &quot;; NA$(I); &quot;!&quot; : NEXT I</code></pre>
+<p>DIM sets the highest index in each dimension before the array is
+first used. An array used without DIM gets one dimension with indexes 0
+to 10. Either way, the array's size is then fixed: DIM can't change it,
+and only CLR, which clears every variable, removes it. Array names are
+separate from other variable names, so the array <code>A()</code> and
+the variable <code>A</code> are unrelated. BASIC 65 sets aside memory
+for every element at once, so a large array can use up memory quickly
+(MEGA65 Book, pp. B-7, B-8).</p>
+<h4 id="screen-arrays">Screen arrays</h4>
 <table>
 <thead>
 <tr class="header">
@@ -302,7 +296,7 @@ and its colour memory. Reading one tells a program what is on the
 screen; assigning to one changes it, with no PEEK, POKE or address
 arithmetic: <code>T@&amp;(10,5)=1 : C@&amp;(10,5)=2</code> puts a red A
 at column 10, row 5.</p>
-<h3 id="reserved-variables">Reserved variables</h3>
+<h4 id="reserved-variables">Reserved variables</h4>
 <table>
 <thead>
 <tr class="header">
@@ -334,1261 +328,9 @@ at column 10, row 5.</p>
 </tbody>
 </table>
 <p>These names cannot be used for ordinary variables, and their values
-are set by BASIC. Each is described in the alphabetical list below.</p>
-<h3 id="shortcuts-and-symbols">Shortcuts and symbols</h3>
-<table>
-<thead>
-<tr class="header">
-<th>Symbol</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td><code>?</code></td>
-<td>Abbreviation for PRINT; <code>? N</code> is the same as
-<code>PRINT N</code>, and LIST shows it as PRINT (MEGA65 Book, p.
-9-13)</td>
-</tr>
-<tr class="even">
-<td><code>#</code></td>
-<td>Marks a channel number, as in <code>PRINT#</code>,
-<code>INPUT#</code>, <code>GET#</code> and <code>DOPEN#</code></td>
-</tr>
-<tr class="odd">
-<td><code>↑</code></td>
-<td>The power operator in expressions; at the start of a line, load
-and run the file named after it</td>
-</tr>
-<tr class="even">
-<td><code>←</code></td>
-<td>At the start of a line, SAVE the program under the file name after
-it</td>
-</tr>
-<tr class="odd">
-<td><code>/</code></td>
-<td>At the start of a line, LOAD the file named after it</td>
-</tr>
-<tr class="even">
-<td><code>@</code></td>
-<td>At the start of a line, DISK: send a command to the drive</td>
-</tr>
-<tr class="odd">
-<td><code>$</code></td>
-<td>At the start of a line, DIR</td>
-</tr>
-</tbody>
-</table>
-<p>The last five shortcuts are meant for use with a directory listing:
-type <code>$</code> to list the disk, move the cursor to a program's
-line, type <code>↑</code> over the start of it and press RETURN, and the
-program loads and runs. Everything except the quoted file name on the
-line is ignored (MEGA65 Book, p. 6-13). They can also be typed by hand,
-as in <code>↑"GAME"</code>. A file name is needed: <code>↑</code> on
-its own is not a short form of RUN for the program already in memory,
-and gives <code>?MISSING FILE NAME ERROR</code>.</p>
-<h2 id="program-flow">Program Flow</h2>
-<h3 id="do-loop-while-until-exit">DO, LOOP, WHILE, UNTIL, EXIT</h3>
-<p>Tokens <code>$EB</code>, <code>$EC</code>, <code>$FD</code>,
-<code>$FC</code>, <code>$ED</code> · Book pp. B-78, B-162, B-282, B-272,
-B-104</p>
-<p>DO and LOOP enclose a block of statements that repeats. A WHILE or
-UNTIL condition can go after DO, tested before each pass, or after LOOP,
-tested after each pass; without one, the loop runs until EXIT leaves
-it.</p>
-<p>Format:
-<code>DO [&lt;UNTIL / WHILE&gt; condition] ... [EXIT] ... LOOP [&lt;UNTIL / WHILE&gt; condition]</code></p>
-<pre><code>10 PW$ = &quot;&quot; : DO
-20 GET A$ : PW$ = PW$ + A$
-30 LOOP UNTIL LEN(PW$) &gt; 7 OR A$ = CHR$(13)</code></pre>
-<h3 id="for-to-step-next">FOR, TO, STEP, NEXT</h3>
-<p>Tokens <code>$81</code>, <code>$A4</code>, <code>$A9</code>,
-<code>$82</code> · Book pp. B-114, B-266, B-252, B-178</p>
-<p>FOR starts a counted loop and NEXT ends it. The index runs from the
-start value to the end value, changing by STEP each time, or by 1 if
-STEP is omitted. TO is also used by many other commands, such as COPY
-and RENAME.</p>
-<p>Format:
-<code>FOR index = start TO end [STEP step] ... NEXT [index]</code></p>
-<pre><code>10 FOR D = 0 TO 360 STEP 30
-20 R = D * π / 180
-30 PRINT D; R; SIN(R)
-40 NEXT D</code></pre>
-<h3 id="if-then-else">IF, THEN, ELSE</h3>
-<p>Tokens <code>$8B</code>, <code>$A7</code>, <code>$D5</code> · Book
-pp. B-134, B-263, B-96</p>
-<p>IF tests a condition. When it is true, the statements after THEN run;
-otherwise the statements after ELSE run, if there is an ELSE. A line
-number after THEN acts as a GOTO.</p>
-<p>Format:
-<code>IF expression THEN statements [: ELSE statements]</code>. A colon
-must come before ELSE.</p>
-<pre><code>10 INPUT &quot;ENTER A NUMBER&quot;; V
-20 IF V &lt; 0 THEN PRINT &quot;NEGATIVE&quot; : ELSE PRINT &quot;NOT NEGATIVE&quot;</code></pre>
-<h3 id="begin-bend">BEGIN, BEND</h3>
-<p>Tokens <code>$FE $18</code>, <code>$FE $19</code> · Book pp. B-27,
-B-28</p>
-<p>BEGIN and BEND bracket a block of statements, over several lines if
-needed, that runs as the THEN or ELSE part of an IF. They lift the old
-limit of one line per condition.</p>
-<p>Format:
-<code>IF condition THEN BEGIN ... BEND [ELSE BEGIN ... BEND]</code></p>
-<pre><code>10 GET A$
-20 IF A$ &gt;= &quot;A&quot; AND A$ &lt;= &quot;Z&quot; THEN BEGIN
-30 PW$ = PW$ + A$
-40 PRINT A$;
-50 BEND
-60 IF LEN(PW$) &lt; 8 THEN 10</code></pre>
-<h3 id="goto">GOTO</h3>
-<p>Token <code>$89</code>, or <code>$CB $A4</code> as GO TO · Book p.
-B-127</p>
-<p>Continues the program at the given line number.</p>
-<p>Format: <code>GOTO line</code> or <code>GO TO line</code></p>
-<pre><code>10 PRINT &quot;HELLO &quot;; : GOTO 10</code></pre>
-<h3 id="gosub-return">GOSUB, RETURN</h3>
-<p>Tokens <code>$8D</code>, <code>$8E</code> · Book pp. B-126, B-214</p>
-<p>GOSUB calls a subroutine at a line number; RETURN goes back to the
-statement after the GOSUB. RETURN also ends a COLLISION handler.</p>
-<p>Format: <code>GOSUB line</code> ... <code>RETURN</code></p>
-<pre><code>10 FOR I = 1 TO 3 : GOSUB 100 : NEXT
-20 END
-100 PRINT &quot;CALL NUMBER&quot;; I : RETURN</code></pre>
-<h3 id="fgoto-fgosub">FGOTO, FGOSUB</h3>
-<p>Tokens <code>$FE $47</code>, <code>$FE $48</code> · Book pp. B-108,
-B-107</p>
-<p>Like GOTO and GOSUB, but the line number is calculated from an
-expression when the statement runs.</p>
-<p>Format: <code>FGOTO expression</code> /
-<code>FGOSUB expression</code></p>
-<pre><code>10 INPUT &quot;WHICH SUBROUTINE: 100, 200 OR 300&quot;; LI
-20 FGOSUB LI</code></pre>
-<h3 id="on">ON</h3>
-<p>Token <code>$91</code> · Book p. B-181</p>
-<p>Jumps to, or calls, one of a list of lines chosen by the value of an
-expression: 1 selects the first line, 2 the second, and so on. ON is
-also the secondary keyword in KEY ON and MOUSE ON.</p>
-<p>Format: <code>ON expression GOTO line [, line ...]</code> or
-<code>ON expression GOSUB line [, line ...]</code></p>
-<pre><code>10 ON SGN(X) + 2 GOTO 100, 200, 300 : REM NEGATIVE, ZERO, POSITIVE</code></pre>
-<h3 id="end">END</h3>
-<p>Token <code>$80</code> · Book p. B-98</p>
-<p>Ends the program and returns to the READY prompt.</p>
-<p>Format: <code>END</code></p>
-<pre><code>10 IF V &lt; 0 THEN END
-20 PRINT V</code></pre>
-<h3 id="stop">STOP</h3>
-<p>Token <code>$90</code> · Book p. B-253</p>
-<p>Stops the program with a BREAK message naming the line, so it can be
-resumed with CONT.</p>
-<p>Format: <code>STOP</code></p>
-<pre><code>10 IF V &lt; 0 THEN STOP
-20 PRINT SQR(V)</code></pre>
-<h3 id="cont">CONT</h3>
-<p>Token <code>$9A</code> · Book p. B-58</p>
-<p>Resumes a program stopped by STOP, END or the RUN/STOP key, provided
-the program has not been edited in between.</p>
-<p>Format: <code>CONT</code></p>
-<pre><code>CONT</code></pre>
-<h3 id="sleep">SLEEP</h3>
-<p>Token <code>$FE $0B</code> · Book p. B-242</p>
-<p>Pauses for a number of seconds, which may be a fraction.</p>
-<p>Format: <code>SLEEP seconds</code></p>
-<pre><code>SLEEP 0.5 : REM WAIT HALF A SECOND</code></pre>
-<h3 id="wait">WAIT</h3>
-<p>Token <code>$92</code> · Book p. B-281</p>
-<p>Pauses until a memory location shows a given bit pattern: the value
-read is XORed with the optional third value, then ANDed with the mask,
-and the wait ends when the result is not zero.</p>
-<p>Format: <code>WAIT address, andmask [, xormask]</code></p>
-<pre><code>10 BANK 128
-20 WAIT $D611, 1 : REM WAIT FOR THE LEFT SHIFT KEY</code></pre>
-<h3 id="vsync">VSYNC</h3>
-<p>Token <code>$FE $54</code> · Book p. B-280</p>
-<p>Waits until the video display reaches a raster line: 0-311 on PAL,
-0-261 on NTSC. Useful for changing colours or graphics at a fixed point
-in the frame.</p>
-<p>Format: <code>VSYNC raster line</code></p>
-<pre><code>10 BORDER 3 : VSYNC 100
-20 BORDER 7 : VSYNC 260
-30 GOTO 10</code></pre>
-<h2 id="error-handling-and-debugging">Error Handling and Debugging</h2>
-<h3 id="trap">TRAP</h3>
-<p>Token <code>$D7</code> · Book p. B-267</p>
-<p>Sends any BASIC error to a handler at the given line instead of
-stopping the program. TRAP with no line turns the handler off.</p>
-<p>Format: <code>TRAP [line]</code></p>
-<pre><code>10 TRAP 100
-20 FOR I = 1 TO 100 : PRINT EXP(I) : NEXT
-30 END
-100 PRINT ERR$(ER) : RESUME 30</code></pre>
-<h3 id="resume">RESUME</h3>
-<p>Token <code>$D6</code> · Book p. B-213</p>
-<p>Ends a TRAP handler: RESUME retries the failing statement, RESUME
-NEXT continues after it, and RESUME with a line number continues
-there.</p>
-<p>Format: <code>RESUME [line / NEXT]</code></p>
-<pre><code>100 PRINT &quot;ERROR&quot;; ER; &quot;IN LINE&quot;; EL : RESUME NEXT</code></pre>
-<h3 id="er-el">ER, EL</h3>
-<p>Reserved variables, no token · Book pp. B-100, B-93</p>
-<p>ER holds the number of the most recent error and EL the line where it
-happened; both are -1 if there has been no error.</p>
-<p>Format: <code>ER</code>, <code>EL</code></p>
-<pre><code>100 PRINT &quot;ERROR&quot;; ER; &quot;AT LINE&quot;; EL</code></pre>
-<h3 id="err">ERR$</h3>
-<p>Token <code>$D3</code> · Book p. B-103</p>
-<p>Returns the text of an error message from its number, 1 to 44.</p>
-<p>Format: <code>ERR$(number)</code></p>
-<pre><code>100 PRINT ERR$(ER); &quot; ERROR IN&quot;; EL</code></pre>
-<h3 id="help">HELP</h3>
-<p>Token <code>$EA</code> · Book p. B-131</p>
-<p>After a program stops with an error, lists the line where it happened
-with the failing statement highlighted.</p>
-<p>Format: <code>HELP</code></p>
-<pre><code>HELP</code></pre>
-<h3 id="tron-troff">TRON, TROFF</h3>
-<p>Tokens <code>$D8</code>, <code>$D9</code> · Book pp. B-269, B-268</p>
-<p>TRON turns on trace mode, in which each line number is printed as it
-runs; TROFF turns it off.</p>
-<p>Format: <code>TRON</code> / <code>TROFF</code></p>
-<pre><code>10 TRON
-20 FOR I = 80 TO 88 : PRINT I; EXP(I) : NEXT
-30 TROFF</code></pre>
-<h2 id="program-editing">Program Editing</h2>
-<h3 id="auto">AUTO</h3>
-<p>Token <code>$DC</code> · Book p. B-23</p>
-<p>Turns automatic line numbering on while a program is typed in: after
-each line is entered, the next line number appears. AUTO with no step
-turns it off.</p>
-<p>Format: <code>AUTO [step]</code></p>
-<pre><code>AUTO 10 : REM NUMBER NEW LINES IN STEPS OF 10</code></pre>
-<h3 id="renumber">RENUMBER</h3>
-<p>Token <code>$F8</code> · Book p. B-210</p>
-<p>Renumbers program lines and updates every GOTO, GOSUB and other line
-reference to match. The arguments give the new first number, the
-increment and the range of lines to renumber.</p>
-<p>Format: <code>RENUMBER [C] [{new, inc, range}]</code></p>
-<p>With <code>C</code> (“crunch”), RENUMBER also removes the spaces
-around the line numbers it rewrites, so <code>GOTO 100</code> becomes
-<code>GOTO100</code>. This saves memory but can't be undone. ROM 920404
-added the <code>C</code> flag, and ROM 920405 removed the older
-<code>RENUMBER100</code> form (no space) that did the same thing,
-because it was too easy to trigger by accident (<a
-href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">ROM
-changelog</a>).</p>
-<pre><code>RENUMBER 100, 10 : REM START AT 100, STEPS OF 10
-RENUMBER C 100   : REM THE SAME, AND REMOVE SPACES AROUND LINE NUMBERS</code></pre>
-<h3 id="delete">DELETE</h3>
-<p>Token <code>$F7</code> · Book p. B-69</p>
-<p>Deletes a range of program lines. Given a file name, it deletes files
-on disk instead.</p>
-<p>Format: <code>DELETE [line range]</code> or
-<code>DELETE filename [,D drive] [,U unit] [,R]</code></p>
-<pre><code>DELETE 240-350 : REM DELETE LINES 240 TO 350</code></pre>
-<h3 id="list">LIST</h3>
-<p>Token <code>$9B</code> · Book p. B-153</p>
-<p>Lists all or part of the program in memory, or a program file on disk
-without loading it. P pauses after each screenful.</p>
-<p>Format: <code>LIST [P] [line range]</code> or
-<code>LIST [P] filename [,U unit]</code></p>
-<pre><code>LIST 500- : REM LIST FROM LINE 500 TO THE END</code></pre>
-<h3 id="find">FIND</h3>
-<p>Token <code>$FE $2B</code> · Book p. B-110</p>
-<p>Lists every line of the program that contains a string.</p>
-<p>Format: <code>FIND "string" [, line range]</code></p>
-<pre><code>FIND &quot;HS&quot;
-FIND /PRINT/</code></pre>
-<p>With quotes, FIND searches plain text, which finds variable names but
-not keywords, because a keyword is stored as a token; another delimiter,
-as in the second line, finds the keyword (MEGA65 Book, FIND).</p>
-<h3 id="change">CHANGE</h3>
-<p>Token <code>$FE $2C</code> · Book p. B-42</p>
-<p>Finds each occurrence of one string, throughout the program or
-within a range of lines, lists the line and asks whether to replace it:
-Y replaces it, * replaces this and every later match, RETURN stops, and
-any other key skips it.</p>
-<p>Format: <code>CHANGE "find" TO "replace" [, line range]</code></p>
-<pre><code>CHANGE &quot;XX$&quot; TO &quot;UU$&quot;, 2000-2700</code></pre>
-<h3 id="new">NEW</h3>
-<p>Token <code>$A2</code> · Book p. B-177</p>
-<p>Erases the program in memory and resets BASIC.
-<code>NEW RESTORE</code> tries to recover a program erased by
-mistake.</p>
-<p>Format: <code>NEW</code></p>
-<pre><code>NEW</code></pre>
-<h3 id="key">KEY</h3>
-<p>Token <code>$F9</code> · Book p. B-145</p>
-<p>Manages the function key macros: KEY alone lists them, KEY with a
-number and string assigns one, and KEY ON and KEY OFF enable or disable
-them.</p>
-<p>Format: <code>KEY</code> / <code>KEY number, string</code> /
-<code>KEY &lt;ON / OFF&gt;</code></p>
-<pre><code>KEY 2, &quot;PRINT π&quot; + CHR$(13) : REM F2 PRINTS PI</code></pre>
-<h3 id="edit">EDIT</h3>
-<p>Tokens <code>$FE $45</code>, with <code>$91</code> (ON) or
-<code>$FE $24</code> (OFF) · Book p. B-89</p>
-<p>EDIT ON switches the editor to text mode, in which numbered lines are
-stored as plain text instead of being tokenised as BASIC, for writing
-data or text files; EDIT OFF returns to BASIC.</p>
-<p>Format: <code>EDIT &lt;ON / OFF&gt;</code></p>
-<pre><code>EDIT ON</code></pre>
-<h3 id="highlight">HIGHLIGHT</h3>
-<p>Token <code>$FE $3D</code> · Book p. B-133</p>
-<p>Sets the colours used by the editor's highlighting, such as for
-system messages, REM statements and keywords in listings.</p>
-<p>Format: <code>HIGHLIGHT colour [, mode]</code></p>
-<pre><code>HIGHLIGHT 7, 1</code></pre>
-<h3 id="merge">MERGE</h3>
-<p>Token <code>$E6</code> · Book p. B-166</p>
-<p>Loads a program from disk and adds its lines to the program in
-memory.</p>
-<p>Format: <code>MERGE filename [,D drive] [,U unit]</code></p>
-<pre><code>DLOAD &quot;MAIN PROGRAM&quot;
-MERGE &quot;LIBRARY&quot;</code></pre>
-<h3 id="import">IMPORT</h3>
-<p>Token <code>$DD</code> · Book p. B-136</p>
-<p>Loads a BASIC program written as plain text in a SEQ file, tokenising
-it as it loads; useful for programs written on another computer.</p>
-<p>Format: <code>IMPORT filename [,D drive] [,U unit]</code></p>
-<pre><code>IMPORT &quot;MEGA TOOLS&quot;, U9</code></pre>
-<h2 id="variables-and-data">Variables and Data</h2>
-<h3 id="let">LET</h3>
-<p>Token <code>$88</code> · Book p. B-149</p>
-<p>Assigns a value to a variable. The word LET is optional and only
-makes the line longer and slower.</p>
-<p>Format: <code>[LET] variable = expression</code></p>
-<pre><code>LET A = 5 : B = 6</code></pre>
-<h3 id="dim">DIM</h3>
-<p>Token <code>$86</code> · Book p. B-70</p>
-<p>Declares an array and its upper bounds; each dimension counts from 0,
-so <code>DIM A%(8)</code> has nine elements. Arrays used without DIM
-default to 11 elements.</p>
-<p>Format: <code>DIM name(limits) [, name(limits) ...]</code></p>
-<pre><code>10 DIM A%(8), XX(2, 3)</code></pre>
-<h3 id="clr">CLR</h3>
-<p>Token <code>$9C</code> · Book p. B-51</p>
-<p>Clears all variables and arrays; <code>CLR variable</code> resets
-just one, and <code>CLR TI</code> restarts the timer.</p>
-<p>Format: <code>CLR</code> or <code>CLR variable</code></p>
-<pre><code>10 A = 5 : CLR : PRINT A : REM PRINTS 0</code></pre>
-<h3 id="data-read-restore">DATA, READ, RESTORE</h3>
-<p>Tokens <code>$83</code>, <code>$87</code>, <code>$8C</code> · Book
-pp. B-63, B-205, B-212</p>
-<p>DATA lines hold constants, READ copies them into variables in order,
-and RESTORE moves the reading position back to the first DATA line or to
-a given line.</p>
-<p>Format: <code>DATA constant [, constant ...]</code> /
-<code>READ variable [, variable ...]</code> /
-<code>RESTORE [line]</code></p>
-<pre><code>10 DATA 3, 1, 4, 1, 5, &quot;MEGA65&quot;
-20 FOR I = 1 TO 5 : READ P : PRINT P : NEXT
-30 READ N$ : PRINT N$
-40 RESTORE</code></pre>
-<h3 id="def-fn-fn">DEF FN, FN</h3>
-<p>Tokens <code>$96 $A5</code>, <code>$A5</code> · Book pp. B-68,
-B-112</p>
-<p>DEF FN defines a one-line function of one numeric argument; FN calls
-it.</p>
-<p>Format: <code>DEF FN name(variable) = expression</code> /
-<code>FN name(expression)</code></p>
-<pre><code>10 DEF FN SD(X) = SIN(X * π / 180) : REM SINE IN DEGREES
-20 PRINT FN SD(30)</code></pre>
-<h3 id="pointer">POINTER</h3>
-<p>Token <code>$CE $0A</code> · Book p. B-193</p>
-<p>Returns the 32-bit address of a variable's value or an array element.
-For a string, it is the address of its descriptor. Chapter 6 shows how
-to use it.</p>
-<p>Format: <code>POINTER(variable)</code></p>
-<pre><code>10 BANK 0
-20 H$ = &quot;HELLO&quot; : P = POINTER(H$)
-30 PRINT &quot;DESCRIPTOR AT $&quot;; HEX$(P)</code></pre>
-<h3 id="rem">REM</h3>
-<p>Token <code>$8F</code> · Book p. B-208</p>
-<p>Starts a comment: BASIC ignores the rest of the line.</p>
-<p>Format: <code>REM text</code></p>
-<pre><code>20 N = 1000 : REM NUMBER OF ITEMS</code></pre>
-<h2 id="keyboard-and-screen-input">Keyboard and Screen Input</h2>
-<h3 id="input">INPUT</h3>
-<p>Token <code>$85</code> · Book p. B-138</p>
-<p>Prints an optional prompt, followed by a question mark if the prompt
-ends with a semicolon (a comma leaves it out), then waits for the user
-to type values for one or more variables and press RETURN.</p>
-<p>Format:
-<code>INPUT [prompt &lt;, / ;&gt;] variable [, variable ...]</code></p>
-<pre><code>10 INPUT &quot;NAME, AGE&quot;; NA$, AG%</code></pre>
-<h3 id="line-input">LINE INPUT</h3>
-<p>Token <code>$E5 $85</code> · Book p. B-151</p>
-<p>Reads a whole line of typing into a string variable, including commas
-and quotation marks that INPUT would treat as separators.</p>
-<p>Format:
-<code>LINE INPUT [prompt &lt;, / ;&gt;] stringvar [, stringvar ...]</code></p>
-<pre><code>10 LINE INPUT &quot;ENTER A PHRASE: &quot;, PH$</code></pre>
-<h3 id="get">GET</h3>
-<p>Token <code>$A1</code> · Book p. B-122</p>
-<p>Takes the next key from the keyboard queue without waiting; a string
-variable receives an empty string if no key is waiting.</p>
-<p>Format: <code>GET variable</code></p>
-<pre><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
-<h3 id="getkey">GETKEY</h3>
-<p>Token <code>$A1 $F9</code> · Book p. B-124</p>
-<p>Like GET, but waits until a key is pressed.</p>
-<p>Format: <code>GETKEY variable</code></p>
-<pre><code>10 GETKEY A$
-20 IF A$ = &quot;W&quot; THEN PRINT &quot;NORTH&quot;</code></pre>
-<h2 id="text-output">Text Output</h2>
-<h3 id="print">PRINT</h3>
-<p>Token <code>$99</code> · Book p. B-198</p>
-<p>Prints values to the screen or the current output channel. A
-semicolon joins items directly, a comma moves to the next tab column,
-and a trailing semicolon suppresses the new line. <code>?</code> is an
-abbreviation.</p>
-<p>Format: <code>PRINT arguments</code></p>
-<pre><code>10 FOR I = 1 TO 10 : PRINT I, I * I, SQR(I) : NEXT</code></pre>
-<h3 id="print-using-using">PRINT USING, USING</h3>
-<p>Tokens <code>$99 $FB</code> (or <code>$98 $FB</code> with
-<code>#</code>), <code>$FB</code> · Book pp. B-200, B-273</p>
-<p>Prints values laid out by a format string, in which <code>#</code>
-marks a digit position and <code>.</code> the decimal point, so columns
-of figures line up.</p>
-<p>Format: <code>PRINT[# channel,] USING format; argument</code></p>
-<pre><code>10 PRINT USING &quot;####.##&quot;; 3.14159</code></pre>
-<h3 id="spc-tab">SPC, TAB</h3>
-<p>Tokens <code>$A6</code>, <code>$A3</code> · Book pp. B-244, B-260</p>
-<p>Used inside PRINT: SPC moves the cursor right by a number of columns,
-and TAB moves it to a given column if it is not already past it.</p>
-<p>Format: <code>SPC(columns)</code> / <code>TAB(column)</code></p>
-<pre><code>10 PRINT &quot;NAME&quot;; TAB(20); &quot;SCORE&quot;
-20 PRINT SPC(5); &quot;INDENTED&quot;</code></pre>
-<h3 id="pos">POS</h3>
-<p>Token <code>$B9</code> · Book p. B-196</p>
-<p>Returns the cursor's column within the current window. The argument
-is ignored.</p>
-<p>Format: <code>POS(dummy)</code></p>
-<pre><code>10 IF POS(0) &gt; 72 THEN PRINT</code></pre>
-<h3 id="cmd">CMD</h3>
-<p>Token <code>$9D</code> · Book p. B-53</p>
-<p>Redirects all screen output, including LIST, to an open channel such
-as a printer, until PRINT# to that channel restores it.</p>
-<p>Format: <code>CMD channel [, string]</code></p>
-<pre><code>OPEN 1, 4 : CMD 1 : LIST
-PRINT#1 : CLOSE 1</code></pre>
-<h3 id="cursor-rcursor">CURSOR, RCURSOR</h3>
-<p>Tokens <code>$FE $41</code>, <code>$FE $42</code> · Book pp. B-61,
-B-203</p>
-<p>CURSOR moves the text cursor, and can also show, hide or restyle it.
-RCURSOR reads its position into two variables.</p>
-<p>Format: <code>CURSOR [&lt;ON / OFF&gt;,] column, row [, style]</code>
-/ <code>RCURSOR colvar, rowvar</code></p>
-<pre><code>10 CURSOR ON, 20, 10 : PRINT &quot;[HERE]&quot;;
-20 RCURSOR X, Y : PRINT &quot; COL:&quot;; X; &quot; ROW:&quot;; Y</code></pre>
-<h3 id="window-rwindow">WINDOW, RWINDOW</h3>
-<p>Tokens <code>$FE $1A</code>, <code>$CE $09</code> · Book pp. B-283,
-B-230</p>
-<p>WINDOW confines text output to a rectangle of the screen, optionally
-clearing it. RWINDOW reads a property of the current window or screen,
-such as its width.</p>
-<p>Format: <code>WINDOW left, top, right, bottom [, clear]</code> /
-<code>RWINDOW(n)</code></p>
-<pre><code>10 WINDOW 0, 12, 79, 24, 1 : REM LOWER HALF, CLEARED
-20 PRINT RWINDOW(2) : REM SCREEN WIDTH</code></pre>
-<h3 id="scnclr">SCNCLR</h3>
-<p>Token <code>$E8</code> · Book p. B-233</p>
-<p>Without an argument, clears the current text window; with a colour,
-fills the graphics screen with that colour.</p>
-<p>Format: <code>SCNCLR [colour]</code></p>
-<pre><code>SCNCLR</code></pre>
-<h3 id="font">FONT</h3>
-<p>Token <code>$FE $46</code> · Book p. B-113</p>
-<p>Switches the character set: FONT A is PETSCII with extra ASCII
-symbols such as <code>{</code>, <code>|</code> and <code>_</code>, FONT
-B is similar with a serif font, and FONT C restores the standard
-Commodore font.</p>
-<p>Format: <code>FONT &lt;A / B / C&gt;</code></p>
-<pre><code>FONT A</code></pre>
-<h3 id="chardef">CHARDEF</h3>
-<p>Token <code>$E0 $96</code> · Book p. B-45</p>
-<p>Redefines the 8 × 8 pattern of a character, given its screen code and
-eight bytes, one per row.</p>
-<p>Format: <code>CHARDEF index, bit-matrix</code></p>
-<pre><code>CHARDEF 1, $FF, $81, $81, $81, $81, $81, $81, $FF : REM &#39;A&#39; BECOMES A BOX</code></pre>
-<h2 id="strings">Strings</h2>
-<h3 id="asc-chr">ASC, <code>CHR$</code></h3>
-<p>Tokens <code>$C6</code>, <code>$C7</code> · Book pp. B-21, B-47</p>
-<p>ASC returns the PETSCII code of a string's first character;
-<code>CHR$</code> returns a one-character string from a code.
-<code>CHR$</code> is the usual way to put quotation marks and control
-codes in strings.</p>
-<p>Format: <code>ASC(string)</code> / <code>CHR$(code)</code></p>
-<pre><code>10 PRINT ASC(&quot;MEGA&quot;) : REM 77
-20 PRINT CHR$(34); &quot;MEGA65&quot;; CHR$(34) : REM &quot;MEGA65&quot; IN QUOTES</code></pre>
-<h3 id="left-mid-right"><code>LEFT$</code>, <code>MID$</code>,
-<code>RIGHT$</code></h3>
-<p>Tokens <code>$C8</code>, <code>$CA</code>, <code>$C9</code> · Book
-pp. B-147, B-167, B-216</p>
-<p>Return the first n characters, n characters from a position, or the
-last n characters of a string. <code>MID$</code> can also appear on the
-left of an equals sign to replace part of a string variable.</p>
-<p>Format: <code>LEFT$(string, n)</code> /
-<code>MID$(string, index, n)</code> / <code>RIGHT$(string, n)</code></p>
-<pre><code>10 A$ = &quot;MEGA65&quot;
-20 PRINT LEFT$(A$, 4); &quot; &quot;; MID$(A$, 3, 2); &quot; &quot;; RIGHT$(A$, 2)
-30 MID$(A$, 4, 1) = &quot;@&quot; : PRINT A$ : REM MEG@65</code></pre>
-<h3 id="len">LEN</h3>
-<p>Token <code>$C3</code> · Book p. B-148</p>
-<p>Returns the number of characters in a string.</p>
-<p>Format: <code>LEN(string)</code></p>
-<pre><code>PRINT LEN(&quot;MEGA65&quot;) : REM 6</code></pre>
-<h3 id="instr">INSTR</h3>
-<p>Token <code>$D4</code> · Book p. B-141</p>
-<p>Returns the position of one string inside another, or 0 if it is not
-there. An optional third argument gives the position to start searching
-from.</p>
-<p>Format: <code>INSTR(haystack, needle [, start])</code></p>
-<pre><code>I = INSTR(&quot;ABCDEF&quot;, &quot;CD&quot;) : REM I = 3</code></pre>
-<h3 id="str-val"><code>STR$</code>, VAL</h3>
-<p>Tokens <code>$C4</code>, <code>$C5</code> · Book pp. B-254, B-276</p>
-<p><code>STR$</code> converts a number to a string as PRINT would show
-it; VAL converts a string of digits back to a number.</p>
-<p>Format: <code>STR$(number)</code> / <code>VAL(string)</code></p>
-<pre><code>10 A$ = &quot;PI IS&quot; + STR$(π)
-20 PRINT VAL(&quot;78E2&quot;) : REM 7800</code></pre>
-<h3 id="rpt"><code>RPT$</code></h3>
-<p>Token <code>$CE $14</code> · Book p. B-222</p>
-<p>Returns a string repeated a number of times.</p>
-<p>Format: <code>RPT$(string, count)</code></p>
-<pre><code>PRINT RPT$(&quot;=&quot;, 30)</code></pre>
-<h3 id="hex-dec"><code>HEX$</code>, DEC</h3>
-<p>Tokens <code>$D2</code>, <code>$D1</code> · Book pp. B-132, B-66</p>
-<p><code>HEX$</code> converts a number to four or eight hexadecimal
-digits; DEC converts a hexadecimal string to a number.</p>
-<p>Format: <code>HEX$(number)</code> / <code>DEC(string)</code></p>
-<pre><code>10 PRINT HEX$(1000) : REM 03E8
-20 PRINT DEC(&quot;D000&quot;) : REM 53248</code></pre>
-<h3 id="strbin-decbin"><code>STRBIN$</code>, DECBIN</h3>
-<p>Tokens <code>$CE $12</code>, <code>$CE $11</code> · Book pp. B-255,
-B-67</p>
-<p><code>STRBIN$</code> converts a number to a string of binary digits;
-DECBIN converts such a string back to a number.</p>
-<p>Format: <code>STRBIN$(number)</code> /
-<code>DECBIN(string)</code></p>
-<pre><code>10 PRINT STRBIN$(245)
-20 PRINT DECBIN(&quot;11110101&quot;) : REM 245</code></pre>
-<h2 id="numbers">Numbers</h2>
-<h3 id="abs-sgn-int">ABS, SGN, INT</h3>
-<p>Tokens <code>$B6</code>, <code>$B4</code>, <code>$B5</code> · Book
-pp. B-18, B-240, B-142</p>
-<p>ABS gives the absolute value, SGN gives -1, 0 or 1 for a negative,
-zero or positive number, and INT rounds down to a whole number, so
-<code>INT(-3.1)</code> is -4.</p>
-<p>Format: <code>ABS(x)</code> / <code>SGN(x)</code> /
-<code>INT(x)</code></p>
-<pre><code>PRINT ABS(-123); SGN(-7); INT(1.9); INT(-3.1) : REM 123 -1 1 -4</code></pre>
-<h3 id="sqr-exp-log-log10-log2">SQR, EXP, LOG, LOG10, LOG2</h3>
-<p>Tokens <code>$BA</code>, <code>$BD</code>, <code>$BC</code>,
-<code>$CE $08</code>, <code>$CE $16</code> · Book pp. B-250, B-105,
-B-159, B-160, B-161</p>
-<p>Square root, e raised to a power, and logarithms to base e, 10 and
-2.</p>
-<p>Format: <code>SQR(x)</code>, <code>EXP(x)</code>,
-<code>LOG(x)</code>, <code>LOG10(x)</code>, <code>LOG2(x)</code></p>
-<pre><code>PRINT SQR(2); EXP(1); LOG10(1000); LOG2(256)</code></pre>
-<h3 id="sin-cos-tan-atn">SIN, COS, TAN, ATN</h3>
-<p>Tokens <code>$BF</code>, <code>$BE</code>, <code>$C0</code>,
-<code>$C1</code> · Book pp. B-241, B-60, B-261, B-22</p>
-<p>Trigonometric functions in radians. SIND, COSD and TAND take degrees
-instead; ATN returns an angle between -π/2 and π/2.</p>
-<p>Format: <code>SIN(radians)</code> or <code>SIND(degrees)</code>,
-likewise COS and TAN; <code>ATN(x)</code></p>
-<pre><code>PRINT SIN(π / 6); SIND(30); ATN(1) * 4</code></pre>
-<h3 id="mod">MOD</h3>
-<p>Token <code>$CE $0B</code> · Book p. B-169</p>
-<p>Returns the remainder of a division.</p>
-<p>Format: <code>MOD(dividend, divisor)</code></p>
-<pre><code>FOR I = 0 TO 8 : PRINT MOD(I, 4); : NEXT : REM 0 1 2 3 0 1 2 3 0</code></pre>
-<h3 id="rnd">RND</h3>
-<p>Token <code>$BB</code> · Book p. B-218</p>
-<p>Returns a pseudo-random number from 0 up to, but not including, 1.
-Multiply and use INT for whole numbers in a range.</p>
-<p>Format: <code>RND(type)</code></p>
-<pre><code>10 DEF FN DI(X) = INT(RND(0) * 6) + 1 : REM DIE ROLL
-20 FOR I = 1 TO 10 : PRINT FN DI(0); : NEXT</code></pre>
-<h3 id="and-or-xor-not">AND, OR, XOR, NOT</h3>
-<p>Tokens <code>$AF</code>, <code>$B0</code>, <code>$E9</code>,
-<code>$A8</code> · Book pp. B-19, B-183, B-286, B-179</p>
-<p>Bitwise operations on 16-bit values, which also combine conditions
-because true is -1 and false is 0. The Operators section below covers
-them in more detail.</p>
-<p>Format: <code>a AND b</code>, <code>a OR b</code>,
-<code>a XOR b</code>, <code>NOT a</code></p>
-<pre><code>PRINT 1 AND 3; 1 OR 3; 6 XOR 5; NOT 3 : REM 1 3 3 -4</code></pre>
-<h2 id="memory-and-machine-language">Memory and Machine Language</h2>
-<h3 id="peek-poke">PEEK, POKE</h3>
-<p>Tokens <code>$C2</code>, <code>$97</code> · Book pp. B-187, B-194</p>
-<p>PEEK reads a byte and POKE writes one or more bytes to consecutive
-addresses. Addresses up to <code>$FFFF</code> are interpreted through
-BANK; larger ones are flat 28-bit addresses.</p>
-<p>Format: <code>PEEK(address)</code> /
-<code>POKE address, value [, value ...]</code></p>
-<pre><code>10 BANK 128
-20 POKE $D020, 0 : PRINT PEEK($D020) AND 15</code></pre>
-<h3 id="wpeek-wpoke">WPEEK, WPOKE</h3>
-<p>Tokens <code>$CE $10</code>, <code>$FE $1D</code> · Book pp. B-284,
-B-285</p>
-<p>Read or write 16-bit values, low byte first, which suits addresses
-and pointers.</p>
-<p>Format: <code>WPEEK(address)</code> /
-<code>WPOKE address, word [, word ...]</code></p>
-<pre><code>10 BANK 128
-20 WPOKE $02F8, $1800 : PRINT HEX$(WPEEK($02F8))</code></pre>
-<h3 id="setbit-clrbit-hasbit">SETBIT, CLRBIT, HASBIT</h3>
-<p>Tokens <code>$FE $2D $FE $4E</code>, <code>$9C $FE $4E</code>,
-<code>$CE $13</code> · Book pp. B-239, B-52, B-129</p>
-<p>Set, clear or test a single bit of a memory location without
-disturbing the others. HASBIT returns -1 or 0.</p>
-<p>Format: <code>SETBIT address, bit</code> /
-<code>CLRBIT address, bit</code> / <code>HASBIT(address, bit)</code></p>
-<pre><code>10 BANK 128
-20 SETBIT $D031, 6 : PRINT HASBIT($D031, 6)
-30 CLRBIT $D011, 4 : REM BLANK THE DISPLAY</code></pre>
-<h3 id="bank">BANK</h3>
-<p>Token <code>$FE $02</code> · Book p. B-26</p>
-<p>Selects which memory bank commands with 16-bit addresses use. Banks 0
-to 5 are chip RAM, though banks 2 and 3 hold the ROM and are
-write-protected; bank 128, the default, is the system view with ROM and
-I/O.</p>
-<p>Format: <code>BANK number</code></p>
-<pre><code>BANK 0 : POKE $4000, 1 : BANK 128</code></pre>
-<h3 id="mem">MEM</h3>
-<p>Token <code>$FE $23</code> · Book p. B-164</p>
-<p>Reserves 8KB blocks of banks 4 and 5 so the graphics commands leave
-them alone. Each argument is a bit mask, one bit per block.</p>
-<p>Format: <code>MEM mask4, mask5</code></p>
-<pre><code>MEM 3, 0 : REM RESERVE $40000-$43FFF</code></pre>
-<h3 id="edma">EDMA</h3>
-<p>Token <code>$FE $21</code> · Book p. B-91</p>
-<p>Uses the DMA controller to copy (command 0) or fill (command 3)
-memory very fast, anywhere in the 28-bit address space; adding 32 to the
-command copies backwards.</p>
-<p>Format: <code>EDMA command, length, source, target</code></p>
-<pre><code>10 EDMA 0, 80*25, 2048, $8000800 : REM COPY SCREEN TO ATTIC RAM
-20 EDMA 3, 80*25, 32, 2048 : REM FILL SCREEN WITH SPACES</code></pre>
-<h3 id="dma">DMA</h3>
-<p>Token <code>$FE $1F</code> · Book p. B-76</p>
-<p>The older form of EDMA, with addresses given as offset and bank
-pairs. It is obsolete; use EDMA.</p>
-<p>Format:
-<code>DMA command [, length, source, source bank, target, target bank [, sub]]</code></p>
-<pre><code>DMA 3, 80*25, 32, 0, 2048, 0 : REM FILL SCREEN WITH SPACES</code></pre>
-<h3 id="sys">SYS</h3>
-<p>Token <code>$9E</code> · Book p. B-256</p>
-<p>Calls a machine-language routine, which returns with RTS. Values for
-A, X, Y, Z and the status register can follow. SYS TO names its
-registers and adds a MAP offset (O) or keeps BASIC's interrupts running
-(I).</p>
-<p>Format: <code>SYS address [{, a, x, y, z, s}]</code> /
-<code>SYS TO address [{,A a, X x, Y y, Z z, S s, I mode, O offset}]</code></p>
-<pre><code>10 POKE $1800, $18, $8A, $65, $06, $60 : REM CLC : TXA : ADC $06 : RTS
-20 SYS $1800, 77, 11</code></pre>
-<h3 id="rreg">RREG</h3>
-<p>Token <code>$FE $09</code> · Book p. B-223</p>
-<p>Copies the register values a SYS call returned into variables.</p>
-<p>Format: <code>RREG [{areg, xreg, yreg, zreg, sreg}]</code></p>
-<pre><code>30 RREG AC, X, Y, Z, S : PRINT AC</code></pre>
-<h3 id="usr">USR</h3>
-<p>Token <code>$B7</code> · Book p. B-275</p>
-<p>Calls a machine-language function whose address is in the vector at
-<code>$02F8</code>. The argument and result pass through BASIC's
-floating-point accumulator.</p>
-<p>Format: <code>USR(expression)</code></p>
-<pre><code>10 BANK 128 : WPOKE $2F8, $7F33 : REM ROM NEGATE ROUTINE, AS IN THE BOOK
-20 PRINT USR(-5)</code></pre>
-<h3 id="fre">FRE</h3>
-<p>Token <code>$B8</code> · Book p. B-117</p>
-<p>Returns free memory or other system information: <code>FRE(0)</code>
-and <code>FRE(1)</code> give free bytes for program and variables,
-<code>FRE(4)</code> and <code>FRE(5)</code> (from ROM 920415) which 8KB
-blocks of banks 4 and 5 are in use, whether reserved by MEM, a graphics
-screen or the system (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), and
-<code>FRE(-1)</code> the ROM version.</p>
-<p>Format: <code>FRE(n)</code></p>
-<pre><code>PRINT FRE(0); &quot;BYTES FREE FOR PROGRAM&quot;; FRE(-1)</code></pre>
-<h3 id="bload-bsave-bverify">BLOAD, BSAVE, BVERIFY</h3>
-<p>Tokens <code>$FE $11</code>, <code>$FE $10</code>,
-<code>$FE $28</code> · Book pp. B-29, B-35, B-38</p>
-<p>Load, save or verify a block of memory as a file. Addresses above
-<code>$FFFF</code> are flat 28-bit addresses that can reach attic RAM; R
-reads or writes raw data with no load address.</p>
-<p>Format:
-<code>BLOAD filename [,B bank] [,P address] [,R] [,D drive] [,U unit]</code>
-/
-<code>BSAVE filename, P start TO P end [,B bank] [,R] [,D drive] [,U unit]</code>
-/
-<code>BVERIFY filename [,P address] [,B bank] [,D drive] [,U unit]</code></p>
-<pre><code>10 BLOAD &quot;SPRITES&quot;, P($40000), R
-20 BSAVE &quot;ML ROUTINES&quot;, B1, P($9000) TO P($A000)</code></pre>
-<h3 id="boot">BOOT</h3>
-<p>Token <code>$FE $1B</code> · Book p. B-31</p>
-<p>Loads a machine-language program and runs it at its load address.
-With no arguments, runs AUTOBOOT.C65; <code>BOOT SYS</code> boots from a
-disk's boot sector.</p>
-<p>Format:
-<code>BOOT filename [,B bank] [,P address] [,D drive] [,U unit]</code></p>
-<pre><code>BOOT &quot;GAME&quot;</code></pre>
-<h3 id="monitor">MONITOR</h3>
-<p>Token <code>$FA</code> · Book p. B-170</p>
-<p>Starts the built-in machine-language monitor. X returns to BASIC.</p>
-<p>Format: <code>MONITOR</code></p>
-<pre><code>MONITOR</code></pre>
-<h2 id="disk-and-files">Disk and Files</h2>
-<p>Most disk commands accept <code>D</code> for the drive number on
-dual-drive units and <code>U</code> for the unit (device) number, which
-defaults to 8. File names can be quoted strings or string expressions in
-parentheses, such as <code>(F$)</code>.</p>
-<h3 id="dir-catalog">DIR, CATALOG</h3>
-<p>Tokens <code>$EE</code> (DIR), <code>$EE $FE $29</code> (DIRECTORY),
-<code>$FE $0C</code> · Book pp. B-71, B-40</p>
-<p>List the files on a disk without disturbing the program in memory. A
-pattern selects matching names; W lists in several columns, and P pauses
-after each screenful. <code>$</code> at the start of a line is a
-shortcut.</p>
-<p>Format:
-<code>DIR [pattern] [,W] [,P] [,R] [,D drive] [,U unit]</code></p>
-<pre><code>DIR &quot;*.PRG&quot;, W, U9</code></pre>
-<h3 id="dload-dsave-dverify">DLOAD, DSAVE, DVERIFY</h3>
-<p>Tokens <code>$F0</code>, <code>$EF</code>, <code>$FE $14</code> ·
-Book pp. B-74, B-86, B-88</p>
-<p>Load, save or verify a BASIC program on disk, defaulting to unit 8.
-An <code>@</code> before the name in DSAVE replaces an existing
-file.</p>
-<p>Format: <code>DLOAD filename [,D drive] [,U unit]</code>, likewise
-DSAVE and DVERIFY</p>
-<pre><code>10 DSAVE &quot;@MYPROG&quot;
-20 DVERIFY &quot;MYPROG&quot;
-30 DLOAD &quot;MYPROG&quot;, U9</code></pre>
-<h3 id="load-save-verify">LOAD, SAVE, VERIFY</h3>
-<p>Tokens <code>$93</code>, <code>$94</code>, <code>$95</code> · Book
-pp. B-154, B-231, B-277</p>
-<p>The C64-style forms, which take a device number instead of U.
-<code>LOAD "*", 8, 1</code> loads to the address stored in the file.</p>
-<p>Format: <code>LOAD filename [, unit [, flag]]</code> /
-<code>SAVE filename [, unit]</code> /
-<code>VERIFY filename [, unit [, binflag]]</code></p>
-<pre><code>LOAD &quot;MEGA TOOLS&quot;, 9</code></pre>
-<h3 id="run">RUN</h3>
-<p>Token <code>$8A</code> · Book p. B-229</p>
-<p>Runs the program in memory, optionally from a given line, or loads
-and runs a program from disk. Running clears variables.</p>
-<p>Format: <code>RUN [line]</code> or
-<code>RUN filename [,D drive] [,U unit]</code></p>
-<pre><code>RUN &quot;FLIGHTSIM&quot;</code></pre>
-<h3 id="open-close">OPEN, CLOSE</h3>
-<p>Tokens <code>$9F</code>, <code>$A0</code> · Book pp. B-182, B-50</p>
-<p>OPEN connects a channel number to a device, with an optional
-secondary address and file name; CLOSE disconnects it. Always close disk
-files, or they are left as unclosed "splat" files.</p>
-<p>Format: <code>OPEN channel, device [, secondary [, filename]]</code>
-/ <code>CLOSE channel</code></p>
-<pre><code>10 OPEN 2, 8, 2, &quot;TEST,S,W&quot;
-20 PRINT#2, &quot;TESTSTRING&quot;
-30 CLOSE 2</code></pre>
-<h3 id="dopen-dclose-append">DOPEN, DCLOSE, APPEND</h3>
-<p>Tokens <code>$FE $0D</code>, <code>$FE $0F</code>,
-<code>$FE $0E</code> · Book pp. B-79, B-65, B-20</p>
-<p>The disk-specific way to open and close files. DOPEN opens for
-reading, or for writing with W, or as a relative file with L and a
-record length. APPEND opens an existing file for writing at its end.
-DCLOSE closes one channel, or every file on a unit.</p>
-<p>Format:
-<code>DOPEN# channel, filename [,L reclen] [,W] [,D drive] [,U unit]</code>
-/ <code>APPEND# channel, filename [,D drive] [,U unit]</code> /
-<code>DCLOSE# channel</code> or <code>DCLOSE [U unit]</code></p>
-<pre><code>10 DOPEN#2, &quot;SCORES&quot;, W
-20 PRINT#2, &quot;ALICE&quot; &quot;,&quot; 1200
-30 DCLOSE#2
-40 APPEND#2, &quot;SCORES&quot; : PRINT#2, &quot;BOB&quot; &quot;,&quot; 900 : DCLOSE#2</code></pre>
-<p>The comma is written as a string: a comma between PRINT# items, as in
-PRINT, writes spaces to the next tab stop, not a comma, and INPUT# would
-then read the whole line as one value.</p>
-<h3 id="print-input-line-input-get">PRINT#, INPUT#, LINE INPUT#,
-GET#</h3>
-<p>Tokens <code>$98</code>, <code>$84</code>, <code>$E5 $84</code>,
-<code>$A1 #</code> · Book pp. B-199, B-139, B-152, B-123</p>
-<p>The file versions of PRINT, INPUT, LINE INPUT and GET, working on an
-open channel.</p>
-<p>Format: <code>PRINT# channel, arguments</code> /
-<code>INPUT# channel, variables</code> /
-<code>LINE INPUT# channel, stringvars</code> /
-<code>GET# channel, variables</code></p>
-<pre><code>10 DOPEN#2, &quot;SCORES&quot;
-20 DO : INPUT#2, N$, S : PRINT N$, S : LOOP UNTIL ST
-30 DCLOSE#2</code></pre>
-<h3 id="record">RECORD</h3>
-<p>Token <code>$FE $12</code> · Book p. B-206</p>
-<p>Moves to a record, and optionally a byte within it, in a relative
-file opened with DOPEN and L.</p>
-<p>Format: <code>RECORD# channel, record [, byte]</code></p>
-<pre><code>10 DOPEN#3, &quot;INDEX&quot;, L40
-20 RECORD#3, 25 : PRINT#3, &quot;ENTRY 25&quot;
-30 DCLOSE#3</code></pre>
-<h3 id="fread-fwrite">FREAD#, FWRITE#</h3>
-<p>Tokens <code>$FE $1C</code>, <code>$FE $1E</code> · Book pp. B-118,
-B-120</p>
-<p>Read or write a block of bytes between an open file and memory at a
-32-bit address, typically from POINTER.</p>
-<p>Format: <code>FREAD# channel, pointer, size</code> /
-<code>FWRITE# channel, pointer, size</code></p>
-<pre><code>10 DIM B&amp;(23) : DOPEN#2, &quot;TEXT&quot;
-20 FREAD#2, POINTER(B&amp;(0)), 24
-30 DCLOSE#2</code></pre>
-<h3 id="copy-concat">COPY, CONCAT</h3>
-<p>Tokens <code>$F4</code>, <code>$FE $13</code> · Book pp. B-59,
-B-57</p>
-<p>COPY copies one file, or files matching a pattern, to another name or
-unit. CONCAT appends one file to the end of another.</p>
-<p>Format:
-<code>COPY source [,D drive] [,U unit] TO [target] [,D drive] [,U unit]</code>
-/ <code>CONCAT file [,D drive] TO target [,D drive] [,U unit]</code></p>
-<pre><code>10 COPY &quot;CODES&quot; TO &quot;BACKUP&quot;
-20 CONCAT &quot;NEW DATA&quot; TO &quot;ARCHIVE&quot;, U9</code></pre>
-<h3 id="rename">RENAME</h3>
-<p>Token <code>$F5</code> · Book p. B-209</p>
-<p>Renames a file on disk.</p>
-<p>Format: <code>RENAME old TO new [,D drive] [,U unit]</code></p>
-<pre><code>RENAME &quot;CODES&quot; TO &quot;BACKUP&quot;</code></pre>
-<h3 id="scratch-erase">SCRATCH, ERASE</h3>
-<p>Tokens <code>$F2</code>, <code>$FE $2A</code> · Book pp. B-234,
-B-102</p>
-<p>Delete files from a disk. A pattern deletes all matching files.
-DELETE with a file name does the same.</p>
-<p>Format: <code>SCRATCH filename [,D drive] [,U unit] [,R]</code>,
-likewise ERASE</p>
-<pre><code>SCRATCH &quot;DRM&quot;, U9</code></pre>
-<h3 id="lock-unlock">LOCK, UNLOCK</h3>
-<p>Tokens <code>$FE $50</code>, <code>$FE $4F</code> · Book pp. B-158,
-B-271</p>
-<p>Protect a file from being changed or deleted, or remove the
-protection.</p>
-<p>Format:
-<code>LOCK &lt;filename / pattern&gt; [,D drive] [,U unit]</code>,
-likewise UNLOCK</p>
-<pre><code>LOCK &quot;DRM&quot;, U9</code></pre>
-<h3 id="backup">BACKUP</h3>
-<p>Token <code>$F6</code> · Book p. B-25</p>
-<p>Copies a whole disk to another unit, or between the two drives of a
-dual-drive unit.</p>
-<p>Format: <code>BACKUP U source TO U target</code> or
-<code>BACKUP D source TO D target [,U unit]</code></p>
-<pre><code>BACKUP U8 TO U9</code></pre>
-<h3 id="collect">COLLECT</h3>
-<p>Token <code>$F3</code> · Book p. B-54</p>
-<p>Tidies a disk: rebuilds its record of free space and removes files
-that were never properly closed.</p>
-<p>Format: <code>COLLECT [,D drive] [,U unit]</code></p>
-<pre><code>COLLECT U9</code></pre>
-<h3 id="format-header">FORMAT, HEADER</h3>
-<p>Tokens <code>$FE $37</code>, <code>$F1</code> · Book pp. B-116,
-B-130</p>
-<p>Format a disk, erasing everything on it. With an I and a
-two-character ID, the format is complete; without one, it is a quick
-format.</p>
-<p>Format: <code>FORMAT diskname [,I id] [,D drive] [,U unit]</code>,
-likewise HEADER</p>
-<pre><code>FORMAT &quot;ADVENTURE&quot;, IDK</code></pre>
-<h3 id="dclear">DCLEAR</h3>
-<p>Token <code>$FE $15</code> · Book p. B-64</p>
-<p>Sends an initialise command to a drive, closing its open files.</p>
-<p>Format: <code>DCLEAR [,D drive] [,U unit]</code></p>
-<pre><code>DCLEAR U9</code></pre>
-<h3 id="disk">DISK</h3>
-<p>Token <code>$FE $40</code> · Book p. B-73</p>
-<p>Sends a command string directly to a drive. <code>@</code> at the
-start of a line is a shortcut.</p>
-<p>Format: <code>DISK command [,U unit]</code></p>
-<pre><code>DISK &quot;I0&quot; : REM INITIALISE DRIVE 0</code></pre>
-<h3 id="mkdir-chdir">MKDIR, CHDIR</h3>
-<p>Tokens <code>$FE $51</code>, <code>$FE $4B</code> · Book pp. B-168,
-B-46</p>
-<p>MKDIR creates a subdirectory, a partition of a given number of
-tracks, on a floppy or D81 image, and moves into it. CHDIR changes the
-current directory: <code>"/"</code> returns to the root of a disk, and
-<code>".."</code> goes up a level only on the SD card (U12).</p>
-<p>Format: <code>MKDIR dirname, L size [,U unit]</code> /
-<code>CHDIR dirname [,U unit]</code></p>
-<pre><code>10 MKDIR &quot;SUBDIR&quot;, L5   : REM CREATE IT AND MOVE INTO IT
-20 CHDIR &quot;/&quot;              : REM BACK TO THE ROOT</code></pre>
-<h3 id="mount">MOUNT</h3>
-<p>Token <code>$FE $49</code> · Book p. B-171</p>
-<p>Mounts a D81 or D64 disk image from the SD card as unit 8, or unit 9
-with U9. Without a file name, it gives the drives back to the
-physical floppy (from ROM 920414): unit 8 becomes the internal drive and
-unit 9 is unmounted unless a unit is given (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). MOUNT OFF
-unmounts.</p>
-<p>Format: <code>MOUNT filename [,U unit]</code> /
-<code>MOUNT [U unit]</code> / <code>MOUNT OFF [U unit]</code></p>
-<pre><code>MOUNT &quot;GAMES.D81&quot;</code></pre>
-<h3 id="type">TYPE</h3>
-<p>Token <code>$FE $27</code> · Book p. B-270</p>
-<p>Prints a PETSCII text file from disk to the screen; P pauses after
-each screenful.</p>
-<p>Format: <code>TYPE [P] filename [,D drive] [,U unit]</code></p>
-<pre><code>TYPE &quot;README&quot;</code></pre>
-<h3 id="set">SET</h3>
-<p>Token <code>$FE $2D</code> · Book p. B-238</p>
-<p>SET DEF changes the default disk unit, SET DISK changes a drive's
-unit number, and SET VERIFY turns automatic verification of saves on or
-off.</p>
-<p>Format: <code>SET DEF unit</code> / <code>SET DISK old TO new</code>
-/ <code>SET VERIFY &lt;ON / OFF&gt;</code></p>
-<pre><code>SET DEF 11 : DIR</code></pre>
-<h3 id="ds-ds-st">DS, <code>DS$</code>, ST</h3>
-<p>Reserved variables, no token · Book pp. B-84, B-85, B-251</p>
-<p>DS and <code>DS$</code> give the status of the last disk operation as
-a number and as text; ST gives the status of the last I/O operation, and
-is non-zero at the end of a file.</p>
-<p>Format: <code>DS</code>, <code>DS$</code>, <code>ST</code></p>
-<pre><code>10 DOPEN#1, &quot;DATA&quot;
-20 IF DS &lt;&gt; 0 THEN PRINT DS$ : STOP</code></pre>
-<h3 id="rdisk">RDISK</h3>
-<p>Token <code>$CE $15</code> · Book p. B-204</p>
-<p>Returns properties of the most recent disk action, such as the unit a
-program was loaded from.</p>
-<p>Format: <code>RDISK(property)</code></p>
-<pre><code>10 DU = RDISK(1)
-20 BLOAD &quot;MYRESOURCE&quot;, U(DU) : REM LOAD FROM THE SAME UNIT</code></pre>
-<h2 id="colour">Colour</h2>
-<p>Colours are palette entry numbers: 0 to 31 for COLOR and FOREGROUND,
-whose values 16 to 31 select the first 16 colours in bold, and 0 to 255
-for BACKGROUND, BORDER and PEN. The first 16 are the C64 colours: 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7
-yellow and so on.</p>
-<h3 id="color-foreground">COLOR, FOREGROUND</h3>
-<p>Tokens <code>$E7</code>, <code>$FE $39</code> · Book pp. B-56,
-B-115</p>
-<p>Set the text colour for everything printed afterwards. The two
-keywords do the same job.</p>
-<p>Format: <code>COLOR colour</code> /
-<code>FOREGROUND colour</code></p>
-<pre><code>COLOR 2 : PRINT &quot;THIS IS RED&quot;</code></pre>
-<h3 id="background-border">BACKGROUND, BORDER</h3>
-<p>Tokens <code>$FE $3B</code>, <code>$FE $3C</code> · Book pp. B-24,
-B-32</p>
-<p>Set the colour of the screen background and of the border around
-it.</p>
-<p>Format: <code>BACKGROUND colour</code> /
-<code>BORDER colour</code></p>
-<pre><code>BACKGROUND 6 : BORDER 14</code></pre>
-<h3 id="palette-rpalette">PALETTE, RPALETTE</h3>
-<p>Tokens <code>$FE $34</code>, <code>$CE $0D</code> · Book pp. B-185,
-B-219</p>
-<p>PALETTE sets the red, green and blue levels, 0 to 15, of a palette
-entry, either for a graphics screen or, with PALETTE COLOR, for the
-system palette used by text. PALETTE RESTORE puts the defaults back.
-RPALETTE reads one component back: 0 red, 1 green, 2 blue.</p>
-<p>Format: <code>PALETTE screen, colour, red, green, blue</code> /
-<code>PALETTE COLOR colour, red, green, blue</code> /
-<code>RPALETTE(screen, index, rgb)</code></p>
-<pre><code>10 PALETTE COLOR 9, 0, 0, 7 : REM ENTRY 9 BECOMES DARK BLUE
-20 PALETTE RESTORE</code></pre>
-<h3 id="rcolor">RCOLOR</h3>
-<p>Token <code>$CD</code> · Book p. B-202</p>
-<p>Returns the current colour of a source such as the background, text
-or border.</p>
-<p>Format: <code>RCOLOR(source)</code></p>
-<pre><code>10 C = RCOLOR(3) : REM CURRENT BORDER COLOUR</code></pre>
-<p>HIGHLIGHT, which sets the editor's highlighting colours, is under
-Program Editing.</p>
-<h2 id="bitmap-graphics">Bitmap Graphics</h2>
-<p>The graphics commands draw on a bitplane screen in banks 4 and 5,
-opened with SCREEN. Coordinates are in pixels from the top-left
-corner.</p>
-<h3 id="screen-graphic">SCREEN, GRAPHIC</h3>
-<p>Tokens <code>$FE $2E</code>, <code>$DE</code> · Book pp. B-235,
-B-128</p>
-<p>SCREEN opens a graphics screen of a given width, height and depth in
-bitplanes, and SCREEN CLOSE returns to text. GRAPHIC CLR resets the
-whole graphics system.</p>
-<p>Format: <code>SCREEN [screen,] width, height, depth</code> /
-<code>SCREEN CLOSE</code> / <code>GRAPHIC CLR</code></p>
-<pre><code>10 SCREEN 320, 200, 4 : REM 16 COLOURS
-20 GETKEY A$ : SCREEN CLOSE</code></pre>
-<h3 id="pen-rpen">PEN, RPEN</h3>
-<p>Tokens <code>$FE $33</code>, <code>$D0</code> · Book pp. B-188,
-B-220</p>
-<p>PEN chooses the colour the drawing commands use; RPEN reads a pen's
-colour.</p>
-<p>Format: <code>PEN colour</code> / <code>RPEN(n)</code></p>
-<pre><code>PEN 2 : REM DRAW IN RED</code></pre>
-<h3 id="dmode-dpat">DMODE, DPAT</h3>
-<p>Tokens <code>$FE $35</code>, <code>$FE $36</code> · Book pp. B-77,
-B-82</p>
-<p>DMODE sets how drawing combines with what is already there, such as
-solid or complemented, and whether lines use the DPAT pattern (style
-1). The stencil and thickness arguments are accepted but have no effect
-(MEGA65 ROM source, DMODE). DPAT sets a dash pattern for lines, used only
-when DMODE's style is 1.</p>
-<p>Format: <code>DMODE jam, complement, stencil, style, thick</code> /
-<code>DPAT type [, number, pattern ...]</code></p>
-<pre><code>10 DPAT 0, 4, %00110011, %00111100, %00001111, %11110000</code></pre>
-<h3 id="dot-pixel">DOT, PIXEL</h3>
-<p>Tokens <code>$FE $4C</code>, <code>$CE $0C</code> · Book pp. B-81,
-B-189</p>
-<p>DOT plots a single pixel, in the pen colour or a given colour; PIXEL
-returns the colour of a pixel.</p>
-<p>Format: <code>DOT x, y [, colour]</code> /
-<code>PIXEL(x, y)</code></p>
-<pre><code>10 SCREEN 320, 200, 4
-20 FOR I = 1 TO 1000 : DOT RND(1) * 320, RND(1) * 200, RND(1) * 16 : NEXT
-30 PRINT PIXEL(160, 100)</code></pre>
-<h3 id="line">LINE</h3>
-<p>Token <code>$E5</code> · Book p. B-150</p>
-<p>Draws a line, or a connected series of lines through several
-points.</p>
-<p>Format: <code>LINE x1, y1 [, x2, y2 ...]</code></p>
-<pre><code>10 SCREEN 320, 200, 2 : PEN 1
-20 LINE 25, 25, 295, 175, 295, 25, 25, 175</code></pre>
-<h3 id="box-circle-ellipse-polygon">BOX, CIRCLE, ELLIPSE, POLYGON</h3>
-<p>Tokens <code>$E1</code>, <code>$E2</code>, <code>$FE $30</code>,
-<code>$FE $2F</code> · Book pp. B-33, B-48, B-94, B-195</p>
-<p>Draw shapes, outlined or, with the solid flag, filled. BOX takes two
-opposite corners or four corner points; CIRCLE a centre and radius;
-ELLIPSE a centre and two radii; POLYGON a centre, radii and number of
-sides.</p>
-<p>Format: <code>BOX x0, y0, x2, y2 [, solid]</code> /
-<code>CIRCLE xc, yc, radius [, flags, start, stop]</code> /
-<code>ELLIPSE xc, yc, xr, yr [, flags, start, stop]</code> /
-<code>POLYGON x, y, xrad, yrad, sides [...]</code></p>
-<pre><code>10 SCREEN 320, 200, 2 : PEN 1
-20 BOX 10, 10, 100, 60, 1
-30 CIRCLE 160, 100, 50
-40 ELLIPSE 250, 100, 40, 20
-50 POLYGON 160, 160, 30, 30, 6</code></pre>
-<h3 id="paint">PAINT</h3>
-<p>Token <code>$DF</code> · Book p. B-184</p>
-<p>Flood-fills an enclosed area, starting at a point, with the pen
-colour.</p>
-<p>Format: <code>PAINT x, y, mode [, border colour]</code></p>
-<pre><code>30 CIRCLE 160, 100, 50 : PAINT 160, 100, 0</code></pre>
-<h3 id="char">CHAR</h3>
-<p>Token <code>$E0</code> · Book p. B-43</p>
-<p>Draws text on a graphics screen, at a column given in characters and
-a row given in pixels, scaled by height and width.</p>
-<p>Format:
-<code>CHAR column, row, height, width, direction, string [, charset address]</code></p>
-<pre><code>10 SCREEN 640, 400, 2
-20 CHAR 28, 180, 4, 4, 2, &quot;MEGA65&quot;, $29000</code></pre>
-<h3 id="cut-gcopy-paste">CUT, GCOPY, PASTE</h3>
-<p>Tokens <code>$E4</code>, <code>$FE $32</code>, <code>$E3</code> ·
-Book pp. B-62, B-121, B-186</p>
-<p>CUT copies a rectangle to a buffer and clears it; GCOPY copies it
-without clearing; PASTE draws the buffer at a new position.</p>
-<p>Format: <code>CUT x, y, width, height</code> /
-<code>GCOPY x, y, width, height</code> / <code>PASTE x, y</code></p>
-<pre><code>10 SCREEN 320, 200, 2 : BOX 60, 60, 300, 180, 1
-20 GCOPY 140, 80, 40, 40
-30 PASTE 10, 10</code></pre>
-<h3 id="viewport">VIEWPORT</h3>
-<p>Token <code>$FE $31</code> · Book p. B-278</p>
-<p>VIEWPORT DEF sets a clipping rectangle for drawing; VIEWPORT CLR
-fills it with the pen colour.</p>
-<p>Format: <code>VIEWPORT DEF x, y, width, height</code> /
-<code>VIEWPORT CLR</code></p>
-<pre><code>10 VIEWPORT DEF 20, 30, 100, 120 : PEN 1 : VIEWPORT CLR</code></pre>
-<h3 id="rgraphic">RGRAPHIC</h3>
-<p>Token <code>$CC</code> · Book p. B-215</p>
-<p>Returns a property of a graphics screen, such as whether it is open,
-or its width.</p>
-<p>Format: <code>RGRAPHIC(screen, parameter)</code></p>
-<pre><code>10 PRINT RGRAPHIC(0, 0) : REM 1 IF SCREEN 0 IS OPEN</code></pre>
-<h3 id="loadiff-saveiff">LOADIFF, SAVEIFF</h3>
-<p>Tokens <code>$FE $43</code>, <code>$FE $44</code> · Book pp. B-156,
-B-232</p>
-<p>Load a picture in IFF format into graphics memory, or save the
-current screen as an IFF file.</p>
-<p>Format: <code>LOADIFF filename [,D drive] [,U unit]</code> /
-<code>SAVEIFF filename [,D drive] [,U unit]</code></p>
-<pre><code>10 SAVEIFF &quot;PICTURE&quot;
-20 LOADIFF &quot;PICTURE&quot;</code></pre>
-<h2 id="sprites">Sprites</h2>
-<h3 id="sprite">SPRITE</h3>
-<p>Token <code>$FE $07</code> · Book p. B-247</p>
-<p>Turns a sprite on or off and sets its colour, priority, expansion and
-mode. SPRITE CLR resets all sprites, and SPRITE LOAD and SPRITE SAVE
-load and save sprite data.</p>
-<p>Format:
-<code>SPRITE num [{, switch, colour, prio, expx, expy, mode}]</code> /
-<code>SPRITE CLR</code> / <code>SPRITE LOAD filename</code> /
-<code>SPRITE SAVE filename</code></p>
-<pre><code>10 SPRITE LOAD &quot;SPRITEDATA&quot;
-20 SPRITE 1, 1, 2 : REM SPRITE 1 ON, RED</code></pre>
-<h3 id="movspr">MOVSPR</h3>
-<p>Token <code>$FE $06</code> · Book p. B-175</p>
-<p>Moves a sprite to a position, or sets it moving continuously at an
-angle and speed, written <code>angle#speed</code>. BASIC's interrupt
-keeps it moving while the program does other work.</p>
-<p>Format: <code>MOVSPR number, position</code></p>
-<pre><code>10 SPRITE 1, 1 : MOVSPR 1, 120, 0
-20 MOVSPR 1, 0#5 : REM MOVE AT ANGLE 0, SPEED 5</code></pre>
-<h3 id="sprcolor-rspcolor">SPRCOLOR, RSPCOLOR</h3>
-<p>Tokens <code>$FE $08</code>, <code>$CE $07</code> · Book pp. B-246,
-B-224</p>
-<p>SPRCOLOR sets the two colours shared by all multicolour sprites;
-RSPCOLOR reads one back.</p>
-<p>Format: <code>SPRCOLOR [{mc1, mc2}]</code> /
-<code>RSPCOLOR(n)</code></p>
-<pre><code>10 SPRCOLOR 4, 5
-20 PRINT RSPCOLOR(1)</code></pre>
-<h3 id="sprsav">SPRSAV</h3>
-<p>Token <code>$FE $16</code> · Book p. B-249</p>
-<p>Copies sprite data between sprites, or between a sprite and a string
-variable.</p>
-<p>Format: <code>SPRSAV source, destination</code></p>
-<pre><code>SPRSAV 1, 2 : REM COPY SPRITE 1&#39;S SHAPE TO SPRITE 2</code></pre>
-<h3 id="collision-bump">COLLISION, BUMP</h3>
-<p>Tokens <code>$FE $17</code>, <code>$CE $03</code> · Book pp. B-55,
-B-37</p>
-<p>COLLISION names a subroutine BASIC calls when sprites collide; BUMP
-returns a bitfield of the sprites involved, type 1 for sprite-to-sprite
-and type 2 for sprite-to-background.</p>
-<p>Format: <code>COLLISION type [, line]</code> /
-<code>BUMP(type)</code></p>
-<pre><code>10 COLLISION 1, 70
-...
-70 S% = BUMP(1) : IF (S% AND 6) = 6 THEN PRINT &quot;SPRITES 1 AND 2 HIT&quot;
-80 RETURN</code></pre>
-<h3 id="rsprite-rsppos-rsprsys">RSPRITE, RSPPOS, RSPRSYS</h3>
-<p>Tokens <code>$CE $06</code>, <code>$CE $05</code>,
-<code>$CE $17</code> · Book pp. B-227, B-226, B-228</p>
-<p>Read back sprite settings: RSPRITE a sprite's attributes, RSPPOS its
-position or speed, and RSPRSYS a system-wide sprite setting.</p>
-<p>Format: <code>RSPRITE(sprite, n)</code> /
-<code>RSPPOS(sprite, n)</code> / <code>RSPRSYS(n)</code></p>
-<pre><code>10 XP = RSPPOS(1, 0) : YP = RSPPOS(1, 1)
-20 PRINT &quot;SPRITE 1 AT&quot;; XP; YP</code></pre>
-<h2 id="sound">Sound</h2>
-<p>Chapter 13 covers these commands in detail.</p>
-<h3 id="sound-1">SOUND</h3>
-<p>Token <code>$DA</code> · Book p. B-243</p>
-<p>Plays a sound effect on voices 1 to 6 of SIDs 2 and 4, with a SID
-frequency value and a duration in jiffies, and optional sweep, waveform
-and pulse width. SOUND CLR silences everything.</p>
-<p>Format:
-<code>SOUND voice, freq, dur [{, dir, min, sweep, wave, pulse}]</code> /
-<code>SOUND CLR</code></p>
-<pre><code>SOUND 3, 4000, 120, 2, 2000, 400, 1 : REM SWEEPING SAWTOOTH</code></pre>
-<h3 id="play-rplay">PLAY, RPLAY</h3>
-<p>Tokens <code>$FE $04</code>, <code>$CE $0F</code> · Book pp. B-190,
-B-221</p>
-<p>PLAY plays up to six strings of music notes in the background on SIDs
-1 and 3. RPLAY tests whether a voice is still playing.</p>
-<p>Format: <code>PLAY [{string1, ... string6}]</code> /
-<code>RPLAY(voice)</code></p>
-<pre><code>10 PLAY &quot;O4ICDEFGABO5CR&quot;, &quot;O2QCGEGCO1GCR&quot;
-20 IF RPLAY(1) OR RPLAY(2) THEN 20 : REM WAIT FOR THE END</code></pre>
-<h3 id="tempo">TEMPO</h3>
-<p>Token <code>$FE $05</code> · Book p. B-262</p>
-<p>Sets the speed of PLAY; a whole note lasts 24 divided by the tempo,
-in seconds.</p>
-<p>Format: <code>TEMPO speed</code></p>
-<pre><code>TEMPO 24 : REM WHOLE NOTE = 1 SECOND</code></pre>
-<h3 id="envelope">ENVELOPE</h3>
-<p>Token <code>$FE $0A</code> · Book p. B-99</p>
-<p>Redefines one of the ten instrument slots PLAY uses.</p>
-<p>Format:
-<code>ENVELOPE n [{, attack, decay, sustain, release, waveform, pw}]</code></p>
-<pre><code>ENVELOPE 9, 10, 5, 10, 5, 2, 4000</code></pre>
-<h3 id="filter">FILTER</h3>
-<p>Token <code>$FE $03</code> · Book p. B-109</p>
-<p>Sets the SID filter for music: cutoff frequency, low-, band- and
-high-pass switches and resonance.</p>
-<p>Format: <code>FILTER sid [{, freq, lp, bp, hp, res}]</code></p>
-<pre><code>FILTER 1, 1024, 1, 0, 0, 10 : REM LOW PASS ON THE RIGHT MUSIC SID</code></pre>
-<h3 id="vol">VOL</h3>
-<p>Token <code>$DB</code> · Book p. B-279</p>
-<p>Sets the volume, 0 to 15, of the right and left pairs of SIDs.</p>
-<p>Format: <code>VOL right, left</code></p>
-<pre><code>VOL 8, 8</code></pre>
-<h2 id="controllers">Controllers</h2>
-<h3 id="joy">JOY</h3>
-<p>Token <code>$CF</code> · Book p. B-143</p>
-<p>Reads a joystick: the low four bits give the direction, 1 for up
-through 8 for up-left clockwise, and bit 7 is the fire button.</p>
-<p>Format: <code>JOY(port)</code></p>
-<pre><code>10 N = JOY(1)
-20 IF N AND 128 THEN PRINT &quot;FIRE!&quot;</code></pre>
-<h3 id="pot">POT</h3>
-<p>Token <code>$CE $02</code> · Book p. B-197</p>
-<p>Reads a paddle, 1 to 4. The low byte is the position, and values
-above 255 mean the button is pressed.</p>
-<p>Format: <code>POT(paddle)</code></p>
-<pre><code>10 X = POT(1) : B = X &gt; 255 : V = X AND 255</code></pre>
-<h3 id="lpen">LPEN</h3>
-<p>Token <code>$CE $04</code> · Book p. B-163</p>
-<p>Reads the latched light pen X (0) or Y (1) position. The Book
-describes a light pen on port 1 with a CRT display, but the current core
-latches only touch input from the on-screen keyboard; see Chapter
-16.</p>
-<p>Format: <code>LPEN(coordinate)</code></p>
-<pre><code>PRINT LPEN(0), LPEN(1)</code></pre>
-<h3 id="mouse-rmouse">MOUSE, RMOUSE</h3>
-<p>Tokens <code>$FE $3E</code>, <code>$FE $3F</code> · Book pp. B-173,
-B-217</p>
-<p>MOUSE ON starts the mouse driver, with the pointer drawn by a sprite;
-RMOUSE reads the position and buttons, giving -1 if the mouse driver is
-off.</p>
-<p>Format: <code>MOUSE ON [{, port, sprite, hotspot, pos}]</code> /
-<code>MOUSE OFF</code> / <code>RMOUSE x, y, buttons</code></p>
-<pre><code>10 MOUSE ON, 1, 1
-20 RMOUSE XP, YP, BU : PRINT XP; YP; BU</code></pre>
-<h2 id="system">System</h2>
-<h3 id="speed-fast-rspeed">SPEED, FAST, RSPEED</h3>
-<p>Tokens <code>$FE $26</code>, <code>$FE $25</code>,
-<code>$CE $0E</code> · Book pp. B-245, B-106, B-225</p>
-<p>SPEED, or its synonym FAST, sets the CPU to 1, 3.5 or 40.5 MHz;
-RSPEED reports the speed as 1, 3 or 40. Neither works after
-<code>POKE 0,65</code> has forced full speed.</p>
-<p>Format: <code>SPEED [speed]</code> / <code>FAST [speed]</code> /
-<code>RSPEED(n)</code></p>
-<pre><code>10 SPEED 1 : PRINT RSPEED(0)
-20 SPEED : PRINT RSPEED(0)</code></pre>
-<h3 id="go64">GO64</h3>
-<p>Token <code>$CB $36 $34</code> · Book p. B-125</p>
-<p>Switches to C64 mode, after asking for confirmation in direct mode.
-Any program in memory is lost.</p>
-<p>Format: <code>GO64</code></p>
-<pre><code>GO64</code></pre>
-<h3 id="freezer">FREEZER</h3>
-<p>Token <code>$FE $4A</code> · Book p. B-119</p>
-<p>Opens the Freezer menu, as holding RESTORE does.</p>
-<p>Format: <code>FREEZER</code></p>
-<pre><code>FREEZER</code></pre>
-<h3 id="info">INFO</h3>
-<p>Token <code>$FE $4D</code> · Book p. B-137</p>
-<p>Displays information about the running system, such as the video mode
-and memory use.</p>
-<p>Format: <code>INFO</code></p>
-<pre><code>INFO</code></pre>
-<h3 id="ti-ti-dt">TI, <code>TI$</code>, <code>DT$</code></h3>
-<p>Reserved variables, no token · Book pp. B-264, B-265, B-87</p>
-<p>TI is a timer with microsecond resolution, restarted with CLR TI;
-<code>TI$</code> and <code>DT$</code> give the time and date from the
-real-time clock.</p>
-<p>Format: <code>TI</code>, <code>TI$</code>, <code>DT$</code></p>
-<pre><code>10 CLR TI
-20 FOR I% = 1 TO 10000 : NEXT
-30 PRINT &quot;TOOK&quot;; TI; &quot;SECONDS AT &quot;; TI$; &quot; ON &quot;; DT$</code></pre>
-<h3 id="t-c">T@&amp;, C@&amp;</h3>
-<p>Reserved arrays, no token · Book pp. B-259, B-39</p>
-<p>Read or set the screen code and colour of the character at a column
-and row of the text screen, as described under Special Keywords and
-Symbols.</p>
-<p>Format: <code>T@&amp;(column, row)</code> /
-<code>C@&amp;(column, row)</code></p>
-<pre><code>10 FOR C = 0 TO 63 : T@&amp;(C, 0) = C : C@&amp;(C, 0) = C AND 15 : NEXT</code></pre>
-<h3 id="off">OFF</h3>
-<p>Token <code>$FE $24</code> · Book p. B-180</p>
-<p>Secondary keyword that turns a feature off, as in KEY OFF, MOUSE OFF
-and EDIT OFF.</p>
-<p>Format: <code>keyword OFF</code></p>
-<pre><code>MOUSE OFF</code></pre>
-<h2 id="operators">Operators</h2>
+are set by BASIC. Each has an entry under its category later in this
+chapter.</p>
+<h3 id="operators">Operators</h3>
 <p>Operators are tokenised like keywords. The tables below follow the
 Book's operator reference (MEGA65 Book, pp. B-9 to B-12).</p>
 <table>
@@ -1678,7 +420,11 @@ Book's operator reference (MEGA65 Book, pp. B-9 to B-12).</p>
 </table>
 <p>The shift operators are new in BASIC 65. The two-character
 comparisons are stored as their two single-character tokens.</p>
-<h3 id="true-and-false">True and false</h3>
+<p>Both sides of a comparison must be the same type, either two numbers
+or two strings (MEGA65 Book, p. B-10). The only other operator that
+works on strings is <code>+</code>, which joins them:
+<code>"MEGA" + "65"</code> is <code>"MEGA65"</code>.</p>
+<h4 id="true-and-false">True and false</h4>
 <p>A comparison evaluates to -1 when true and 0 when false. Because -1
 has every bit set, NOT, AND, OR and XOR work the same way whether their
 operands are comparisons or ordinary numbers:
@@ -1691,7 +437,7 @@ B-10, B-11).</p>
 them apart by position. In <code>A = B = 10</code>, the first
 <code>=</code> assigns and the second compares, so A becomes -1 or
 0.</p>
-<h3 id="precedence">Precedence</h3>
+<h4 id="precedence">Precedence</h4>
 <p>From highest to lowest:</p>
 <ol type="1">
 <li><code>↑</code></li>
@@ -1707,6 +453,1930 @@ them apart by position. In <code>A = B = 10</code>, the first
 </ol>
 <p>Parentheses override the order: <code>A * (A - B) * B</code> performs
 the subtraction first (MEGA65 Book, p. B-12).</p>
+<h3 id="functions">Functions</h3>
+<p>A function is a keyword that calculates a value from the arguments
+given to it in parentheses, and hands the value back to the expression
+it is part of. In <code>A = SQR(16) + 1</code>, SQR returns 4, so A
+becomes 5. A function call can go anywhere an expression of its type
+can, but it can't stand on its own as a statement.</p>
+<p>Functions whose names end in <code>$</code>, such as
+<code>CHR$</code>, <code>LEFT$</code> and <code>HEX$</code>, return
+strings, just as string variable names end in <code>$</code>. All other
+functions return numbers. Some keywords that are not mathematical
+functions work the same way, such as <code>PEEK</code>,
+<code>JOY</code> and <code>POINTER</code>.</p>
+<p>A few functions take an argument that they ignore, because the syntax
+requires one. <code>POS(0)</code> is the usual way to write POS. Other
+functions, such as FRE, use their argument to choose what to
+return.</p>
+<p>A program can also define its own one-line numeric functions with
+DEF FN and call them with FN. A function whose name is a single letter
+is fast, like a single-letter variable (MEGA65 Book, p. B-7).</p>
+<p>The numeric functions are listed under Numbers and the string
+functions under Strings. Others are described with the statements they
+relate to, such as PEEK under Memory and Machine Language and RCOLOR
+under Colour.</p>
+<h3 id="expressions">Expressions</h3>
+<p>An expression is anything that has a value: a literal, a variable
+or array element, a function call, or any of these combined with
+operators and parentheses. Every expression is either numeric or a
+string (MEGA65 Book, p. B-4):</p>
+<pre><code>X = SQR(M) + PEEK(SC + J)
+K$ = MID$(&quot;HI &quot; + NA$, 1, L) + CHR$(13)</code></pre>
+<p>Wherever a format in this chapter names a value, such as
+<code>number</code> or <code>string</code>, any expression of that type
+will do. An expression of the wrong type gives a type mismatch error,
+as in <code>KEY "POTATO", "SOUP"</code>, where KEY expects a number
+first (MEGA65 Book, p. B-4). Real, integer and byte values can be mixed
+freely in one numeric expression; to turn a number into a string, or a
+string into a number, use the functions <code>STR$</code> and VAL.</p>
+<p>When a value is stored in an integer or byte variable, it is first
+rounded down to a whole number, so <code>A% = 2.7</code> stores 2 and
+<code>A% = -1.5</code> stores -2. A whole number outside -32768 to
+32767 gives an illegal quantity error. A byte variable then keeps only
+the low eight bits, without an error: <code>A&amp; = 300</code> stores
+44, and <code>A&amp; = -1</code> stores 255.</p>
+<p>Every value worked out along the way must also be in range. A
+number too large for a real gives an overflow error, and a string
+result longer than 255 characters gives a string too long error.</p>
+<p>A comparison is a numeric expression too, worth -1 when true and 0
+when false, as described under Operators. So a condition can be
+combined with arithmetic, and arithmetic can serve as a condition:</p>
+<pre><code>10 DA = 31 + 3 * (M = 2) + (M = 4 OR M = 6 OR M = 9 OR M = 11)
+20 IF X$ = &quot;Y&quot; OR X$ = &quot;N&quot; THEN 100</code></pre>
+<p>Line 10 gives the number of days in month M of a year that is not a
+leap year.
+Because comparisons have a lower precedence than arithmetic but a
+higher one than AND and OR, a condition that leaves out a comparison
+can still be valid and mean something else.
+<code>IF PEEK(X) = 0 AND PEEK(X + 1) = 0</code> tests two bytes for
+zero, but <code>IF PEEK(X) AND PEEK(X + 1) = 0</code> ANDs the first
+byte with the result of the comparison.</p>
+<h3 id="statements">Statements</h3>
+<p>A statement is one complete instruction. Most begin with a keyword,
+followed by its arguments, as in <code>PRINT "HELLO"</code> or
+<code>POKE $D020, 0</code>. An assignment begins with a variable
+instead, as in <code>A = 5</code>, because the word LET is optional.</p>
+<p>The statements fall into a few broad groups, which match the
+categories of the keyword entries later in this chapter:</p>
+<ul>
+<li><strong>Assignment</strong>: LET, or a variable followed by
+<code>=</code>.</li>
+<li><strong>Program flow</strong>: IF, GOTO, GOSUB, loops, and the
+statements that end or pause a program.</li>
+<li><strong>Data</strong>: DIM, DATA, READ and DEF FN.</li>
+<li><strong>Input and output</strong>: INPUT, GET and PRINT for the
+keyboard and screen, and their <code>#</code> forms for files and
+devices.</li>
+<li><strong>Machine and devices</strong>: the statements for memory,
+graphics, sound, sprites and disks.</li>
+<li><strong>Comments</strong>: REM, which makes BASIC ignore the rest
+of the line.</li>
+</ul>
+<h4 id="program-lines-and-direct-mode">Program lines and direct mode</h4>
+<p>A statement typed without a line number runs as soon as RETURN is
+pressed. This is direct mode. A line that starts with a number from 0
+to 63999 is stored as part of the program instead, and runs when the
+program does (MEGA65 Book, pp. 9-6, B-4). BASIC keeps the lines in
+order of their numbers, whatever order they were typed in. Typing a
+line with an existing number replaces that line, and typing the number
+alone deletes it.</p>
+<p>Several statements can share one line, separated by colons
+(MEGA65 Book, p. B-4):</p>
+<pre><code>PRINT &quot;HELLO&quot; : PRINT &quot;HOW ARE YOU?&quot;</code></pre>
+<p>Most statements work both in direct mode and in a program. A few,
+such as RENUMBER, work only in direct mode, because they act on the
+program itself (MEGA65 Book, p. B-5). Their entries say so.</p>
+<h4 id="tokens">Tokens</h4>
+<p>When a line is stored, BASIC 65 replaces each keyword with a shorter
+code called a token, as Chapter 6 describes. Tokens come in four
+forms:</p>
+<ul>
+<li><strong>One byte</strong>, <code>$80</code> to <code>$FD</code>, for
+the keywords BASIC 65 shares with earlier Commodore BASICs and many of
+its own.</li>
+<li><strong>Two bytes beginning <code>$FE</code></strong>, for most
+extended statements, a scheme BASIC 65 inherits from the C128's BASIC
+7.0, such as BANK (<code>$FE $02</code>).</li>
+<li><strong>Two bytes beginning <code>$CE</code></strong>, for most
+added functions, such as POINTER (<code>$CE $0A</code>).</li>
+<li><strong>Combinations</strong> for compound keywords, such as GOTO
+written as GO TO (<code>$CB $A4</code>) or SETBIT
+(<code>$FE $2D $FE $4E</code>, SET followed by BIT).</li>
+</ul>
+<p>Reserved variables such as DS, ER and TI have no token: they are
+stored as their names.</p>
+<h4 id="shortcuts-and-symbols">Shortcuts and symbols</h4>
+<table>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>?</code></td>
+<td>Abbreviation for PRINT; <code>? N</code> is the same as
+<code>PRINT N</code>, and LIST shows it as PRINT (MEGA65 Book, p.
+9-13)</td>
+</tr>
+<tr class="even">
+<td><code>#</code></td>
+<td>Marks a channel number, as in <code>PRINT#</code>,
+<code>INPUT#</code>, <code>GET#</code> and <code>DOPEN#</code></td>
+</tr>
+<tr class="odd">
+<td><code>↑</code></td>
+<td>The power operator in expressions; at the start of a line, load
+and run the file named after it</td>
+</tr>
+<tr class="even">
+<td><code>←</code></td>
+<td>At the start of a line, SAVE the program under the file name after
+it</td>
+</tr>
+<tr class="odd">
+<td><code>/</code></td>
+<td>At the start of a line, LOAD the file named after it</td>
+</tr>
+<tr class="even">
+<td><code>@</code></td>
+<td>At the start of a line, DISK: send a command to the drive</td>
+</tr>
+<tr class="odd">
+<td><code>$</code></td>
+<td>At the start of a line, DIR</td>
+</tr>
+</tbody>
+</table>
+<p>The last five shortcuts are meant for use with a directory listing:
+type <code>$</code> to list the disk, move the cursor to a program's
+line, type <code>↑</code> over the start of it and press RETURN, and the
+program loads and runs. Everything except the quoted file name on the
+line is ignored (MEGA65 Book, p. 6-13). They can also be typed by hand,
+as in <code>↑"GAME"</code>. A file name is needed: <code>↑</code> on
+its own is not a short form of RUN for the program already in memory,
+and gives <code>?MISSING FILE NAME ERROR</code>.</p>
+<h3 id="error-handling">Error Handling</h3>
+<p>This section describes what happens when something goes wrong in a
+BASIC 65 program, and how a program can deal with it. The keywords
+involved have their own entries under <a
+href="#error-handling-and-debugging">Error Handling and Debugging</a>
+and <a href="#disk-and-files">Disk and Files</a>.</p>
+<h4 id="how-errors-are-reported">How errors are reported</h4>
+<p>When BASIC 65 meets something it can't do, it stops, sends input and
+output back to the keyboard and screen, and prints a message ending in
+<code>ERROR</code>. If a program was running, the message gives the
+line, and HELP then lists that line with the failing statement
+highlighted (MEGA65 Book, p. B-131):</p>
+<pre><code>10 A = 1.E20
+20 B = A + A : C = EXP(A) : PRINT A, B, C
+RUN
+?OVERFLOW ERROR IN 20
+READY.</code></pre>
+<p>Each error has a number, listed under <a href="#error-messages">Error
+messages</a> below. ER holds the number of the last error and EL its
+line, and <code>ERR$(ER)</code> gives the message text.</p>
+<h4 id="catching-errors-in-a-program">Catching errors in a program</h4>
+<p>TRAP sets a line for BASIC to go to when an error happens in a
+running program, instead of stopping (MEGA65 Book, p. B-267). The lines
+from there form an error handler. It reads ER and EL to find out what
+went wrong and where, and ends with RESUME (MEGA65 Book, p. B-213):</p>
+<ul>
+<li><code>RESUME</code> tries the failing statement again, after the
+handler has fixed the cause.</li>
+<li><code>RESUME NEXT</code> carries on with the statement after
+it.</li>
+<li><code>RESUME line</code> carries on at that line.</li>
+</ul>
+<pre><code> 10 TRAP 100
+ 20 FOR I = 1 TO 100
+ 30 PRINT EXP(I)
+ 40 NEXT
+ 50 PRINT &quot;STOPPED FOR I =&quot;; I
+ 60 END
+100 PRINT ERR$(ER) : RESUME 50</code></pre>
+<p>Here EXP overflows when I reaches 89, and the handler prints the
+message and continues at line 50. A few rules follow from the way the
+ROM handles traps:</p>
+<ul>
+<li>Errors in direct mode are never trapped; they are always
+reported.</li>
+<li>While the handler runs, the trap is switched off, so an error inside
+the handler itself stops the program as usual. RESUME switches the trap
+back on.</li>
+<li>Pressing RUN/STOP raises error 30, BREAK, so a program with a trap
+set goes to its handler instead of stopping. The STOP statement is not
+an error and is not trapped.</li>
+<li><code>TRAP</code> with no line number switches trapping off.</li>
+</ul>
+<h4 id="disk-and-device-errors">Disk and device errors</h4>
+<p>Not every disk problem stops the program with a BASIC error. The
+drive keeps its own status, which a program should check after each
+disk command: DS is 0 when
+the last disk operation worked, and <code>DS$</code> gives the drive's
+message. Reading them also clears the error on the drive (MEGA65 Book,
+p. B-84):</p>
+<pre><code>100 DOPEN#1, &quot;DATA&quot;
+110 IF DS &lt;&gt; 0 THEN PRINT &quot;COULD NOT OPEN FILE DATA&quot; : STOP</code></pre>
+<p>ST gives the status of the last input or output operation on a
+channel. It is 0 when all is well and is otherwise set by the device;
+when reading a file, a value of 64 means the end of the file was
+reached (MEGA65 Book, p. B-251). HELP shows only BASIC errors; for disk
+errors, use DS and <code>DS$</code> (MEGA65 Book, p. B-131).</p>
+<h4 id="finding-the-cause">Finding the cause</h4>
+<p>When an error is hard to explain, HELP shows exactly which statement
+failed, and TRON prints each line number as it runs, so the path the
+program took to reach the error can be followed. <a
+href="ch04-effective-programming-in-basic65.html#debugging">Chapter
+4</a> covers debugging BASIC programs in more depth, and Chapter 8 covers the
+Matrix Mode debugger.</p>
+<h4 id="error-messages">Error messages</h4>
+<p>The table lists the messages by number, as in the Book's list (MEGA65
+Book, pp. B-100, B-101). The causes are worked out from the BASIC 65
+ROM's source code. Errors 1 to 9 come from the KERNAL's input and
+output routines, which BASIC passes on. The rest come from BASIC
+itself.</p>
+<table>
+<thead>
+<tr class="header">
+<th>ER</th>
+<th>Message</th>
+<th>Cause</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>OK</td>
+<td>No error. ER is -1, not 0, when no error has happened.</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>TOO MANY FILES</td>
+<td>Too many files are open at once, or BASIC can't find a free channel for OPEN, DOPEN or APPEND.</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>FILE OPEN</td>
+<td>OPEN used a file number that is already open.</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>FILE NOT OPEN</td>
+<td>PRINT#, INPUT#, GET#, CMD or RECORD used a file number that is not open.</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>FILE NOT FOUND</td>
+<td>LOAD, DLOAD, OPEN, CHDIR or MOUNT named a file or directory that doesn't exist.</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td>DEVICE NOT PRESENT</td>
+<td>No device answered at that unit number, or the device can't be used for that kind of file.</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>NOT INPUT FILE</td>
+<td>Reserved. Nothing in BASIC 65 or the MEGA65 KERNAL raises it; it is kept from earlier Commodore BASICs.</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>NOT OUTPUT FILE</td>
+<td>PRINT# or CMD sent output to a device that can't accept it.</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td>MISSING FILE NAME</td>
+<td>A command that needs a file name was given an empty one, as with <code>↑</code> on its own.</td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td>ILLEGAL DEVICE NUMBER</td>
+<td>The unit number is out of range for the command, such as a unit below 4 or above 30 for a disk command, or DSAVE to the SD card (unit 12).</td>
+</tr>
+<tr class="odd">
+<td>10</td>
+<td>NEXT WITHOUT FOR</td>
+<td>NEXT has no matching FOR.</td>
+</tr>
+<tr class="even">
+<td>11</td>
+<td>SYNTAX</td>
+<td>The statement is not written correctly: a misspelt keyword, a missing comma or parenthesis, or a keyword inside a variable name.</td>
+</tr>
+<tr class="odd">
+<td>12</td>
+<td>RETURN WITHOUT GOSUB</td>
+<td>RETURN has no matching GOSUB.</td>
+</tr>
+<tr class="even">
+<td>13</td>
+<td>OUT OF DATA</td>
+<td>READ ran past the last item in the DATA lines.</td>
+</tr>
+<tr class="odd">
+<td>14</td>
+<td>ILLEGAL QUANTITY</td>
+<td>An argument is outside the range the keyword accepts, or a number is too large to convert to an integer.</td>
+</tr>
+<tr class="even">
+<td>15</td>
+<td>OVERFLOW</td>
+<td>A calculation produced a number too large for a real value.</td>
+</tr>
+<tr class="odd">
+<td>16</td>
+<td>OUT OF MEMORY</td>
+<td>There is no room left for the program, for variables or arrays, or for nested FOR, GOSUB and DO.</td>
+</tr>
+<tr class="even">
+<td>17</td>
+<td>UNDEFINED STATEMENT</td>
+<td>GOTO, GOSUB or RESTORE named a line number that doesn't exist.</td>
+</tr>
+<tr class="odd">
+<td>18</td>
+<td>BAD SUBSCRIPT</td>
+<td>An array index is outside the bounds set by DIM, including for the screen arrays <code>T@&amp;</code> and <code>C@&amp;</code>.</td>
+</tr>
+<tr class="even">
+<td>19</td>
+<td>REDIMENSIONED ARRAY</td>
+<td>DIM named an array that already exists.</td>
+</tr>
+<tr class="odd">
+<td>20</td>
+<td>DIVISION BY ZERO</td>
+<td>A division by 0.</td>
+</tr>
+<tr class="even">
+<td>21</td>
+<td>ILLEGAL DIRECT</td>
+<td>A statement that only works in a program, such as INPUT, GET or DEF FN, was typed in direct mode.</td>
+</tr>
+<tr class="odd">
+<td>22</td>
+<td>TYPE MISMATCH</td>
+<td>A string was used where a number was expected, or the other way round; this includes READ meeting the wrong type of DATA item.</td>
+</tr>
+<tr class="even">
+<td>23</td>
+<td>STRING TOO LONG</td>
+<td>A string result is longer than 255 characters.</td>
+</tr>
+<tr class="odd">
+<td>24</td>
+<td>FILE DATA</td>
+<td>INPUT# read something that is not a number into a numeric variable.</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td>FORMULA TOO COMPLEX</td>
+<td>An expression is nested too deeply to evaluate, or there is no more room for strings.</td>
+</tr>
+<tr class="odd">
+<td>26</td>
+<td>CAN'T CONTINUE</td>
+<td>CONT was used when there is no stopped program to continue.</td>
+</tr>
+<tr class="even">
+<td>27</td>
+<td>UNDEFINED FUNCTION</td>
+<td>FN called a function that DEF FN has not defined.</td>
+</tr>
+<tr class="odd">
+<td>28</td>
+<td>VERIFY</td>
+<td>DVERIFY or VERIFY found a difference while in edit mode. Outside edit mode, VERIFY reports the address of the difference instead.</td>
+</tr>
+<tr class="even">
+<td>29</td>
+<td>LOAD</td>
+<td>A load failed partway through.</td>
+</tr>
+<tr class="odd">
+<td>30</td>
+<td>BREAK</td>
+<td>The RUN/STOP key stopped the program.</td>
+</tr>
+<tr class="even">
+<td>31</td>
+<td>CAN'T RESUME</td>
+<td>RESUME was used when no error is waiting to be handled by a TRAP routine.</td>
+</tr>
+<tr class="odd">
+<td>32</td>
+<td>LOOP NOT FOUND</td>
+<td>BASIC reached the end of the program looking for the LOOP that ends a DO block, after a false WHILE or UNTIL or an EXIT.</td>
+</tr>
+<tr class="even">
+<td>33</td>
+<td>LOOP WITHOUT DO</td>
+<td>LOOP or EXIT has no matching DO.</td>
+</tr>
+<tr class="odd">
+<td>34</td>
+<td>DIRECT MODE ONLY</td>
+<td>A command that only works in direct mode, such as AUTO, RENUMBER, DELETE, CHANGE, MERGE, EDIT or IMPORT, was used in a program.</td>
+</tr>
+<tr class="even">
+<td>35</td>
+<td>SCREEN NOT OPEN</td>
+<td>A graphics command, such as PALETTE, LOADIFF or PIXEL, was used before SCREEN opened a graphics screen.</td>
+</tr>
+<tr class="odd">
+<td>36</td>
+<td>BAD DISK</td>
+<td>BOOT SYS could not boot from the disk.</td>
+</tr>
+<tr class="even">
+<td>37</td>
+<td>BEND NOT FOUND</td>
+<td>A BEGIN after THEN or ELSE has no matching BEND.</td>
+</tr>
+<tr class="odd">
+<td>38</td>
+<td>LINE NUMBER TOO LARGE</td>
+<td>RENUMBER would give a line a number above the highest allowed.</td>
+</tr>
+<tr class="even">
+<td>39</td>
+<td>UNRESOLVED REFERENCE</td>
+<td>RENUMBER found a GOTO, GOSUB or similar reference to a line that doesn't exist.</td>
+</tr>
+<tr class="odd">
+<td>40</td>
+<td>UNIMPLEMENTED COMMAND</td>
+<td>The keyword is reserved but does nothing yet, such as SCALE, or SET was given an option it doesn't know.</td>
+</tr>
+<tr class="even">
+<td>41</td>
+<td>FILE READ</td>
+<td>Reserved. Nothing in the current ROM raises it.</td>
+</tr>
+<tr class="odd">
+<td>42</td>
+<td>EDIT MODE</td>
+<td>A command that runs or replaces a program, such as RUN, GOTO, CONT, LOAD or BOOT, was used while edit mode is on.</td>
+</tr>
+<tr class="even">
+<td>43</td>
+<td>RESERVED NAME</td>
+<td>A program tried to assign to a reserved variable such as ST, TI, DS or ER.</td>
+</tr>
+<tr class="odd">
+<td>44</td>
+<td>CBDOS DRIVES ONLY</td>
+<td>MKDIR was used on a drive other than the internal drive or a CBDOS external drive.</td>
+</tr>
+<tr class="even">
+<td>45</td>
+<td>OK</td>
+<td>Not a real error: ER values above 44 all show the message OK. Since ROM 920405, a DLOAD that fails in edit mode reports <code>?OK ERROR</code>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="basic-keywords">BASIC Keywords</h2>
+<p>The keyword entries are grouped by what they do. Categories at a
+Glance lists every category and its keywords, and each category name in
+it links to that category's entries. The symbols and special names that
+are not keywords, such as <code>$</code>, <code>%</code>,
+<code>T@&amp;</code> and <code>?</code>, are described under BASIC
+Syntax, and <a href="#symbols-and-special-names">Symbols and Special
+Names</a> says where to find each one.</p>
+<h3 id="categories-at-a-glance">Categories at a Glance</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Category</th>
+<th>Keywords</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#program-flow">Program flow</a></td>
+<td>DO, LOOP, WHILE, UNTIL, EXIT, FOR, TO, STEP, NEXT, IF, THEN, ELSE,
+BEGIN, BEND, GOTO, GOSUB, FGOTO, FGOSUB, ON, RETURN, END, STOP, CONT,
+SLEEP, WAIT, VSYNC</td>
+</tr>
+<tr class="even">
+<td><a href="#error-handling-and-debugging">Error handling and debugging</a></td>
+<td>TRAP, RESUME, ER, EL, <code>ERR$</code>, HELP, TRON, TROFF</td>
+</tr>
+<tr class="odd">
+<td><a href="#program-editing">Program editing</a></td>
+<td>AUTO, RENUMBER, DELETE, LIST, FIND, CHANGE, NEW, KEY, EDIT,
+HIGHLIGHT, MERGE, IMPORT</td>
+</tr>
+<tr class="even">
+<td><a href="#variables-and-data">Variables and data</a></td>
+<td>LET, DIM, CLR, DATA, READ, RESTORE, DEF FN, FN, POINTER, REM</td>
+</tr>
+<tr class="odd">
+<td><a href="#keyboard-and-screen-input">Keyboard and screen input</a></td>
+<td>INPUT, LINE INPUT, GET, GETKEY</td>
+</tr>
+<tr class="even">
+<td><a href="#text-output">Text output</a></td>
+<td>PRINT, PRINT USING, USING, SPC, TAB, POS, CMD, CURSOR, RCURSOR,
+WINDOW, RWINDOW, SCNCLR, FONT, CHARDEF</td>
+</tr>
+<tr class="odd">
+<td><a href="#strings">Strings</a></td>
+<td>ASC, <code>CHR$</code>, <code>LEFT$</code>, <code>MID$</code>,
+<code>RIGHT$</code>, LEN, INSTR, <code>STR$</code>, VAL,
+<code>RPT$</code>, <code>HEX$</code>, DEC, <code>STRBIN$</code>,
+DECBIN</td>
+</tr>
+<tr class="even">
+<td><a href="#numbers">Numbers</a></td>
+<td>ABS, INT, SGN, SQR, EXP, LOG, LOG10, LOG2, SIN, COS, TAN, ATN, MOD,
+RND, AND, OR, NOT, XOR</td>
+</tr>
+<tr class="odd">
+<td><a href="#memory-and-machine-language">Memory and machine language</a></td>
+<td>PEEK, POKE, WPEEK, WPOKE, SETBIT, CLRBIT, HASBIT, BANK, MEM, EDMA,
+DMA, SYS, RREG, USR, FRE, BLOAD, BSAVE, BVERIFY, BOOT, MONITOR</td>
+</tr>
+<tr class="even">
+<td><a href="#disk-and-files">Disk and files</a></td>
+<td>DIR, DIRECTORY, CATALOG, DLOAD, DSAVE, DVERIFY, LOAD, SAVE, VERIFY,
+RUN, OPEN, CLOSE, DOPEN, DCLOSE, APPEND, PRINT#, INPUT#, LINE INPUT#,
+GET#, RECORD, FREAD#, FWRITE#, COPY, CONCAT, RENAME, SCRATCH, ERASE,
+LOCK, UNLOCK, BACKUP, COLLECT, FORMAT, HEADER, DCLEAR, DISK, MKDIR,
+CHDIR, MOUNT, TYPE, SET, DS, <code>DS$</code>, ST, RDISK</td>
+</tr>
+<tr class="odd">
+<td><a href="#colour">Colour</a></td>
+<td>COLOR, FOREGROUND, BACKGROUND, BORDER, PALETTE, RCOLOR,
+RPALETTE</td>
+</tr>
+<tr class="even">
+<td><a href="#bitmap-graphics">Bitmap graphics</a></td>
+<td>GRAPHIC, SCREEN, PEN, RPEN, DMODE, DPAT, DOT, LINE, BOX, CIRCLE,
+ELLIPSE, POLYGON, PAINT, CHAR, CUT, GCOPY, PASTE, PIXEL, VIEWPORT,
+RGRAPHIC, LOADIFF, SAVEIFF</td>
+</tr>
+<tr class="odd">
+<td><a href="#sprites">Sprites</a></td>
+<td>SPRITE, MOVSPR, SPRCOLOR, SPRSAV, COLLISION, BUMP, RSPRITE, RSPPOS,
+RSPCOLOR, RSPRSYS</td>
+</tr>
+<tr class="even">
+<td><a href="#sound">Sound</a></td>
+<td>SOUND, PLAY, TEMPO, ENVELOPE, FILTER, VOL, RPLAY</td>
+</tr>
+<tr class="odd">
+<td><a href="#controllers">Controllers</a></td>
+<td>JOY, POT, LPEN, MOUSE, RMOUSE</td>
+</tr>
+<tr class="even">
+<td><a href="#system">System</a></td>
+<td>FAST, SPEED, RSPEED, GO64, FREEZER, INFO, <code>DT$</code>, TI,
+<code>TI$</code>, T@&amp;, C@&amp;, OFF</td>
+</tr>
+</tbody>
+</table>
+<h3 id="symbols-and-special-names">Symbols and Special Names</h3>
+<p>Some of BASIC 65's most useful features are not keywords, so they
+have no entry in the categories that follow. Each is described under
+BASIC Syntax, as listed here.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Symbol or name</th>
+<th>Meaning</th>
+<th>Described under</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$</code> before a number</td>
+<td>Hexadecimal literal</td>
+<td><a href="#number-prefixes">Number prefixes</a></td>
+</tr>
+<tr class="even">
+<td><code>%</code> before a number</td>
+<td>Binary literal</td>
+<td><a href="#number-prefixes">Number prefixes</a></td>
+</tr>
+<tr class="odd">
+<td><code>π</code></td>
+<td>The value of pi</td>
+<td><a href="#numbers-and-literals">Numbers and Literals</a></td>
+</tr>
+<tr class="even">
+<td><code>"</code></td>
+<td>Starts and ends a string literal; starts quote mode</td>
+<td><a href="#string-literals">String literals</a></td>
+</tr>
+<tr class="odd">
+<td><code>%</code>, <code>&amp;</code>, <code>$</code> after a name</td>
+<td>Integer, byte and string variable types</td>
+<td><a href="#type-suffixes">Type suffixes</a></td>
+</tr>
+<tr class="even">
+<td><code>( )</code> after a name</td>
+<td>Array element</td>
+<td><a href="#arrays">Arrays</a></td>
+</tr>
+<tr class="odd">
+<td><code>T@&amp;</code>, <code>C@&amp;</code></td>
+<td>Screen code and colour arrays</td>
+<td><a href="#screen-arrays">Screen arrays</a></td>
+</tr>
+<tr class="even">
+<td>DS, <code>DS$</code>, ER, EL, ST, TI, <code>TI$</code>, <code>DT$</code></td>
+<td>Reserved variables</td>
+<td><a href="#reserved-variables">Reserved variables</a></td>
+</tr>
+<tr class="odd">
+<td><code>+ - * / ↑ &lt;&lt; &gt;&gt;</code></td>
+<td>Arithmetic and shift operators</td>
+<td><a href="#operators">Operators</a></td>
+</tr>
+<tr class="even">
+<td><code>= &lt;&gt; &lt; &lt;= &gt; &gt;=</code></td>
+<td>Comparisons, and <code>=</code> for assignment</td>
+<td><a href="#operators">Operators</a></td>
+</tr>
+<tr class="odd">
+<td><code>:</code></td>
+<td>Separates statements on a line</td>
+<td><a href="#program-lines-and-direct-mode">Program lines and direct mode</a></td>
+</tr>
+<tr class="even">
+<td><code>?</code></td>
+<td>Short form of PRINT</td>
+<td><a href="#shortcuts-and-symbols">Shortcuts and symbols</a></td>
+</tr>
+<tr class="odd">
+<td><code>#</code></td>
+<td>Marks a channel number, as in <code>PRINT#</code></td>
+<td><a href="#shortcuts-and-symbols">Shortcuts and symbols</a></td>
+</tr>
+<tr class="even">
+<td><code>↑</code>, <code>←</code>, <code>/</code>, <code>@</code>, <code>$</code> at the start of a line</td>
+<td>Load and run, save, load, disk command, directory</td>
+<td><a href="#shortcuts-and-symbols">Shortcuts and symbols</a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="program-flow">Program Flow</h3>
+<h4 id="do-loop-while-until-exit">DO, LOOP, WHILE, UNTIL, EXIT</h4>
+<p>Tokens <code>$EB</code>, <code>$EC</code>, <code>$FD</code>,
+<code>$FC</code>, <code>$ED</code> · Book pp. B-78, B-162, B-282, B-272,
+B-104</p>
+<p>DO and LOOP enclose a block of statements that repeats. A WHILE or
+UNTIL condition can go after DO, tested before each pass, or after LOOP,
+tested after each pass; without one, the loop runs until EXIT leaves
+it.</p>
+<p>Format:
+<code>DO [&lt;UNTIL / WHILE&gt; condition] ... [EXIT] ... LOOP [&lt;UNTIL / WHILE&gt; condition]</code></p>
+<pre><code>10 PW$ = &quot;&quot; : DO
+20 GET A$ : PW$ = PW$ + A$
+30 LOOP UNTIL LEN(PW$) &gt; 7 OR A$ = CHR$(13)</code></pre>
+<pre><code>10 I = 0
+20 DO WHILE I &lt; 3 : PRINT I; : I = I + 1 : LOOP
+30 DO : I = I - 1 : IF I = 0 THEN EXIT
+40 LOOP : PRINT &quot;DONE&quot;</code></pre>
+<p>Line 20 prints 0, 1 and 2; the loop in lines 30 and 40 counts I back
+down and leaves through EXIT when it reaches 0.</p>
+<h4 id="for-to-step-next">FOR, TO, STEP, NEXT</h4>
+<p>Tokens <code>$81</code>, <code>$A4</code>, <code>$A9</code>,
+<code>$82</code> · Book pp. B-114, B-266, B-252, B-178</p>
+<p>FOR starts a counted loop and NEXT ends it. The index runs from the
+start value to the end value, changing by STEP each time, or by 1 if
+STEP is omitted. TO is also used by many other commands, such as COPY
+and RENAME.</p>
+<p>Format:
+<code>FOR index = start TO end [STEP step] ... NEXT [index]</code></p>
+<pre><code>10 FOR D = 0 TO 360 STEP 30
+20 R = D * π / 180
+30 PRINT D; R; SIN(R)
+40 NEXT D</code></pre>
+<h4 id="if-then-else">IF, THEN, ELSE</h4>
+<p>Tokens <code>$8B</code>, <code>$A7</code>, <code>$D5</code> · Book
+pp. B-134, B-263, B-96</p>
+<p>IF tests a condition. When it is true, the statements after THEN run;
+otherwise the statements after ELSE run, if there is an ELSE. A line
+number after THEN acts as a GOTO.</p>
+<p>Format:
+<code>IF expression THEN statements [: ELSE statements]</code>. A colon
+must come before ELSE.</p>
+<pre><code>10 INPUT &quot;ENTER A NUMBER&quot;; V
+20 IF V &lt; 0 THEN PRINT &quot;NEGATIVE&quot; : ELSE PRINT &quot;NOT NEGATIVE&quot;</code></pre>
+<h4 id="begin-bend">BEGIN, BEND</h4>
+<p>Tokens <code>$FE $18</code>, <code>$FE $19</code> · Book pp. B-27,
+B-28</p>
+<p>BEGIN and BEND bracket a block of statements, over several lines if
+needed, that runs as the THEN or ELSE part of an IF. They lift the old
+limit of one line per condition.</p>
+<p>Format:
+<code>IF condition THEN BEGIN ... BEND [ELSE BEGIN ... BEND]</code></p>
+<pre><code>10 GET A$
+20 IF A$ &gt;= &quot;A&quot; AND A$ &lt;= &quot;Z&quot; THEN BEGIN
+30 PW$ = PW$ + A$
+40 PRINT A$;
+50 BEND
+60 IF LEN(PW$) &lt; 8 THEN 10</code></pre>
+<h4 id="goto">GOTO</h4>
+<p>Token <code>$89</code>, or <code>$CB $A4</code> as GO TO · Book p.
+B-127</p>
+<p>Continues the program at the given line number.</p>
+<p>Format: <code>GOTO line</code> or <code>GO TO line</code></p>
+<pre><code>10 PRINT &quot;HELLO &quot;; : GOTO 10</code></pre>
+<h4 id="gosub-return">GOSUB, RETURN</h4>
+<p>Tokens <code>$8D</code>, <code>$8E</code> · Book pp. B-126, B-214</p>
+<p>GOSUB calls a subroutine at a line number; RETURN goes back to the
+statement after the GOSUB. RETURN also ends a COLLISION handler.</p>
+<p>Format: <code>GOSUB line</code> ... <code>RETURN</code></p>
+<pre><code>10 FOR I = 1 TO 3 : GOSUB 100 : NEXT
+20 END
+100 PRINT &quot;CALL NUMBER&quot;; I : RETURN</code></pre>
+<h4 id="fgoto-fgosub">FGOTO, FGOSUB</h4>
+<p>Tokens <code>$FE $47</code>, <code>$FE $48</code> · Book pp. B-108,
+B-107</p>
+<p>Like GOTO and GOSUB, but the line number is calculated from an
+expression when the statement runs.</p>
+<p>Format: <code>FGOTO expression</code> /
+<code>FGOSUB expression</code></p>
+<pre><code>10 INPUT &quot;WHICH SUBROUTINE: 100, 200 OR 300&quot;; LI
+20 FGOSUB LI</code></pre>
+<pre><code> 10 INPUT &quot;WHICH LINE: 100, 200 OR 300&quot;; LI
+ 20 FGOTO LI
+100 PRINT &quot;AT LINE 100&quot; : END
+200 PRINT &quot;AT LINE 200&quot; : END
+300 PRINT &quot;AT LINE 300&quot; : END</code></pre>
+<h4 id="on">ON</h4>
+<p>Token <code>$91</code> · Book p. B-181</p>
+<p>Jumps to, or calls, one of a list of lines chosen by the value of an
+expression: 1 selects the first line, 2 the second, and so on. ON is
+also the secondary keyword in KEY ON and MOUSE ON.</p>
+<p>Format: <code>ON expression GOTO line [, line ...]</code> or
+<code>ON expression GOSUB line [, line ...]</code></p>
+<pre><code>10 ON SGN(X) + 2 GOTO 100, 200, 300 : REM NEGATIVE, ZERO, POSITIVE</code></pre>
+<h4 id="end">END</h4>
+<p>Token <code>$80</code> · Book p. B-98</p>
+<p>Ends the program and returns to the READY prompt.</p>
+<p>Format: <code>END</code></p>
+<pre><code>10 IF V &lt; 0 THEN END
+20 PRINT V</code></pre>
+<h4 id="stop">STOP</h4>
+<p>Token <code>$90</code> · Book p. B-253</p>
+<p>Stops the program with a BREAK message naming the line, so it can be
+resumed with CONT.</p>
+<p>Format: <code>STOP</code></p>
+<pre><code>10 IF V &lt; 0 THEN STOP
+20 PRINT SQR(V)</code></pre>
+<h4 id="cont">CONT</h4>
+<p>Token <code>$9A</code> · Book p. B-58</p>
+<p>Resumes a program stopped by STOP, END or the RUN/STOP key, provided
+the program has not been edited in between.</p>
+<p>Format: <code>CONT</code></p>
+<pre><code>CONT</code></pre>
+<h4 id="sleep">SLEEP</h4>
+<p>Token <code>$FE $0B</code> · Book p. B-242</p>
+<p>Pauses for a number of seconds, which may be a fraction.</p>
+<p>Format: <code>SLEEP seconds</code></p>
+<pre><code>SLEEP 0.5 : REM WAIT HALF A SECOND</code></pre>
+<h4 id="wait">WAIT</h4>
+<p>Token <code>$92</code> · Book p. B-281</p>
+<p>Pauses until a memory location shows a given bit pattern: the value
+read is XORed with the optional third value, then ANDed with the mask,
+and the wait ends when the result is not zero.</p>
+<p>Format: <code>WAIT address, andmask [, xormask]</code></p>
+<pre><code>10 BANK 128
+20 WAIT $D611, 1 : REM WAIT FOR THE LEFT SHIFT KEY</code></pre>
+<h4 id="vsync">VSYNC</h4>
+<p>Token <code>$FE $54</code> · Book p. B-280</p>
+<p>Waits until the video display reaches a raster line: 0-311 on PAL,
+0-261 on NTSC. Useful for changing colours or graphics at a fixed point
+in the frame.</p>
+<p>Format: <code>VSYNC raster line</code></p>
+<pre><code>10 BORDER 3 : VSYNC 100
+20 BORDER 7 : VSYNC 260
+30 GOTO 10</code></pre>
+<h3 id="error-handling-and-debugging">Error Handling and Debugging</h3>
+<h4 id="trap">TRAP</h4>
+<p>Token <code>$D7</code> · Book p. B-267</p>
+<p>Sends any BASIC error to a handler at the given line instead of
+stopping the program. TRAP with no line turns the handler off.</p>
+<p>Format: <code>TRAP [line]</code></p>
+<pre><code>10 TRAP 100
+20 FOR I = 1 TO 100 : PRINT EXP(I) : NEXT
+30 END
+100 PRINT ERR$(ER) : RESUME 30</code></pre>
+<h4 id="resume">RESUME</h4>
+<p>Token <code>$D6</code> · Book p. B-213</p>
+<p>Ends a TRAP handler: RESUME retries the failing statement, RESUME
+NEXT continues after it, and RESUME with a line number continues
+there.</p>
+<p>Format: <code>RESUME [line / NEXT]</code></p>
+<pre><code>100 PRINT &quot;ERROR&quot;; ER; &quot;IN LINE&quot;; EL : RESUME NEXT</code></pre>
+<h4 id="er-el">ER, EL</h4>
+<p>Reserved variables, no token · Book pp. B-100, B-93</p>
+<p>ER holds the number of the most recent error and EL the line where it
+happened; both are -1 if there has been no error. The numbers are
+listed under <a href="#error-messages">Error messages</a>, at the
+end of BASIC Syntax.</p>
+<p>Format: <code>ER</code>, <code>EL</code></p>
+<pre><code>100 PRINT &quot;ERROR&quot;; ER; &quot;AT LINE&quot;; EL</code></pre>
+<h4 id="err">ERR$</h4>
+<p>Token <code>$D3</code> · Book p. B-103</p>
+<p>Returns the text of an error message from its number, 1 to 44.</p>
+<p>Format: <code>ERR$(number)</code></p>
+<pre><code>100 PRINT ERR$(ER); &quot; ERROR IN&quot;; EL</code></pre>
+<h4 id="help">HELP</h4>
+<p>Token <code>$EA</code> · Book p. B-131</p>
+<p>After a program stops with an error, lists the line where it happened
+with the failing statement highlighted.</p>
+<p>Format: <code>HELP</code></p>
+<pre><code>HELP</code></pre>
+<h4 id="tron-troff">TRON, TROFF</h4>
+<p>Tokens <code>$D8</code>, <code>$D9</code> · Book pp. B-269, B-268</p>
+<p>TRON turns on trace mode, in which each line number is printed as it
+runs; TROFF turns it off.</p>
+<p>Format: <code>TRON</code> / <code>TROFF</code></p>
+<pre><code>10 TRON
+20 FOR I = 80 TO 88 : PRINT I; EXP(I) : NEXT
+30 TROFF</code></pre>
+<h3 id="program-editing">Program Editing</h3>
+<h4 id="auto">AUTO</h4>
+<p>Token <code>$DC</code> · Book p. B-23</p>
+<p>Turns automatic line numbering on while a program is typed in: after
+each line is entered, the next line number appears. AUTO with no step
+turns it off.</p>
+<p>Format: <code>AUTO [step]</code></p>
+<pre><code>AUTO 10 : REM NUMBER NEW LINES IN STEPS OF 10</code></pre>
+<h4 id="renumber">RENUMBER</h4>
+<p>Token <code>$F8</code> · Book p. B-210</p>
+<p>Renumbers program lines and updates every GOTO, GOSUB and other line
+reference to match. The arguments give the new first number, the
+increment and the range of lines to renumber.</p>
+<p>Format: <code>RENUMBER [C] [{new, inc, range}]</code></p>
+<p>With <code>C</code> (“crunch”), RENUMBER also removes the spaces
+around the line numbers it rewrites, so <code>GOTO 100</code> becomes
+<code>GOTO100</code>. This saves memory but can't be undone. ROM 920404
+added the <code>C</code> flag, and ROM 920405 removed the older
+<code>RENUMBER100</code> form (no space) that did the same thing,
+because it was too easy to trigger by accident (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">ROM
+changelog</a>).</p>
+<pre><code>RENUMBER 100, 10 : REM START AT 100, STEPS OF 10
+RENUMBER C 100   : REM THE SAME, AND REMOVE SPACES AROUND LINE NUMBERS</code></pre>
+<h4 id="delete">DELETE</h4>
+<p>Token <code>$F7</code> · Book p. B-69</p>
+<p>Deletes a range of program lines. Given a file name, it deletes files
+on disk instead.</p>
+<p>Format: <code>DELETE [line range]</code> or
+<code>DELETE filename [,D drive] [,U unit] [,R]</code></p>
+<pre><code>DELETE 240-350 : REM DELETE LINES 240 TO 350</code></pre>
+<h4 id="list">LIST</h4>
+<p>Token <code>$9B</code> · Book p. B-153</p>
+<p>Lists all or part of the program in memory, or a program file on disk
+without loading it. P pauses after each screenful.</p>
+<p>Format: <code>LIST [P] [line range]</code> or
+<code>LIST [P] filename [,U unit]</code></p>
+<pre><code>LIST 500- : REM LIST FROM LINE 500 TO THE END</code></pre>
+<h4 id="find">FIND</h4>
+<p>Token <code>$FE $2B</code> · Book p. B-110</p>
+<p>Lists every line of the program that contains a string.</p>
+<p>Format: <code>FIND "string" [, line range]</code></p>
+<pre><code>FIND &quot;HS&quot;
+FIND /PRINT/</code></pre>
+<p>With quotes, FIND searches plain text, which finds variable names but
+not keywords, because a keyword is stored as a token; another delimiter,
+as in the second line, finds the keyword (MEGA65 Book, FIND).</p>
+<h4 id="change">CHANGE</h4>
+<p>Token <code>$FE $2C</code> · Book p. B-42</p>
+<p>Finds each occurrence of one string, throughout the program or
+within a range of lines, lists the line and asks whether to replace it:
+Y replaces it, * replaces this and every later match, RETURN stops, and
+any other key skips it.</p>
+<p>Format: <code>CHANGE "find" TO "replace" [, line range]</code></p>
+<pre><code>CHANGE &quot;XX$&quot; TO &quot;UU$&quot;, 2000-2700</code></pre>
+<h4 id="new">NEW</h4>
+<p>Token <code>$A2</code> · Book p. B-177</p>
+<p>Erases the program in memory and resets BASIC.
+<code>NEW RESTORE</code> tries to recover a program erased by
+mistake.</p>
+<p>Format: <code>NEW</code></p>
+<pre><code>NEW</code></pre>
+<h4 id="key">KEY</h4>
+<p>Token <code>$F9</code> · Book p. B-145</p>
+<p>Manages the function key macros: KEY alone lists them, KEY with a
+number and string assigns one, and KEY ON and KEY OFF enable or disable
+them.</p>
+<p>Format: <code>KEY</code> / <code>KEY number, string</code> /
+<code>KEY &lt;ON / OFF&gt;</code></p>
+<pre><code>KEY 2, &quot;PRINT π&quot; + CHR$(13) : REM F2 PRINTS PI</code></pre>
+<h4 id="edit">EDIT</h4>
+<p>Tokens <code>$FE $45</code>, with <code>$91</code> (ON) or
+<code>$FE $24</code> (OFF) · Book p. B-89</p>
+<p>EDIT ON switches the editor to text mode, in which numbered lines are
+stored as plain text instead of being tokenised as BASIC, for writing
+data or text files; EDIT OFF returns to BASIC.</p>
+<p>Format: <code>EDIT &lt;ON / OFF&gt;</code></p>
+<pre><code>EDIT ON</code></pre>
+<h4 id="highlight">HIGHLIGHT</h4>
+<p>Token <code>$FE $3D</code> · Book p. B-133</p>
+<p>Sets the colours used by the editor's highlighting, such as for
+system messages, REM statements and keywords in listings.</p>
+<p>Format: <code>HIGHLIGHT colour [, mode]</code></p>
+<pre><code>HIGHLIGHT 7, 1</code></pre>
+<h4 id="merge">MERGE</h4>
+<p>Token <code>$E6</code> · Book p. B-166</p>
+<p>Loads a program from disk and adds its lines to the program in
+memory.</p>
+<p>Format: <code>MERGE filename [,D drive] [,U unit]</code></p>
+<pre><code>DLOAD &quot;MAIN PROGRAM&quot;
+MERGE &quot;LIBRARY&quot;</code></pre>
+<h4 id="import">IMPORT</h4>
+<p>Token <code>$DD</code> · Book p. B-136</p>
+<p>Loads a BASIC program written as plain text in a SEQ file, tokenising
+it as it loads; useful for programs written on another computer.</p>
+<p>Format: <code>IMPORT filename [,D drive] [,U unit]</code></p>
+<pre><code>IMPORT &quot;MEGA TOOLS&quot;, U9</code></pre>
+<h3 id="variables-and-data">Variables and Data</h3>
+<h4 id="let">LET</h4>
+<p>Token <code>$88</code> · Book p. B-149</p>
+<p>Assigns a value to a variable. The word LET is optional and only
+makes the line longer and slower.</p>
+<p>Format: <code>[LET] variable = expression</code></p>
+<pre><code>LET A = 5 : B = 6</code></pre>
+<h4 id="dim">DIM</h4>
+<p>Token <code>$86</code> · Book p. B-70</p>
+<p>Declares an array and its upper bounds; each dimension counts from 0,
+so <code>DIM A%(8)</code> has nine elements. Arrays used without DIM
+default to 11 elements.</p>
+<p>Format: <code>DIM name(limits) [, name(limits) ...]</code></p>
+<pre><code>10 DIM A%(8), XX(2, 3)</code></pre>
+<h4 id="clr">CLR</h4>
+<p>Token <code>$9C</code> · Book p. B-51</p>
+<p>Clears all variables and arrays; <code>CLR variable</code> resets
+just one, and <code>CLR TI</code> restarts the timer.</p>
+<p>Format: <code>CLR</code> or <code>CLR variable</code></p>
+<pre><code>10 A = 5 : CLR : PRINT A : REM PRINTS 0</code></pre>
+<h4 id="data-read-restore">DATA, READ, RESTORE</h4>
+<p>Tokens <code>$83</code>, <code>$87</code>, <code>$8C</code> · Book
+pp. B-63, B-205, B-212</p>
+<p>DATA lines hold constants, READ copies them into variables in order,
+and RESTORE moves the reading position back to the first DATA line or to
+a given line.</p>
+<p>Format: <code>DATA constant [, constant ...]</code> /
+<code>READ variable [, variable ...]</code> /
+<code>RESTORE [line]</code></p>
+<pre><code>10 DATA 3, 1, 4, 1, 5, &quot;MEGA65&quot;
+20 FOR I = 1 TO 5 : READ P : PRINT P : NEXT
+30 READ N$ : PRINT N$
+40 RESTORE</code></pre>
+<h4 id="def-fn-fn">DEF FN, FN</h4>
+<p>Tokens <code>$96 $A5</code>, <code>$A5</code> · Book pp. B-68,
+B-112</p>
+<p>DEF FN defines a one-line function of one numeric argument; FN calls
+it.</p>
+<p>Format: <code>DEF FN name(variable) = expression</code> /
+<code>FN name(expression)</code></p>
+<pre><code>10 DEF FN SD(X) = SIN(X * π / 180) : REM SINE IN DEGREES
+20 PRINT FN SD(30)</code></pre>
+<h4 id="pointer">POINTER</h4>
+<p>Token <code>$CE $0A</code> · Book p. B-193</p>
+<p>Returns the 32-bit address of a variable's value or an array element.
+For a string, it is the address of its descriptor. Chapter 6 shows how
+to use it.</p>
+<p>Format: <code>POINTER(variable)</code></p>
+<pre><code>10 BANK 0
+20 H$ = &quot;HELLO&quot; : P = POINTER(H$)
+30 PRINT &quot;DESCRIPTOR AT $&quot;; HEX$(P)</code></pre>
+<h4 id="rem">REM</h4>
+<p>Token <code>$8F</code> · Book p. B-208</p>
+<p>Starts a comment: BASIC ignores the rest of the line.</p>
+<p>Format: <code>REM text</code></p>
+<pre><code>20 N = 1000 : REM NUMBER OF ITEMS</code></pre>
+<h3 id="keyboard-and-screen-input">Keyboard and Screen Input</h3>
+<h4 id="input">INPUT</h4>
+<p>Token <code>$85</code> · Book p. B-138</p>
+<p>Prints an optional prompt, followed by a question mark if the prompt
+ends with a semicolon (a comma leaves it out), then waits for the user
+to type values for one or more variables and press RETURN.</p>
+<p>Format:
+<code>INPUT [prompt &lt;, / ;&gt;] variable [, variable ...]</code></p>
+<pre><code>10 INPUT &quot;NAME, AGE&quot;; NA$, AG%</code></pre>
+<h4 id="line-input">LINE INPUT</h4>
+<p>Token <code>$E5 $85</code> · Book p. B-151</p>
+<p>Reads a whole line of typing into a string variable, including commas
+and quotation marks that INPUT would treat as separators.</p>
+<p>Format:
+<code>LINE INPUT [prompt &lt;, / ;&gt;] stringvar [, stringvar ...]</code></p>
+<pre><code>10 LINE INPUT &quot;ENTER A PHRASE: &quot;, PH$</code></pre>
+<h4 id="get">GET</h4>
+<p>Token <code>$A1</code> · Book p. B-122</p>
+<p>Takes the next key from the keyboard queue without waiting; a string
+variable receives an empty string if no key is waiting.</p>
+<p>Format: <code>GET variable</code></p>
+<pre><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
+<h4 id="getkey">GETKEY</h4>
+<p>Token <code>$A1 $F9</code> · Book p. B-124</p>
+<p>Like GET, but waits until a key is pressed.</p>
+<p>Format: <code>GETKEY variable</code></p>
+<pre><code>10 GETKEY A$
+20 IF A$ = &quot;W&quot; THEN PRINT &quot;NORTH&quot;</code></pre>
+<h3 id="text-output">Text Output</h3>
+<h4 id="print">PRINT</h4>
+<p>Token <code>$99</code> · Book p. B-198</p>
+<p>Prints values to the screen or the current output channel. A
+semicolon joins items directly, a comma moves to the next tab column,
+and a trailing semicolon suppresses the new line. <code>?</code> is an
+abbreviation.</p>
+<p>Format: <code>PRINT arguments</code></p>
+<pre><code>10 FOR I = 1 TO 10 : PRINT I, I * I, SQR(I) : NEXT</code></pre>
+<h4 id="print-using-using">PRINT USING, USING</h4>
+<p>Tokens <code>$99 $FB</code> (or <code>$98 $FB</code> with
+<code>#</code>), <code>$FB</code> · Book pp. B-200, B-273</p>
+<p>Prints values laid out by a format string, in which <code>#</code>
+marks a digit position and <code>.</code> the decimal point, so columns
+of figures line up.</p>
+<p>Format: <code>PRINT[# channel,] USING format; argument</code></p>
+<pre><code>10 PRINT USING &quot;####.##&quot;; 3.14159</code></pre>
+<h4 id="spc-tab">SPC, TAB</h4>
+<p>Tokens <code>$A6</code>, <code>$A3</code> · Book pp. B-244, B-260</p>
+<p>Used inside PRINT: SPC moves the cursor right by a number of columns,
+and TAB moves it to a given column if it is not already past it.</p>
+<p>Format: <code>SPC(columns)</code> / <code>TAB(column)</code></p>
+<pre><code>10 PRINT &quot;NAME&quot;; TAB(20); &quot;SCORE&quot;
+20 PRINT SPC(5); &quot;INDENTED&quot;</code></pre>
+<h4 id="pos">POS</h4>
+<p>Token <code>$B9</code> · Book p. B-196</p>
+<p>Returns the cursor's column within the current window. The argument
+is ignored.</p>
+<p>Format: <code>POS(dummy)</code></p>
+<pre><code>10 IF POS(0) &gt; 72 THEN PRINT</code></pre>
+<h4 id="cmd">CMD</h4>
+<p>Token <code>$9D</code> · Book p. B-53</p>
+<p>Redirects all screen output, including LIST, to an open channel such
+as a printer, until PRINT# to that channel restores it.</p>
+<p>Format: <code>CMD channel [, string]</code></p>
+<pre><code>OPEN 1, 4 : CMD 1 : LIST
+PRINT#1 : CLOSE 1</code></pre>
+<h4 id="cursor-rcursor">CURSOR, RCURSOR</h4>
+<p>Tokens <code>$FE $41</code>, <code>$FE $42</code> · Book pp. B-61,
+B-203</p>
+<p>CURSOR moves the text cursor, and can also show, hide or restyle it.
+RCURSOR reads its position into two variables.</p>
+<p>Format: <code>CURSOR [&lt;ON / OFF&gt;,] column, row [, style]</code>
+/ <code>RCURSOR colvar, rowvar</code></p>
+<pre><code>10 CURSOR ON, 20, 10 : PRINT &quot;[HERE]&quot;;
+20 RCURSOR X, Y : PRINT &quot; COL:&quot;; X; &quot; ROW:&quot;; Y</code></pre>
+<h4 id="window-rwindow">WINDOW, RWINDOW</h4>
+<p>Tokens <code>$FE $1A</code>, <code>$CE $09</code> · Book pp. B-283,
+B-230</p>
+<p>WINDOW confines text output to a rectangle of the screen, optionally
+clearing it. RWINDOW reads a property of the current window or screen,
+such as its width.</p>
+<p>Format: <code>WINDOW left, top, right, bottom [, clear]</code> /
+<code>RWINDOW(n)</code></p>
+<pre><code>10 WINDOW 0, 12, 79, 24, 1 : REM LOWER HALF, CLEARED
+20 PRINT RWINDOW(2) : REM SCREEN WIDTH</code></pre>
+<h4 id="scnclr">SCNCLR</h4>
+<p>Token <code>$E8</code> · Book p. B-233</p>
+<p>Without an argument, clears the current text window; with a colour,
+fills the graphics screen with that colour.</p>
+<p>Format: <code>SCNCLR [colour]</code></p>
+<pre><code>SCNCLR</code></pre>
+<h4 id="font">FONT</h4>
+<p>Token <code>$FE $46</code> · Book p. B-113</p>
+<p>Switches the character set: FONT A is PETSCII with extra ASCII
+symbols such as <code>{</code>, <code>|</code> and <code>_</code>, FONT
+B is similar with a serif font, and FONT C restores the standard
+Commodore font.</p>
+<p>Format: <code>FONT &lt;A / B / C&gt;</code></p>
+<pre><code>FONT A</code></pre>
+<h4 id="chardef">CHARDEF</h4>
+<p>Token <code>$E0 $96</code> · Book p. B-45</p>
+<p>Redefines the 8 × 8 pattern of a character, given its screen code and
+eight bytes, one per row.</p>
+<p>Format: <code>CHARDEF index, bit-matrix</code></p>
+<pre><code>CHARDEF 1, $FF, $81, $81, $81, $81, $81, $81, $FF : REM &#39;A&#39; BECOMES A BOX</code></pre>
+<h3 id="strings">Strings</h3>
+<h4 id="asc-chr">ASC, <code>CHR$</code></h4>
+<p>Tokens <code>$C6</code>, <code>$C7</code> · Book pp. B-21, B-47</p>
+<p>ASC returns the PETSCII code of a string's first character;
+<code>CHR$</code> returns a one-character string from a code.
+<code>CHR$</code> is the usual way to put quotation marks and control
+codes in strings.</p>
+<p>Format: <code>ASC(string)</code> / <code>CHR$(code)</code></p>
+<pre><code>10 PRINT ASC(&quot;MEGA&quot;) : REM 77
+20 PRINT CHR$(34); &quot;MEGA65&quot;; CHR$(34) : REM &quot;MEGA65&quot; IN QUOTES</code></pre>
+<h4 id="left-mid-right"><code>LEFT$</code>, <code>MID$</code>,
+<code>RIGHT$</code></h4>
+<p>Tokens <code>$C8</code>, <code>$CA</code>, <code>$C9</code> · Book
+pp. B-147, B-167, B-216</p>
+<p>Return the first n characters, n characters from a position, or the
+last n characters of a string. <code>MID$</code> can also appear on the
+left of an equals sign to replace part of a string variable.</p>
+<p>Format: <code>LEFT$(string, n)</code> /
+<code>MID$(string, index, n)</code> / <code>RIGHT$(string, n)</code></p>
+<pre><code>10 A$ = &quot;MEGA65&quot;
+20 PRINT LEFT$(A$, 4); &quot; &quot;; MID$(A$, 3, 2); &quot; &quot;; RIGHT$(A$, 2)
+30 MID$(A$, 4, 1) = &quot;@&quot; : PRINT A$ : REM MEG@65</code></pre>
+<h4 id="len">LEN</h4>
+<p>Token <code>$C3</code> · Book p. B-148</p>
+<p>Returns the number of characters in a string.</p>
+<p>Format: <code>LEN(string)</code></p>
+<pre><code>PRINT LEN(&quot;MEGA65&quot;) : REM 6</code></pre>
+<h4 id="instr">INSTR</h4>
+<p>Token <code>$D4</code> · Book p. B-141</p>
+<p>Returns the position of one string inside another, or 0 if it is not
+there. An optional third argument gives the position to start searching
+from.</p>
+<p>Format: <code>INSTR(haystack, needle [, start])</code></p>
+<pre><code>I = INSTR(&quot;ABCDEF&quot;, &quot;CD&quot;) : REM I = 3</code></pre>
+<h4 id="str-val"><code>STR$</code>, VAL</h4>
+<p>Tokens <code>$C4</code>, <code>$C5</code> · Book pp. B-254, B-276</p>
+<p><code>STR$</code> converts a number to a string as PRINT would show
+it; VAL converts a string of digits back to a number.</p>
+<p>Format: <code>STR$(number)</code> / <code>VAL(string)</code></p>
+<pre><code>10 A$ = &quot;PI IS&quot; + STR$(π)
+20 PRINT VAL(&quot;78E2&quot;) : REM 7800</code></pre>
+<h4 id="rpt"><code>RPT$</code></h4>
+<p>Token <code>$CE $14</code> · Book p. B-222</p>
+<p>Returns a string repeated a number of times.</p>
+<p>Format: <code>RPT$(string, count)</code></p>
+<pre><code>PRINT RPT$(&quot;=&quot;, 30)</code></pre>
+<h4 id="hex-dec"><code>HEX$</code>, DEC</h4>
+<p>Tokens <code>$D2</code>, <code>$D1</code> · Book pp. B-132, B-66</p>
+<p><code>HEX$</code> converts a number to four or eight hexadecimal
+digits; DEC converts a hexadecimal string to a number.</p>
+<p>Format: <code>HEX$(number)</code> / <code>DEC(string)</code></p>
+<pre><code>10 PRINT HEX$(1000) : REM 03E8
+20 PRINT DEC(&quot;D000&quot;) : REM 53248</code></pre>
+<h4 id="strbin-decbin"><code>STRBIN$</code>, DECBIN</h4>
+<p>Tokens <code>$CE $12</code>, <code>$CE $11</code> · Book pp. B-255,
+B-67</p>
+<p><code>STRBIN$</code> converts a number to a string of binary digits;
+DECBIN converts such a string back to a number.</p>
+<p>Format: <code>STRBIN$(number)</code> /
+<code>DECBIN(string)</code></p>
+<pre><code>10 PRINT STRBIN$(245)
+20 PRINT DECBIN(&quot;11110101&quot;) : REM 245</code></pre>
+<h3 id="numbers">Numbers</h3>
+<h4 id="abs-sgn-int">ABS, SGN, INT</h4>
+<p>Tokens <code>$B6</code>, <code>$B4</code>, <code>$B5</code> · Book
+pp. B-18, B-240, B-142</p>
+<p>ABS gives the absolute value, SGN gives -1, 0 or 1 for a negative,
+zero or positive number, and INT rounds down to a whole number, so
+<code>INT(-3.1)</code> is -4.</p>
+<p>Format: <code>ABS(x)</code> / <code>SGN(x)</code> /
+<code>INT(x)</code></p>
+<pre><code>PRINT ABS(-123); SGN(-7); INT(1.9); INT(-3.1) : REM 123 -1 1 -4</code></pre>
+<h4 id="sqr-exp-log-log10-log2">SQR, EXP, LOG, LOG10, LOG2</h4>
+<p>Tokens <code>$BA</code>, <code>$BD</code>, <code>$BC</code>,
+<code>$CE $08</code>, <code>$CE $16</code> · Book pp. B-250, B-105,
+B-159, B-160, B-161</p>
+<p>Square root, e raised to a power, and logarithms to base e, 10 and
+2.</p>
+<p>Format: <code>SQR(x)</code>, <code>EXP(x)</code>,
+<code>LOG(x)</code>, <code>LOG10(x)</code>, <code>LOG2(x)</code></p>
+<pre><code>PRINT SQR(2); EXP(1); LOG10(1000); LOG2(256)</code></pre>
+<h4 id="sin-cos-tan-atn">SIN, COS, TAN, ATN</h4>
+<p>Tokens <code>$BF</code>, <code>$BE</code>, <code>$C0</code>,
+<code>$C1</code> · Book pp. B-241, B-60, B-261, B-22</p>
+<p>Trigonometric functions in radians. SIND, COSD and TAND take degrees
+instead; ATN returns an angle between -π/2 and π/2.</p>
+<p>Format: <code>SIN(radians)</code> or <code>SIND(degrees)</code>,
+likewise COS and TAN; <code>ATN(x)</code></p>
+<pre><code>PRINT SIN(π / 6); COS(π / 3); TAN(π / 4); ATN(1) * 4
+ 0.5  0.5  1  3.1415927
+PRINT SIND(30); COSD(60); TAND(45)
+ 0.5  0.5  1</code></pre>
+<h4 id="mod">MOD</h4>
+<p>Token <code>$CE $0B</code> · Book p. B-169</p>
+<p>Returns the remainder of a division.</p>
+<p>Format: <code>MOD(dividend, divisor)</code></p>
+<pre><code>FOR I = 0 TO 8 : PRINT MOD(I, 4); : NEXT : REM 0 1 2 3 0 1 2 3 0</code></pre>
+<h4 id="rnd">RND</h4>
+<p>Token <code>$BB</code> · Book p. B-218</p>
+<p>Returns a pseudo-random number from 0 up to, but not including, 1.
+Multiply and use INT for whole numbers in a range.</p>
+<p>Format: <code>RND(type)</code></p>
+<pre><code>10 DEF FN DI(X) = INT(RND(0) * 6) + 1 : REM DIE ROLL
+20 FOR I = 1 TO 10 : PRINT FN DI(0); : NEXT</code></pre>
+<h4 id="and-or-xor-not">AND, OR, XOR, NOT</h4>
+<p>Tokens <code>$AF</code>, <code>$B0</code>, <code>$E9</code>,
+<code>$A8</code> · Book pp. B-19, B-183, B-286, B-179</p>
+<p>Bitwise operations on 16-bit values, which also combine conditions
+because true is -1 and false is 0. The Operators section below covers
+them in more detail.</p>
+<p>Format: <code>a AND b</code>, <code>a OR b</code>,
+<code>a XOR b</code>, <code>NOT a</code></p>
+<pre><code>PRINT 1 AND 3; 1 OR 3; 6 XOR 5; NOT 3 : REM 1 3 3 -4</code></pre>
+<h3 id="memory-and-machine-language">Memory and Machine Language</h3>
+<h4 id="peek-poke">PEEK, POKE</h4>
+<p>Tokens <code>$C2</code>, <code>$97</code> · Book pp. B-187, B-194</p>
+<p>PEEK reads a byte and POKE writes one or more bytes to consecutive
+addresses. Addresses up to <code>$FFFF</code> are interpreted through
+BANK; larger ones are flat 28-bit addresses.</p>
+<p>Format: <code>PEEK(address)</code> /
+<code>POKE address, value [, value ...]</code></p>
+<pre><code>10 BANK 128
+20 POKE $D020, 0 : PRINT PEEK($D020) AND 15</code></pre>
+<h4 id="wpeek-wpoke">WPEEK, WPOKE</h4>
+<p>Tokens <code>$CE $10</code>, <code>$FE $1D</code> · Book pp. B-284,
+B-285</p>
+<p>Read or write 16-bit values, low byte first, which suits addresses
+and pointers.</p>
+<p>Format: <code>WPEEK(address)</code> /
+<code>WPOKE address, word [, word ...]</code></p>
+<pre><code>10 BANK 128
+20 WPOKE $02F8, $1800 : PRINT HEX$(WPEEK($02F8))</code></pre>
+<h4 id="setbit-clrbit-hasbit">SETBIT, CLRBIT, HASBIT</h4>
+<p>Tokens <code>$FE $2D $FE $4E</code>, <code>$9C $FE $4E</code>,
+<code>$CE $13</code> · Book pp. B-239, B-52, B-129</p>
+<p>Set, clear or test a single bit of a memory location without
+disturbing the others. HASBIT returns -1 or 0.</p>
+<p>Format: <code>SETBIT address, bit</code> /
+<code>CLRBIT address, bit</code> / <code>HASBIT(address, bit)</code></p>
+<pre><code>10 BANK 128
+20 SETBIT $D031, 6 : PRINT HASBIT($D031, 6)
+30 CLRBIT $D011, 4 : REM BLANK THE DISPLAY</code></pre>
+<h4 id="bank">BANK</h4>
+<p>Token <code>$FE $02</code> · Book p. B-26</p>
+<p>Selects which memory bank commands with 16-bit addresses use. Banks 0
+to 5 are chip RAM, though banks 2 and 3 hold the ROM and are
+write-protected; bank 128, the default, is the system view with ROM and
+I/O.</p>
+<p>Format: <code>BANK number</code></p>
+<pre><code>BANK 0 : POKE $4000, 1 : BANK 128</code></pre>
+<h4 id="mem">MEM</h4>
+<p>Token <code>$FE $23</code> · Book p. B-164</p>
+<p>Reserves 8KB blocks of banks 4 and 5 so the graphics commands leave
+them alone. Each argument is a bit mask, one bit per block.</p>
+<p>Format: <code>MEM mask4, mask5</code></p>
+<pre><code>MEM 3, 0 : REM RESERVE $40000-$43FFF</code></pre>
+<h4 id="edma">EDMA</h4>
+<p>Token <code>$FE $21</code> · Book p. B-91</p>
+<p>Uses the DMA controller to copy (command 0) or fill (command 3)
+memory very fast, anywhere in the 28-bit address space; adding 32 to the
+command copies backwards.</p>
+<p>Format: <code>EDMA command, length, source, target</code></p>
+<pre><code>10 EDMA 0, 80*25, 2048, $8000800 : REM COPY SCREEN TO ATTIC RAM
+20 EDMA 3, 80*25, 32, 2048 : REM FILL SCREEN WITH SPACES</code></pre>
+<h4 id="dma">DMA</h4>
+<p>Token <code>$FE $1F</code> · Book p. B-76</p>
+<p>The older form of EDMA, with addresses given as offset and bank
+pairs. It is obsolete; use EDMA.</p>
+<p>Format:
+<code>DMA command [, length, source, source bank, target, target bank [, sub]]</code></p>
+<pre><code>DMA 3, 80*25, 32, 0, 2048, 0 : REM FILL SCREEN WITH SPACES</code></pre>
+<h4 id="sys">SYS</h4>
+<p>Token <code>$9E</code> · Book p. B-256</p>
+<p>Calls a machine-language routine, which returns with RTS. Values for
+A, X, Y, Z and the status register can follow. SYS TO names its
+registers and adds a MAP offset (O) or keeps BASIC's interrupts running
+(I).</p>
+<p>Format: <code>SYS address [{, a, x, y, z, s}]</code> /
+<code>SYS TO address [{,A a, X x, Y y, Z z, S s, I mode, O offset}]</code></p>
+<pre><code>10 POKE $1800, $18, $8A, $65, $06, $60 : REM CLC : TXA : ADC $06 : RTS
+20 SYS $1800, 77, 11</code></pre>
+<h4 id="rreg">RREG</h4>
+<p>Token <code>$FE $09</code> · Book p. B-223</p>
+<p>Copies the register values a SYS call returned into variables.</p>
+<p>Format: <code>RREG [{areg, xreg, yreg, zreg, sreg}]</code></p>
+<pre><code>30 RREG AC, X, Y, Z, S : PRINT AC</code></pre>
+<h4 id="usr">USR</h4>
+<p>Token <code>$B7</code> · Book p. B-275</p>
+<p>Calls a machine-language function whose address is in the vector at
+<code>$02F8</code>. The argument and result pass through BASIC's
+floating-point accumulator.</p>
+<p>Format: <code>USR(expression)</code></p>
+<pre><code>10 BANK 128 : WPOKE $2F8, $7F33 : REM ROM NEGATE ROUTINE, AS IN THE BOOK
+20 PRINT USR(-5)</code></pre>
+<h4 id="fre">FRE</h4>
+<p>Token <code>$B8</code> · Book p. B-117</p>
+<p>Returns free memory or other system information: <code>FRE(0)</code>
+and <code>FRE(1)</code> give free bytes for program and variables,
+<code>FRE(4)</code> and <code>FRE(5)</code> (from ROM 920415) which 8KB
+blocks of banks 4 and 5 are in use, whether reserved by MEM, a graphics
+screen or the system (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), and
+<code>FRE(-1)</code> the ROM version.</p>
+<p>Format: <code>FRE(n)</code></p>
+<pre><code>PRINT FRE(0); &quot;BYTES FREE FOR PROGRAM&quot;; FRE(-1)</code></pre>
+<h4 id="bload-bsave-bverify">BLOAD, BSAVE, BVERIFY</h4>
+<p>Tokens <code>$FE $11</code>, <code>$FE $10</code>,
+<code>$FE $28</code> · Book pp. B-29, B-35, B-38</p>
+<p>Load, save or verify a block of memory as a file. Addresses above
+<code>$FFFF</code> are flat 28-bit addresses that can reach attic RAM; R
+reads or writes raw data with no load address.</p>
+<p>Format:
+<code>BLOAD filename [,B bank] [,P address] [,R] [,D drive] [,U unit]</code>
+/
+<code>BSAVE filename, P start TO P end [,B bank] [,R] [,D drive] [,U unit]</code>
+/
+<code>BVERIFY filename [,P address] [,B bank] [,D drive] [,U unit]</code></p>
+<pre><code>10 BLOAD &quot;SPRITES&quot;, P($40000), R
+20 BSAVE &quot;ML ROUTINES&quot;, B1, P($9000) TO P($A000)
+30 BVERIFY &quot;ML ROUTINES&quot;, B1, P($9000)</code></pre>
+<h4 id="boot">BOOT</h4>
+<p>Token <code>$FE $1B</code> · Book p. B-31</p>
+<p>Loads a machine-language program and runs it at its load address.
+With no arguments, runs AUTOBOOT.C65; <code>BOOT SYS</code> boots from a
+disk's boot sector.</p>
+<p>Format:
+<code>BOOT filename [,B bank] [,P address] [,D drive] [,U unit]</code></p>
+<pre><code>BOOT &quot;GAME&quot;</code></pre>
+<h4 id="monitor">MONITOR</h4>
+<p>Token <code>$FA</code> · Book p. B-170</p>
+<p>Starts the built-in machine-language monitor. X returns to BASIC.</p>
+<p>Format: <code>MONITOR</code></p>
+<pre><code>MONITOR</code></pre>
+<h3 id="disk-and-files">Disk and Files</h3>
+<p>Most disk commands accept <code>D</code> for the drive number on
+dual-drive units and <code>U</code> for the unit (device) number, which
+defaults to 8. File names can be quoted strings or string expressions in
+parentheses, such as <code>(F$)</code>.</p>
+<h4 id="dir-catalog">DIR, CATALOG</h4>
+<p>Tokens <code>$EE</code> (DIR), <code>$EE $FE $29</code> (DIRECTORY),
+<code>$FE $0C</code> · Book pp. B-71, B-40</p>
+<p>List the files on a disk without disturbing the program in memory. A
+pattern selects matching names; W lists in several columns, and P pauses
+after each screenful. <code>$</code> at the start of a line is a
+shortcut.</p>
+<p>Format:
+<code>DIR [pattern] [,W] [,P] [,R] [,D drive] [,U unit]</code></p>
+<pre><code>DIR &quot;*.PRG&quot;, W, U9
+DIRECTORY U8
+CATALOG W, U8</code></pre>
+<h4 id="dload-dsave-dverify">DLOAD, DSAVE, DVERIFY</h4>
+<p>Tokens <code>$F0</code>, <code>$EF</code>, <code>$FE $14</code> ·
+Book pp. B-74, B-86, B-88</p>
+<p>Load, save or verify a BASIC program on disk, defaulting to unit 8.
+An <code>@</code> before the name in DSAVE replaces an existing
+file.</p>
+<p>Format: <code>DLOAD filename [,D drive] [,U unit]</code>, likewise
+DSAVE and DVERIFY</p>
+<pre><code>10 DSAVE &quot;@MYPROG&quot;
+20 DVERIFY &quot;MYPROG&quot;
+30 DLOAD &quot;MYPROG&quot;, U9</code></pre>
+<h4 id="load-save-verify">LOAD, SAVE, VERIFY</h4>
+<p>Tokens <code>$93</code>, <code>$94</code>, <code>$95</code> · Book
+pp. B-154, B-231, B-277</p>
+<p>The C64-style forms, which take a device number instead of U.
+<code>LOAD "*", 8, 1</code> loads to the address stored in the file.</p>
+<p>Format: <code>LOAD filename [, unit [, flag]]</code> /
+<code>SAVE filename [, unit]</code> /
+<code>VERIFY filename [, unit [, binflag]]</code></p>
+<pre><code>LOAD &quot;MEGA TOOLS&quot;, 9
+SAVE &quot;ZORK-I&quot;, 8
+VERIFY &quot;ZORK-I&quot;, 8</code></pre>
+<h4 id="run">RUN</h4>
+<p>Token <code>$8A</code> · Book p. B-229</p>
+<p>Runs the program in memory, optionally from a given line, or loads
+and runs a program from disk. Running clears variables.</p>
+<p>Format: <code>RUN [line]</code> or
+<code>RUN filename [,D drive] [,U unit]</code></p>
+<pre><code>RUN &quot;FLIGHTSIM&quot;</code></pre>
+<h4 id="open-close">OPEN, CLOSE</h4>
+<p>Tokens <code>$9F</code>, <code>$A0</code> · Book pp. B-182, B-50</p>
+<p>OPEN connects a channel number to a device, with an optional
+secondary address and file name; CLOSE disconnects it. Always close disk
+files, or they are left as unclosed "splat" files.</p>
+<p>Format: <code>OPEN channel, device [, secondary [, filename]]</code>
+/ <code>CLOSE channel</code></p>
+<pre><code>10 OPEN 2, 8, 2, &quot;TEST,S,W&quot;
+20 PRINT#2, &quot;TESTSTRING&quot;
+30 CLOSE 2</code></pre>
+<h4 id="dopen-dclose-append">DOPEN, DCLOSE, APPEND</h4>
+<p>Tokens <code>$FE $0D</code>, <code>$FE $0F</code>,
+<code>$FE $0E</code> · Book pp. B-79, B-65, B-20</p>
+<p>The disk-specific way to open and close files. DOPEN opens for
+reading, or for writing with W, or as a relative file with L and a
+record length. APPEND opens an existing file for writing at its end.
+DCLOSE closes one channel, or every file on a unit.</p>
+<p>Format:
+<code>DOPEN# channel, filename [,L reclen] [,W] [,D drive] [,U unit]</code>
+/ <code>APPEND# channel, filename [,D drive] [,U unit]</code> /
+<code>DCLOSE# channel</code> or <code>DCLOSE [U unit]</code></p>
+<pre><code>10 DOPEN#2, &quot;SCORES&quot;, W
+20 PRINT#2, &quot;ALICE&quot; &quot;,&quot; 1200
+30 DCLOSE#2
+40 APPEND#2, &quot;SCORES&quot; : PRINT#2, &quot;BOB&quot; &quot;,&quot; 900 : DCLOSE#2</code></pre>
+<p>The comma is written as a string: a comma between PRINT# items, as in
+PRINT, writes spaces to the next tab stop, not a comma, and INPUT# would
+then read the whole line as one value.</p>
+<h4 id="print-input-line-input-get">PRINT#, INPUT#, LINE INPUT#,
+GET#</h4>
+<p>Tokens <code>$98</code>, <code>$84</code>, <code>$E5 $84</code>,
+<code>$A1 #</code> · Book pp. B-199, B-139, B-152, B-123</p>
+<p>The file versions of PRINT, INPUT, LINE INPUT and GET, working on an
+open channel.</p>
+<p>Format: <code>PRINT# channel, arguments</code> /
+<code>INPUT# channel, variables</code> /
+<code>LINE INPUT# channel, stringvars</code> /
+<code>GET# channel, variables</code></p>
+<pre><code>10 DOPEN#2, &quot;SCORES&quot;
+20 DO : INPUT#2, N$, S : PRINT N$, S : LOOP UNTIL ST
+30 DCLOSE#2</code></pre>
+<pre><code>10 DOPEN#2, &quot;NOTES&quot;, W
+20 PRINT#2, &quot;FIRST LINE&quot; : PRINT#2, &quot;SECOND LINE&quot;
+30 DCLOSE#2
+40 DOPEN#2, &quot;NOTES&quot;
+50 LINE INPUT#2, A$ : GET#2, B$ : PRINT A$ : PRINT B$
+60 DCLOSE#2</code></pre>
+<p>The second program writes two lines to a new file, then reads back
+the whole first line with LINE INPUT# and one character of the second,
+<code>S</code>, with GET#.</p>
+<h4 id="record">RECORD</h4>
+<p>Token <code>$FE $12</code> · Book p. B-206</p>
+<p>Moves to a record, and optionally a byte within it, in a relative
+file opened with DOPEN and L.</p>
+<p>Format: <code>RECORD# channel, record [, byte]</code></p>
+<pre><code>10 DOPEN#3, &quot;INDEX&quot;, L40
+20 RECORD#3, 25 : PRINT#3, &quot;ENTRY 25&quot;
+30 DCLOSE#3</code></pre>
+<h4 id="fread-fwrite">FREAD#, FWRITE#</h4>
+<p>Tokens <code>$FE $1C</code>, <code>$FE $1E</code> · Book pp. B-118,
+B-120</p>
+<p>Read or write a block of bytes between an open file and memory at a
+32-bit address, typically from POINTER.</p>
+<p>Format: <code>FREAD# channel, pointer, size</code> /
+<code>FWRITE# channel, pointer, size</code></p>
+<pre><code>10 DIM B&amp;(23) : DOPEN#2, &quot;TEXT&quot;
+20 FREAD#2, POINTER(B&amp;(0)), 24
+30 DCLOSE#2
+40 DOPEN#2, &quot;COPY&quot;, W
+50 FWRITE#2, POINTER(B&amp;(0)), 24
+60 DCLOSE#2</code></pre>
+<h4 id="copy-concat">COPY, CONCAT</h4>
+<p>Tokens <code>$F4</code>, <code>$FE $13</code> · Book pp. B-59,
+B-57</p>
+<p>COPY copies one file, or files matching a pattern, to another name or
+unit. CONCAT appends one file to the end of another.</p>
+<p>Format:
+<code>COPY source [,D drive] [,U unit] TO [target] [,D drive] [,U unit]</code>
+/ <code>CONCAT file [,D drive] TO target [,D drive] [,U unit]</code></p>
+<pre><code>10 COPY &quot;CODES&quot; TO &quot;BACKUP&quot;
+20 CONCAT &quot;NEW DATA&quot; TO &quot;ARCHIVE&quot;, U9</code></pre>
+<h4 id="rename">RENAME</h4>
+<p>Token <code>$F5</code> · Book p. B-209</p>
+<p>Renames a file on disk.</p>
+<p>Format: <code>RENAME old TO new [,D drive] [,U unit]</code></p>
+<pre><code>RENAME &quot;CODES&quot; TO &quot;BACKUP&quot;</code></pre>
+<h4 id="scratch-erase">SCRATCH, ERASE</h4>
+<p>Tokens <code>$F2</code>, <code>$FE $2A</code> · Book pp. B-234,
+B-102</p>
+<p>Delete files from a disk. A pattern deletes all matching files.
+DELETE with a file name does the same.</p>
+<p>Format: <code>SCRATCH filename [,D drive] [,U unit] [,R]</code>,
+likewise ERASE</p>
+<pre><code>SCRATCH &quot;DRM&quot;, U9
+ERASE &quot;OLD*&quot; : REM EVERY FILE BEGINNING WITH OLD</code></pre>
+<h4 id="lock-unlock">LOCK, UNLOCK</h4>
+<p>Tokens <code>$FE $50</code>, <code>$FE $4F</code> · Book pp. B-158,
+B-271</p>
+<p>Protect a file from being changed or deleted, or remove the
+protection.</p>
+<p>Format:
+<code>LOCK &lt;filename / pattern&gt; [,D drive] [,U unit]</code>,
+likewise UNLOCK</p>
+<pre><code>LOCK &quot;DRM&quot;, U9
+UNLOCK &quot;DRM&quot;, U9</code></pre>
+<h4 id="backup">BACKUP</h4>
+<p>Token <code>$F6</code> · Book p. B-25</p>
+<p>Copies a whole disk to another unit, or between the two drives of a
+dual-drive unit.</p>
+<p>Format: <code>BACKUP U source TO U target</code> or
+<code>BACKUP D source TO D target [,U unit]</code></p>
+<pre><code>BACKUP U8 TO U9</code></pre>
+<h4 id="collect">COLLECT</h4>
+<p>Token <code>$F3</code> · Book p. B-54</p>
+<p>Tidies a disk: rebuilds its record of free space and removes files
+that were never properly closed.</p>
+<p>Format: <code>COLLECT [,D drive] [,U unit]</code></p>
+<pre><code>COLLECT U9</code></pre>
+<h4 id="format-header">FORMAT, HEADER</h4>
+<p>Tokens <code>$FE $37</code>, <code>$F1</code> · Book pp. B-116,
+B-130</p>
+<p>Format a disk, erasing everything on it. With an I and a
+two-character ID, the format is complete; without one, it is a quick
+format.</p>
+<p>Format: <code>FORMAT diskname [,I id] [,D drive] [,U unit]</code>,
+likewise HEADER</p>
+<pre><code>FORMAT &quot;ADVENTURE&quot;, IDK : REM FULL FORMAT, ID DK
+HEADER &quot;ZORK-I&quot;, U9      : REM QUICK FORMAT ON UNIT 9</code></pre>
+<h4 id="dclear">DCLEAR</h4>
+<p>Token <code>$FE $15</code> · Book p. B-64</p>
+<p>Sends an initialise command to a drive, closing its open files.</p>
+<p>Format: <code>DCLEAR [,D drive] [,U unit]</code></p>
+<pre><code>DCLEAR U9</code></pre>
+<h4 id="disk">DISK</h4>
+<p>Token <code>$FE $40</code> · Book p. B-73</p>
+<p>Sends a command string directly to a drive. <code>@</code> at the
+start of a line is a shortcut.</p>
+<p>Format: <code>DISK command [,U unit]</code></p>
+<pre><code>DISK &quot;I0&quot; : REM INITIALISE DRIVE 0</code></pre>
+<h4 id="mkdir-chdir">MKDIR, CHDIR</h4>
+<p>Tokens <code>$FE $51</code>, <code>$FE $4B</code> · Book pp. B-168,
+B-46</p>
+<p>MKDIR creates a subdirectory, a partition of a given number of
+tracks, on a floppy or D81 image, and moves into it. CHDIR changes the
+current directory: <code>"/"</code> returns to the root of a disk, and
+<code>".."</code> goes up a level only on the SD card (U12).</p>
+<p>Format: <code>MKDIR dirname, L size [,U unit]</code> /
+<code>CHDIR dirname [,U unit]</code></p>
+<pre><code>10 MKDIR &quot;SUBDIR&quot;, L5   : REM CREATE IT AND MOVE INTO IT
+20 CHDIR &quot;/&quot;              : REM BACK TO THE ROOT</code></pre>
+<h4 id="mount">MOUNT</h4>
+<p>Token <code>$FE $49</code> · Book p. B-171</p>
+<p>Mounts a D81 or D64 disk image from the SD card as unit 8, or unit 9
+with U9. Without a file name, it gives the drives back to the
+physical floppy (from ROM 920414): unit 8 becomes the internal drive and
+unit 9 is unmounted unless a unit is given (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). MOUNT OFF
+unmounts.</p>
+<p>Format: <code>MOUNT filename [,U unit]</code> /
+<code>MOUNT [U unit]</code> / <code>MOUNT OFF [U unit]</code></p>
+<pre><code>MOUNT &quot;GAMES.D81&quot;</code></pre>
+<h4 id="type">TYPE</h4>
+<p>Token <code>$FE $27</code> · Book p. B-270</p>
+<p>Prints a PETSCII text file from disk to the screen; P pauses after
+each screenful.</p>
+<p>Format: <code>TYPE [P] filename [,D drive] [,U unit]</code></p>
+<pre><code>TYPE &quot;README&quot;</code></pre>
+<h4 id="set">SET</h4>
+<p>Token <code>$FE $2D</code> · Book p. B-238</p>
+<p>SET DEF changes the default disk unit, SET DISK changes a drive's
+unit number, and SET VERIFY turns automatic verification of saves on or
+off.</p>
+<p>Format: <code>SET DEF unit</code> / <code>SET DISK old TO new</code>
+/ <code>SET VERIFY &lt;ON / OFF&gt;</code></p>
+<pre><code>SET DEF 11 : DIR</code></pre>
+<h4 id="ds-ds-st">DS, <code>DS$</code>, ST</h4>
+<p>Reserved variables, no token · Book pp. B-84, B-85, B-251</p>
+<p>DS and <code>DS$</code> give the status of the last disk operation as
+a number and as text; ST gives the status of the last I/O operation, and
+is non-zero at the end of a file.</p>
+<p>Format: <code>DS</code>, <code>DS$</code>, <code>ST</code></p>
+<pre><code>10 DOPEN#1, &quot;DATA&quot;
+20 IF DS &lt;&gt; 0 THEN PRINT DS$ : STOP</code></pre>
+<h4 id="rdisk">RDISK</h4>
+<p>Token <code>$CE $15</code> · Book p. B-204</p>
+<p>Returns properties of the most recent disk action, such as the unit a
+program was loaded from.</p>
+<p>Format: <code>RDISK(property)</code></p>
+<pre><code>10 DU = RDISK(1)
+20 BLOAD &quot;MYRESOURCE&quot;, U(DU) : REM LOAD FROM THE SAME UNIT</code></pre>
+<h3 id="colour">Colour</h3>
+<p>Colours are palette entry numbers: 0 to 31 for COLOR and FOREGROUND,
+whose values 16 to 31 select the first 16 colours in bold, and 0 to 255
+for BACKGROUND, BORDER and PEN. The first 16 are the C64 colours: 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7
+yellow and so on.</p>
+<h4 id="color-foreground">COLOR, FOREGROUND</h4>
+<p>Tokens <code>$E7</code>, <code>$FE $39</code> · Book pp. B-56,
+B-115</p>
+<p>Set the text colour for everything printed afterwards. The two
+keywords do the same job.</p>
+<p>Format: <code>COLOR colour</code> /
+<code>FOREGROUND colour</code></p>
+<pre><code>COLOR 2 : PRINT &quot;THIS IS RED&quot;
+FOREGROUND 7 : PRINT &quot;THIS IS YELLOW&quot;</code></pre>
+<h4 id="background-border">BACKGROUND, BORDER</h4>
+<p>Tokens <code>$FE $3B</code>, <code>$FE $3C</code> · Book pp. B-24,
+B-32</p>
+<p>Set the colour of the screen background and of the border around
+it.</p>
+<p>Format: <code>BACKGROUND colour</code> /
+<code>BORDER colour</code></p>
+<pre><code>BACKGROUND 6 : BORDER 14</code></pre>
+<h4 id="palette-rpalette">PALETTE, RPALETTE</h4>
+<p>Tokens <code>$FE $34</code>, <code>$CE $0D</code> · Book pp. B-185,
+B-219</p>
+<p>PALETTE sets the red, green and blue levels, 0 to 15, of a palette
+entry, either for a graphics screen or, with PALETTE COLOR, for the
+system palette used by text. PALETTE RESTORE puts the defaults back.
+RPALETTE reads one component back: 0 red, 1 green, 2 blue.</p>
+<p>Format: <code>PALETTE screen, colour, red, green, blue</code> /
+<code>PALETTE COLOR colour, red, green, blue</code> /
+<code>RPALETTE(screen, index, rgb)</code></p>
+<pre><code>10 PALETTE COLOR 9, 0, 0, 7 : REM ENTRY 9 BECOMES DARK BLUE
+20 PALETTE RESTORE</code></pre>
+<pre><code>10 SCREEN 320, 200, 4
+20 R = RPALETTE(0, 3, 0) : G = RPALETTE(0, 3, 1) : B = RPALETTE(0, 3, 2)
+30 SCREEN CLOSE : PRINT R; G; B : REM PRINTS 0 15 15</code></pre>
+<h4 id="rcolor">RCOLOR</h4>
+<p>Token <code>$CD</code> · Book p. B-202</p>
+<p>Returns the current colour of a source such as the background, text
+or border.</p>
+<p>Format: <code>RCOLOR(source)</code></p>
+<pre><code>10 C = RCOLOR(3) : REM CURRENT BORDER COLOUR</code></pre>
+<p>HIGHLIGHT, which sets the editor's highlighting colours, is under
+Program Editing.</p>
+<h3 id="bitmap-graphics">Bitmap Graphics</h3>
+<p>The graphics commands draw on a bitplane screen in banks 4 and 5,
+opened with SCREEN. Coordinates are in pixels from the top-left
+corner.</p>
+<h4 id="screen-graphic">SCREEN, GRAPHIC</h4>
+<p>Tokens <code>$FE $2E</code>, <code>$DE</code> · Book pp. B-235,
+B-128</p>
+<p>SCREEN opens a graphics screen of a given width, height and depth in
+bitplanes, and SCREEN CLOSE returns to text. GRAPHIC CLR resets the
+whole graphics system.</p>
+<p>Format: <code>SCREEN [screen,] width, height, depth</code> /
+<code>SCREEN CLOSE</code> / <code>GRAPHIC CLR</code></p>
+<pre><code> 5 GRAPHIC CLR : REM START FROM THE DEFAULTS
+10 SCREEN 320, 200, 4 : REM 16 COLOURS
+20 GETKEY A$ : SCREEN CLOSE</code></pre>
+<h4 id="pen-rpen">PEN, RPEN</h4>
+<p>Tokens <code>$FE $33</code>, <code>$D0</code> · Book pp. B-188,
+B-220</p>
+<p>PEN chooses the colour the drawing commands use; RPEN reads a pen's
+colour.</p>
+<p>Format: <code>PEN colour</code> / <code>RPEN(n)</code></p>
+<pre><code>10 SCREEN 320, 200, 2 : PEN 1 : C = RPEN(0)
+20 SCREEN CLOSE : PRINT &quot;DRAW PEN COLOUR =&quot;; C</code></pre>
+<h4 id="dmode-dpat">DMODE, DPAT</h4>
+<p>Tokens <code>$FE $35</code>, <code>$FE $36</code> · Book pp. B-77,
+B-82</p>
+<p>DMODE sets how drawing combines with what is already there, such as
+solid or complemented, and whether lines use the DPAT pattern (style
+1). The stencil and thickness arguments are accepted but have no effect
+(MEGA65 ROM source, DMODE). DPAT sets a dash pattern for lines, used only
+when DMODE's style is 1.</p>
+<p>Format: <code>DMODE jam, complement, stencil, style, thick</code> /
+<code>DPAT type [, number, pattern ...]</code></p>
+<pre><code>10 SCREEN 320, 200, 5 : PEN 2 : BOX 50, 50, 100, 100, 1
+20 PEN 6 : DMODE 0, 1, 0, 0, 0 : REM COMPLEMENT WHAT IS THERE
+30 BOX 40, 90, 170, 94, 1
+40 GETKEY A$ : SCREEN CLOSE</code></pre>
+<pre><code>10 DPAT 0, 4, %00110011, %00111100, %00001111, %11110000</code></pre>
+<h4 id="dot-pixel">DOT, PIXEL</h4>
+<p>Tokens <code>$FE $4C</code>, <code>$CE $0C</code> · Book pp. B-81,
+B-189</p>
+<p>DOT plots a single pixel, in the pen colour or a given colour; PIXEL
+returns the colour of a pixel.</p>
+<p>Format: <code>DOT x, y [, colour]</code> /
+<code>PIXEL(x, y)</code></p>
+<pre><code>10 SCREEN 320, 200, 4
+20 FOR I = 1 TO 1000 : DOT RND(1) * 320, RND(1) * 200, RND(1) * 16 : NEXT
+30 PRINT PIXEL(160, 100)</code></pre>
+<h4 id="line">LINE</h4>
+<p>Token <code>$E5</code> · Book p. B-150</p>
+<p>Draws a line, or a connected series of lines through several
+points.</p>
+<p>Format: <code>LINE x1, y1 [, x2, y2 ...]</code></p>
+<pre><code>10 SCREEN 320, 200, 2 : PEN 1
+20 LINE 25, 25, 295, 175, 295, 25, 25, 175</code></pre>
+<h4 id="box-circle-ellipse-polygon">BOX, CIRCLE, ELLIPSE, POLYGON</h4>
+<p>Tokens <code>$E1</code>, <code>$E2</code>, <code>$FE $30</code>,
+<code>$FE $2F</code> · Book pp. B-33, B-48, B-94, B-195</p>
+<p>Draw shapes, outlined or, with the solid flag, filled. BOX takes two
+opposite corners or four corner points; CIRCLE a centre and radius;
+ELLIPSE a centre and two radii; POLYGON a centre, radii and number of
+sides.</p>
+<p>Format: <code>BOX x0, y0, x2, y2 [, solid]</code> /
+<code>CIRCLE xc, yc, radius [, flags, start, stop]</code> /
+<code>ELLIPSE xc, yc, xr, yr [, flags, start, stop]</code> /
+<code>POLYGON x, y, xrad, yrad, sides [...]</code></p>
+<pre><code>10 SCREEN 320, 200, 2 : PEN 1
+20 BOX 10, 10, 100, 60, 1
+30 CIRCLE 160, 100, 50
+40 ELLIPSE 250, 100, 40, 20
+50 POLYGON 160, 160, 30, 30, 6</code></pre>
+<h4 id="paint">PAINT</h4>
+<p>Token <code>$DF</code> · Book p. B-184</p>
+<p>Flood-fills an enclosed area, starting at a point, with the pen
+colour.</p>
+<p>Format: <code>PAINT x, y, mode [, border colour]</code></p>
+<pre><code>30 CIRCLE 160, 100, 50 : PAINT 160, 100, 0</code></pre>
+<h4 id="char">CHAR</h4>
+<p>Token <code>$E0</code> · Book p. B-43</p>
+<p>Draws text on a graphics screen, at a column given in characters and
+a row given in pixels, scaled by height and width.</p>
+<p>Format:
+<code>CHAR column, row, height, width, direction, string [, charset address]</code></p>
+<pre><code>10 SCREEN 640, 400, 2
+20 CHAR 28, 180, 4, 4, 2, &quot;MEGA65&quot;, $29000</code></pre>
+<h4 id="cut-gcopy-paste">CUT, GCOPY, PASTE</h4>
+<p>Tokens <code>$E4</code>, <code>$FE $32</code>, <code>$E3</code> ·
+Book pp. B-62, B-121, B-186</p>
+<p>CUT copies a rectangle to a buffer and clears it; GCOPY copies it
+without clearing; PASTE draws the buffer at a new position.</p>
+<p>Format: <code>CUT x, y, width, height</code> /
+<code>GCOPY x, y, width, height</code> / <code>PASTE x, y</code></p>
+<pre><code>10 SCREEN 320, 200, 2 : BOX 60, 60, 300, 180, 1
+20 GCOPY 140, 80, 40, 40
+30 PASTE 10, 10
+40 CUT 140, 80, 40, 40 : PASTE 200, 10
+50 GETKEY A$ : SCREEN CLOSE</code></pre>
+<h4 id="viewport">VIEWPORT</h4>
+<p>Token <code>$FE $31</code> · Book p. B-278</p>
+<p>VIEWPORT DEF sets a clipping rectangle for drawing; VIEWPORT CLR
+fills it with the pen colour.</p>
+<p>Format: <code>VIEWPORT DEF x, y, width, height</code> /
+<code>VIEWPORT CLR</code></p>
+<pre><code>10 VIEWPORT DEF 20, 30, 100, 120 : PEN 1 : VIEWPORT CLR</code></pre>
+<h4 id="rgraphic">RGRAPHIC</h4>
+<p>Token <code>$CC</code> · Book p. B-215</p>
+<p>Returns a property of a graphics screen, such as whether it is open,
+or its width.</p>
+<p>Format: <code>RGRAPHIC(screen, parameter)</code></p>
+<pre><code>10 PRINT RGRAPHIC(0, 0) : REM 1 IF SCREEN 0 IS OPEN</code></pre>
+<h4 id="loadiff-saveiff">LOADIFF, SAVEIFF</h4>
+<p>Tokens <code>$FE $43</code>, <code>$FE $44</code> · Book pp. B-156,
+B-232</p>
+<p>Load a picture in IFF format into graphics memory, or save the
+current screen as an IFF file.</p>
+<p>Format: <code>LOADIFF filename [,D drive] [,U unit]</code> /
+<code>SAVEIFF filename [,D drive] [,U unit]</code></p>
+<pre><code>10 SAVEIFF &quot;PICTURE&quot;
+20 LOADIFF &quot;PICTURE&quot;</code></pre>
+<h3 id="sprites">Sprites</h3>
+<h4 id="sprite">SPRITE</h4>
+<p>Token <code>$FE $07</code> · Book p. B-247</p>
+<p>Turns a sprite on or off and sets its colour, priority, expansion and
+mode. SPRITE CLR resets all sprites, and SPRITE LOAD and SPRITE SAVE
+load and save sprite data.</p>
+<p>Format:
+<code>SPRITE num [{, switch, colour, prio, expx, expy, mode}]</code> /
+<code>SPRITE CLR</code> / <code>SPRITE LOAD filename</code> /
+<code>SPRITE SAVE filename</code></p>
+<pre><code>10 SPRITE LOAD &quot;SPRITEDATA&quot;
+20 SPRITE 1, 1, 2 : REM SPRITE 1 ON, RED</code></pre>
+<h4 id="movspr">MOVSPR</h4>
+<p>Token <code>$FE $06</code> · Book p. B-175</p>
+<p>Moves a sprite to a position, or sets it moving continuously at an
+angle and speed, written <code>angle#speed</code>. BASIC's interrupt
+keeps it moving while the program does other work.</p>
+<p>Format: <code>MOVSPR number, position</code></p>
+<pre><code>10 SPRITE 1, 1 : MOVSPR 1, 120, 0
+20 MOVSPR 1, 0#5 : REM MOVE AT ANGLE 0, SPEED 5</code></pre>
+<h4 id="sprcolor-rspcolor">SPRCOLOR, RSPCOLOR</h4>
+<p>Tokens <code>$FE $08</code>, <code>$CE $07</code> · Book pp. B-246,
+B-224</p>
+<p>SPRCOLOR sets the two colours shared by all multicolour sprites;
+RSPCOLOR reads one back.</p>
+<p>Format: <code>SPRCOLOR [{mc1, mc2}]</code> /
+<code>RSPCOLOR(n)</code></p>
+<pre><code>10 SPRCOLOR 4, 5
+20 PRINT RSPCOLOR(1)</code></pre>
+<h4 id="sprsav">SPRSAV</h4>
+<p>Token <code>$FE $16</code> · Book p. B-249</p>
+<p>Copies sprite data between sprites, or between a sprite and a string
+variable.</p>
+<p>Format: <code>SPRSAV source, destination</code></p>
+<pre><code>SPRSAV 1, 2 : REM COPY SPRITE 1&#39;S SHAPE TO SPRITE 2</code></pre>
+<h4 id="collision-bump">COLLISION, BUMP</h4>
+<p>Tokens <code>$FE $17</code>, <code>$CE $03</code> · Book pp. B-55,
+B-37</p>
+<p>COLLISION names a subroutine BASIC calls when sprites collide; BUMP
+returns a bitfield of the sprites involved, type 1 for sprite-to-sprite
+and type 2 for sprite-to-background.</p>
+<p>Format: <code>COLLISION type [, line]</code> /
+<code>BUMP(type)</code></p>
+<pre><code>10 COLLISION 1, 70
+...
+70 S% = BUMP(1) : IF (S% AND 6) = 6 THEN PRINT &quot;SPRITES 1 AND 2 HIT&quot;
+80 RETURN</code></pre>
+<h4 id="rsprite-rsppos-rsprsys">RSPRITE, RSPPOS, RSPRSYS</h4>
+<p>Tokens <code>$CE $06</code>, <code>$CE $05</code>,
+<code>$CE $17</code> · Book pp. B-227, B-226, B-228</p>
+<p>Read back sprite settings: RSPRITE a sprite's attributes, RSPPOS its
+position or speed, and RSPRSYS a system-wide sprite setting.</p>
+<p>Format: <code>RSPRITE(sprite, n)</code> /
+<code>RSPPOS(sprite, n)</code> / <code>RSPRSYS(n)</code></p>
+<pre><code>10 XP = RSPPOS(1, 0) : YP = RSPPOS(1, 1)
+20 PRINT &quot;SPRITE 1 AT&quot;; XP; YP
+30 SPRITE 1, 1 : PRINT RSPRITE(1, 0) : REM 1, AS SPRITE 1 IS ON
+40 PRINT RSPRSYS(0) : REM 1 IF HIGH-RESOLUTION SPRITES ARE ON</code></pre>
+<h3 id="sound">Sound</h3>
+<p>Chapter 13 covers these commands in detail.</p>
+<h4 id="sound-1">SOUND</h4>
+<p>Token <code>$DA</code> · Book p. B-243</p>
+<p>Plays a sound effect on voices 1 to 6 of SIDs 2 and 4, with a SID
+frequency value and a duration in jiffies, and optional sweep, waveform
+and pulse width. SOUND CLR silences everything.</p>
+<p>Format:
+<code>SOUND voice, freq, dur [{, dir, min, sweep, wave, pulse}]</code> /
+<code>SOUND CLR</code></p>
+<pre><code>SOUND 3, 4000, 120, 2, 2000, 400, 1 : REM SWEEPING SAWTOOTH</code></pre>
+<h4 id="play-rplay">PLAY, RPLAY</h4>
+<p>Tokens <code>$FE $04</code>, <code>$CE $0F</code> · Book pp. B-190,
+B-221</p>
+<p>PLAY plays up to six strings of music notes in the background on SIDs
+1 and 3. RPLAY tests whether a voice is still playing.</p>
+<p>Format: <code>PLAY [{string1, ... string6}]</code> /
+<code>RPLAY(voice)</code></p>
+<pre><code>10 PLAY &quot;O4ICDEFGABO5CR&quot;, &quot;O2QCGEGCO1GCR&quot;
+20 IF RPLAY(1) OR RPLAY(2) THEN 20 : REM WAIT FOR THE END</code></pre>
+<h4 id="tempo">TEMPO</h4>
+<p>Token <code>$FE $05</code> · Book p. B-262</p>
+<p>Sets the speed of PLAY; a whole note lasts 24 divided by the tempo,
+in seconds.</p>
+<p>Format: <code>TEMPO speed</code></p>
+<pre><code>TEMPO 24 : REM WHOLE NOTE = 1 SECOND</code></pre>
+<h4 id="envelope">ENVELOPE</h4>
+<p>Token <code>$FE $0A</code> · Book p. B-99</p>
+<p>Redefines one of the ten instrument slots PLAY uses.</p>
+<p>Format:
+<code>ENVELOPE n [{, attack, decay, sustain, release, waveform, pw}]</code></p>
+<pre><code>ENVELOPE 9, 10, 5, 10, 5, 2, 4000</code></pre>
+<h4 id="filter">FILTER</h4>
+<p>Token <code>$FE $03</code> · Book p. B-109</p>
+<p>Sets the SID filter for music: cutoff frequency, low-, band- and
+high-pass switches and resonance.</p>
+<p>Format: <code>FILTER sid [{, freq, lp, bp, hp, res}]</code></p>
+<pre><code>FILTER 1, 1024, 1, 0, 0, 10 : REM LOW PASS ON THE RIGHT MUSIC SID</code></pre>
+<h4 id="vol">VOL</h4>
+<p>Token <code>$DB</code> · Book p. B-279</p>
+<p>Sets the volume, 0 to 15, of the right and left pairs of SIDs.</p>
+<p>Format: <code>VOL right, left</code></p>
+<pre><code>VOL 8, 8</code></pre>
+<h3 id="controllers">Controllers</h3>
+<h4 id="joy">JOY</h4>
+<p>Token <code>$CF</code> · Book p. B-143</p>
+<p>Reads a joystick: the low four bits give the direction, 1 for up
+through 8 for up-left clockwise, and bit 7 is the fire button.</p>
+<p>Format: <code>JOY(port)</code></p>
+<pre><code>10 N = JOY(1)
+20 IF N AND 128 THEN PRINT &quot;FIRE!&quot;</code></pre>
+<h4 id="pot">POT</h4>
+<p>Token <code>$CE $02</code> · Book p. B-197</p>
+<p>Reads a paddle, 1 to 4. The low byte is the position, and values
+above 255 mean the button is pressed.</p>
+<p>Format: <code>POT(paddle)</code></p>
+<pre><code>10 X = POT(1) : B = X &gt; 255 : V = X AND 255</code></pre>
+<h4 id="lpen">LPEN</h4>
+<p>Token <code>$CE $04</code> · Book p. B-163</p>
+<p>Reads the latched light pen X (0) or Y (1) position. The Book
+describes a light pen on port 1 with a CRT display, but the current core
+latches only touch input from the on-screen keyboard; see Chapter
+16.</p>
+<p>Format: <code>LPEN(coordinate)</code></p>
+<pre><code>PRINT LPEN(0), LPEN(1)</code></pre>
+<h4 id="mouse-rmouse">MOUSE, RMOUSE</h4>
+<p>Tokens <code>$FE $3E</code>, <code>$FE $3F</code> · Book pp. B-173,
+B-217</p>
+<p>MOUSE ON starts the mouse driver, with the pointer drawn by a sprite;
+RMOUSE reads the position and buttons, giving -1 if the mouse driver is
+off.</p>
+<p>Format: <code>MOUSE ON [{, port, sprite, hotspot, pos}]</code> /
+<code>MOUSE OFF</code> / <code>RMOUSE x, y, buttons</code></p>
+<pre><code>10 MOUSE ON, 1, 1
+20 RMOUSE XP, YP, BU : PRINT XP; YP; BU</code></pre>
+<h3 id="system">System</h3>
+<h4 id="speed-fast-rspeed">SPEED, FAST, RSPEED</h4>
+<p>Tokens <code>$FE $26</code>, <code>$FE $25</code>,
+<code>$CE $0E</code> · Book pp. B-245, B-106, B-225</p>
+<p>SPEED, or its synonym FAST, sets the CPU to 1, 3.5 or 40.5 MHz;
+RSPEED reports the speed as 1, 3 or 40. Neither works after
+<code>POKE 0,65</code> has forced full speed.</p>
+<p>Format: <code>SPEED [speed]</code> / <code>FAST [speed]</code> /
+<code>RSPEED(n)</code></p>
+<pre><code>10 SPEED 1 : PRINT RSPEED(0)
+20 SPEED : PRINT RSPEED(0)
+30 FAST 3.5 : PRINT RSPEED(0) : REM PRINTS 3</code></pre>
+<h4 id="go64">GO64</h4>
+<p>Token <code>$CB $36 $34</code> · Book p. B-125</p>
+<p>Switches to C64 mode, after asking for confirmation in direct mode.
+Any program in memory is lost.</p>
+<p>Format: <code>GO64</code></p>
+<pre><code>GO64</code></pre>
+<h4 id="freezer">FREEZER</h4>
+<p>Token <code>$FE $4A</code> · Book p. B-119</p>
+<p>Opens the Freezer menu, as holding RESTORE does.</p>
+<p>Format: <code>FREEZER</code></p>
+<pre><code>FREEZER</code></pre>
+<h4 id="info">INFO</h4>
+<p>Token <code>$FE $4D</code> · Book p. B-137</p>
+<p>Displays information about the running system, such as the video mode
+and memory use.</p>
+<p>Format: <code>INFO</code></p>
+<pre><code>INFO</code></pre>
+<h4 id="ti-ti-dt">TI, <code>TI$</code>, <code>DT$</code></h4>
+<p>Reserved variables, no token · Book pp. B-264, B-265, B-87</p>
+<p>TI is a timer with microsecond resolution, restarted with CLR TI;
+<code>TI$</code> and <code>DT$</code> give the time and date from the
+real-time clock.</p>
+<p>Format: <code>TI</code>, <code>TI$</code>, <code>DT$</code></p>
+<pre><code>10 CLR TI
+20 FOR I% = 1 TO 10000 : NEXT
+30 PRINT &quot;TOOK&quot;; TI; &quot;SECONDS AT &quot;; TI$; &quot; ON &quot;; DT$</code></pre>
+<h4 id="t-c">T@&amp;, C@&amp;</h4>
+<p>Reserved arrays, no token · Book pp. B-259, B-39</p>
+<p>Read or set the screen code and colour of the character at a column
+and row of the text screen, as described under <a
+href="#screen-arrays">Screen arrays</a>.</p>
+<p>Format: <code>T@&amp;(column, row)</code> /
+<code>C@&amp;(column, row)</code></p>
+<pre><code>10 FOR C = 0 TO 63 : T@&amp;(C, 0) = C : C@&amp;(C, 0) = C AND 15 : NEXT</code></pre>
+<h4 id="off">OFF</h4>
+<p>Token <code>$FE $24</code> · Book p. B-180</p>
+<p>Secondary keyword that turns a feature off, as in KEY OFF, MOUSE OFF
+and EDIT OFF.</p>
+<p>Format: <code>keyword OFF</code></p>
+<pre><code>MOUSE OFF</code></pre>
 <nav class="chapnav"><span><a href="ch02-getting-to-know-the-mega65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch04-effective-programming-in-basic65.html">Next &rarr;</a></span></nav>
 </body>
 </html>

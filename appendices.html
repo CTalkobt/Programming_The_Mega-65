@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch17-major-peripherals.html">&larr; Previous</a></span><a href="index.html">Contents</a><span></span></nav>
 <h1 id="programming-the-mega65--appendices">Programming the MEGA65 —
 Appendices</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 15, 2026 · @Craig Taylor</p>
 <h2 id="appendix-a-screen-codes-and-colours">Appendix A: Screen Codes
 and Colours</h2>
 <h3 id="screen-codes">Screen codes</h3>
@@ -1312,6 +1312,51 @@ cursor onto the display, typing over the values and pressing RETURN, as
 in other Commodore monitors. Chapter 7 walks through a first program
 entered with the monitor, and Chapter 8 covers debugging with it, with
 BRK breakpoints, and with Matrix Mode.</p>
+<h2 id="appendix-h-sources-and-further-reading">Appendix H: Sources and
+Further Reading</h2>
+<p>This book is checked against the sources below. When they disagree,
+the MEGA65's own source code is the final word, because it is what the
+machine actually runs.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Source</th>
+<th>What it contains</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/MEGA65/mega65-user-guide">MEGA65 User
+Guide repository</a></td>
+<td>The source of the official MEGA65 manuals, including the MEGA65
+Book (the Complete Compendium) cited throughout as "MEGA65 Book, p.
+X-NN". Its issue tracker and recent commits show corrections made since
+the August 2025 edition.</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/MEGA65/mega65-core">mega65-core</a></td>
+<td>The source code of the MEGA65 core: the VHDL that describes the
+45GS02 CPU (<code>src/vhdl/gs4510.vhdl</code>), the VIC-IV and the
+other chips, the Hypervisor (<code>src/hyppo/</code>) and the Freezer
+(<code>src/mega65-freezemenu/</code>). The <code>development</code>
+branch has the newest changes; <code>iomap.txt</code> lists the I/O
+registers.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://dansanderson.com/mega65/">Dan Sanderson's MEGA65
+pages</a></td>
+<td>Articles, tutorials and the <em>MEGA65 Digest</em> newsletter by a
+member of the MEGA65 team, including the
+project's history in "MEGA65: The First Ten Years".</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a></td>
+<td>What changed in each ROM release, used to say which ROM introduced a
+BASIC 65 or KERNAL feature.</td>
+</tr>
+</tbody>
+</table>
 <nav class="chapnav"><span><a href="ch17-major-peripherals.html">&larr; Previous</a></span><a href="index.html">Contents</a><span></span></nav>
 </body>
 </html>

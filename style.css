@@ -1,6 +1,6 @@
 body{max-width:52rem;margin:2rem auto;padding:0 1rem;font:16px/1.55 Georgia,serif;color:#222;background:#fff}
 @media (prefers-color-scheme:dark){body{color:#ddd;background:#1b1b1b}a{color:#8ab4f8}th,td{border-color:#555!important}pre,code{background:#2a2a2a!important}p.version{color:#999}}
-h1,h2,h3{font-family:Helvetica,Arial,sans-serif;line-height:1.25}
+h1,h2,h3,h4{font-family:Helvetica,Arial,sans-serif;line-height:1.25}
 pre{overflow-x:auto;padding:.75rem;background:#f4f4f4;border-radius:4px}
 code{font-family:Consolas,Menlo,monospace;font-size:.92em;background:#f4f4f4;padding:0 .2em}
 pre code{padding:0;background:none}
