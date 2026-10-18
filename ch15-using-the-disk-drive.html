@@ -30,7 +30,7 @@ Drive</title>
 <h1
 id="programming-the-mega65--chapter-15-using-the-disk-drive">Programming
 the MEGA65 — Chapter 15: Using the Disk Drive</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Most of this chapter applies equally to a disk image on the SD card,
 the MEGA65's internal 3.5" drive and a Commodore drive on the IEC port.
@@ -128,8 +128,20 @@ each on its own line, so INPUT# can tell where one ends:</p>
 existing file uses APPEND# instead of DOPEN#, and replacing a file needs
 it to be scratched first, or an <code>@</code> before the name, which
 works for data files as well as programs, as in <code>DOPEN#2,
-"@SCORES", W</code> (MEGA65 Book, DOPEN). Avoid <code>@</code> with
-1541 and 1571 drives, as the Book advises.</p>
+"@SCORES", W</code> (MEGA65 Book, DOPEN). If the file does not exist,
+the <code>@</code> has no effect and the file is created as usual.</p>
+<p>The Book advises against <code>@</code> on 1541 and 1571 drives, but
+the problem is wider than that. The "save-and-replace" bug that can
+corrupt a disk is in the DOS of every Commodore drive from the 2040 to
+the 1581, so avoid <code>@</code> on any external IEC drive. The
+MEGA65's own DOS does not have the bug. It was fixed in ROM 920303, and
+from 920361 <code>@</code> also works when saving from EDIT mode (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>). On the internal drive and on disk images, DSAVE,
+SAVE, DOPEN and OPEN all accept it, as in <code>OPEN 2,8,2,
+"@SCORES,S,W"</code> (<a
+href="https://files.mega65.org/html/main.php?ar=015ff11d-ba3a-4f5d-ab39-99ceb21295ea">MEGA65
+Filehost, "DOS - Tip: save-and-replace bug"</a>).</p>
 <h3 id="relative-files">Relative files</h3>
 <p>A relative file holds numbered records of a fixed length, given with
 L when the file is first created. RECORD moves to any record directly,

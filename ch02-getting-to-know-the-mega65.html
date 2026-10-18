@@ -30,7 +30,7 @@ MEGA65</title>
 <h1
 id="programming-the-mega65--chapter-2-getting-to-know-the-mega65">Programming
 the MEGA65 — Chapter 2: Getting to Know the MEGA65</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Before programming any computer, it pays to know its everyday tools
 well. On the MEGA65 those tools are richer than on a C64: the keyboard
@@ -310,8 +310,43 @@ a screen. The most useful are listed below; the Book has the full table
 <td>ESC Y</td>
 <td>Restore the default tab stops</td>
 </tr>
+<tr class="even">
+<td>ESC Z</td>
+<td>Clear all tab stops</td>
+</tr>
+<tr class="odd">
+<td>ESC N, ESC R</td>
+<td>Allow or stop line pushing (ROM 920396 and later)</td>
+</tr>
+<tr class="even">
+<td>ESC ↑, ESC ←</td>
+<td>Save the cursor position, or return to the saved position (ROM
+920362 and later)</td>
+</tr>
+<tr class="odd">
+<td>ESC G, ESC H</td>
+<td>Turn the bell on or off</td>
+</tr>
+<tr class="even">
+<td>ESC [, ESC ]</td>
+<td>Monochrome or colour display: ignore or show the attributes such as
+reverse and flashing</td>
+</tr>
 </tbody>
 </table>
+<p>ESC ↑ and ESC ← are the up-arrow and left-arrow keys, which print as
+<code>CHR$(27);"^"</code> and <code>CHR$(27);"_"</code> from a
+program.</p>
+<p>Line pushing is what the editor does when a character is printed in
+the last column of a line: it joins the next screen line to this one
+and pushes the lines below down to make room. ESC R stops this, so a
+program can fill the last column without moving the rest of the screen.
+To print in the bottom-right corner, scrolling must be stopped as well,
+with ESC M, or the screen scrolls up (MEGA65 ROM source, escape table;
+<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>):</p>
+<pre><code>10 PRINT CHR$(27);"R";CHR$(27);"M";   : REM NO LINE PUSHING OR SCROLLING
+20 CURSOR 79,24 : PRINT "*";          : REM BOTTOM-RIGHT CORNER
+30 PRINT CHR$(27);"N";CHR$(27);"L";   : REM BACK TO NORMAL</code></pre>
 <p>Some programs expect to start in 80 × 25 mode and may not work
 correctly in 80 × 50.</p>
 <h3 id="windows-and-tabs">Windows and tabs</h3>

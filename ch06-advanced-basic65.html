@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch05-mega65-architecture.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch07-45gs02-machine-language.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-6-advanced-basic-65">Programming
 the MEGA65 — Chapter 6: Advanced BASIC 65</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 4 treated BASIC 65 as a language: how to structure programs,
 debug them and make them run well. This chapter treats it as a program,
@@ -446,7 +446,12 @@ selected bank into <code>$2000-$7FFF</code> (MEGA65 Book, pp. 14-43,
 called with <code>BANK 4 : SYS $2000</code>, and SYS cannot reach attic
 RAM at all. For small routines, the Book recommends bank 0 from $1600 to
 $1EFF, which it describes as guaranteed unused by the system; its SYS
-entry suggests <code>$1800-$1EFF</code>.</p>
+entry suggests <code>$1800-$1EFF</code>. The ROM source shows that the
+graphics commands use <code>$1800-$1FFF</code> as work space, for a
+brush buffer, clipping variables, an IFF buffer, a scan-line buffer and
+their own base page (MEGA65 ROM source, <code>kg65vars.src</code>). So only
+<code>$1600-$17FF</code> is safe in every program; the rest of the
+range is free only in programs that use no graphics commands.</p>
 <p>SYS can also load the registers before the call, and RREG reads them
 back afterwards:</p>
 <pre><code>10 BANK 0
@@ -476,7 +481,7 @@ RAM and chip RAM.</p>
 <p>SYS has a second form, SYS TO, with named arguments and two extra
 abilities (MEGA65 Book, p. B-256). Registers are set by name, with
 hexadecimal values in parentheses:</p>
-<pre><code>SYS TO $1800, A(5), X($FF)</code></pre>
+<pre><code>SYS TO $1600, A(5), X($FF)</code></pre>
 <p>The O argument overrides the MAP offset for <code>$2000-$7FFF</code>,
 which lets SYS TO run code anywhere in the first 384KB rather than only
 in the window above. The value is multiplied by 256 and added to the CPU
@@ -500,6 +505,24 @@ B-91):</p>
 30 PRINT &quot;PRESS A KEY&quot;
 40 GETKEY A$
 50 EDMA 0, 80*25, $8000000, 2048      : REM COPY IT BACK</code></pre>
+<p>That version works only in the 80 by 25 mode. In 80 by 50 the screen
+holds 4,000 characters and lives in bank 4 at <code>$40800</code>, and
+a program that changes the VIC-IV's layout may put it anywhere. A
+program that may run in any text mode should ask where the screen is
+and how big it is. SCRNPTR, <code>$D060-$D062</code>, holds the
+screen's address, and RWINDOW(2) and RWINDOW(3) give the width and
+height of the whole screen, whatever the current window. RWINDOW(3)
+arrived in ROM 920404 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>):</p>
+<pre><code>10 S=WPEEK($D060)+65536*PEEK($D062)  : REM SCREEN ADDRESS (SCRNPTR)
+20 N=RWINDOW(2)*RWINDOW(3)           : REM CHARACTERS ON THE SCREEN
+30 EDMA 0, N, S, $8000000            : REM COPY SCREEN TO ATTIC RAM
+40 EDMA 3, N, 32, S                  : REM FILL SCREEN WITH SPACES
+50 PRINT &quot;PRESS A KEY&quot; : GETKEY A$
+60 EDMA 0, N, $8000000, S            : REM COPY IT BACK</code></pre>
+<p>Colour RAM can be saved the same way, with the same length. Its
+address is <code>$FF80000</code> plus the offset in COLPTR,
+<code>$D064-$D065</code>, which is <code>$FF80000+WPEEK($D064)</code>
+(Chapter 12).</p>
 <p>A length of 0 means 65,536 bytes. EDMA uses the F018B job format, in
 which bit 4 of the command runs the source backwards and bit 5 the
 destination. An overlapping copy to a higher address needs both, so add
@@ -682,8 +705,8 @@ BASIC sees in the system bank (MEGA65 Book, p. B-285). The smallest
 possible USR routine is a single RTS: it leaves BASIC's floating-point
 accumulator untouched, so USR returns its argument unchanged. That is
 enough to show the mechanism:</p>
-<pre><code>10 BANK 0 : POKE $1800, $60           : REM RTS AT $1800
-20 BANK 128 : WPOKE $02F8, $1800      : REM POINT THE USR VECTOR AT IT
+<pre><code>10 BANK 0 : POKE $1600, $60           : REM RTS AT $1600
+20 BANK 128 : WPOKE $02F8, $1600      : REM POINT THE USR VECTOR AT IT
 30 PRINT USR(42)                      : REM SHOULD PRINT 42</code></pre>
 <p>A real USR routine reads its argument from the floating-point
 accumulator and leaves its result there, using BASIC's internal
@@ -695,15 +718,16 @@ pause for the duration of the call. SYS TO with <code>I(1)</code> keeps
 them running, which suits short routines called often while music plays
 (MEGA65 Book, p. B-256):</p>
 <pre><code>10 PLAY &quot;O4T0IC E G O5C O4G E L&quot;
-20 POKE $1800, $EE, $20, $D0, $60     : REM INC $D020 : RTS
+20 POKE $1600, $EE, $20, $D0, $60     : REM INC $D020 : RTS
 30 FOR I=1 TO 50
-40 SYS TO $1800, I(1)                 : REM MUSIC KEEPS PLAYING
+40 SYS TO $1600, I(1)                 : REM MUSIC KEEPS PLAYING
 50 SLEEP 0.1
 60 NEXT
 70 PLAY                               : REM STOP THE MUSIC</code></pre>
-<p>The routine sits at <code>$1800</code>, inside the
+<p>The routine sits at <code>$1600</code>, inside the
 <code>$1600-$1EFF</code> range that interrupt mode required in ROMs
-920414 to 920418, so it works on every ROM that has SYS TO. POKE
+920414 to 920418, so it works on every ROM that has SYS TO, and below
+the graphics commands' work space at <code>$1800</code>. POKE
 accepts several values in a row, so line 20 places a four-byte routine
 in one statement.</p>
 <h3 id="example-one-command-start-up">Example: one-command start-up</h3>

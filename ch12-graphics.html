@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-12-graphics">Programming the
 MEGA65 — Chapter 12: Graphics</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The VIC-IV is three video chips in one. It behaves as a VIC-II for
 C64 software, adds the C65's VIC-III features of 80 columns, bitplanes
@@ -531,10 +531,26 @@ short shift-and-rotate sequence, does the same job. Tools that convert
 images for the MEGA65 usually swap the nybbles when they write the
 palette file, so the bytes can be copied straight into the
 registers.</p>
-<p>The first 16 entries default to the C64's colours, so programs that
-use only colours 0-15 look as they would on a C64. BASIC 65's PALETTE
-COLOR command changes an entry without any register work, and PALETTE
-RESTORE puts the defaults back.</p>
+<p>The KERNAL sets the first 32 entries when it starts (MEGA65 ROM
+source, <code>palette_init</code>). Entries 0-15 follow the C64's
+order, so colour 2 is red and colour 6 is blue, but they are not the
+C64's colours. They use full-strength values, such as pure red and pure
+cyan, which look clean on a modern display. The C64's colours are darker
+and less saturated. A program that wants the C64's look can load them
+itself. This program, from the MEGA65 Filehost, sets the palette that
+the C64 mode uses (<a
+href="https://files.mega65.org/html/main.php?ar=cfbfe86e-bd9e-46dc-8b69-fe0c5936508c">MEGA65
+Filehost, "How to switch to the C64-like colors"</a>). Its DATA values
+already have their nybbles swapped, so they go straight into the
+registers:</p>
+<pre><code>10 FOR C=0 TO 15 : READ V : POKE $D100+C, V : NEXT C
+20 FOR C=0 TO 15 : READ V : POKE $D200+C, V : NEXT C
+30 FOR C=0 TO 15 : READ V : POKE $D300+C, V : NEXT C
+100 DATA 0,255,186,102,187,85,209,174,155,135,221,181,184,11,170,139
+110 DATA 0,255,19,173,243,236,224,95,71,55,57,181,184,79,217,139
+120 DATA 0,255,98,255,139,133,121,199,129,0,120,181,184,202,254,139</code></pre>
+<p>BASIC 65's PALETTE COLOR command changes an entry without any
+register work, and PALETTE RESTORE puts the defaults back.</p>
 <h3 id="several-palettes">Several palettes</h3>
 <p>The VIC-IV keeps four palette banks of 256 entries.
 <code>$D070</code> chooses which bank the <code>$D100-$D3FF</code>

@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-11-mega65-rom-guide">Programming
 the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
 DOS, the monitor, the character sets, and a complete set of C64 ROMs for
@@ -909,8 +909,8 @@ KERNAL out replaces them with its own, as shown in Chapter 8.</p>
 <p>BASIC 65 has its own vectors, which belong to BASIC rather than the
 KERNAL. The one programs most often need is the USR vector, two bytes at
 <code>$02F8</code>, low byte first, read in the system bank:
-<code>BANK 128 : WPOKE $02F8, $1800</code> points USR at a routine at
-<code>$1800</code> (MEGA65 Book, p. B-285). Chapter 9 describes writing
+<code>BANK 128 : WPOKE $02F8, $1600</code> points USR at a routine at
+<code>$1600</code> (MEGA65 Book, p. B-285). Chapter 9 describes writing
 USR routines. Other BASIC vectors and work areas are internal and should
 not be assumed from the C64 or C128.</p>
 <h2 id="hypervisor-services">Hypervisor Services</h2>

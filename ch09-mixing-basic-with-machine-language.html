@@ -30,7 +30,7 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-9-mixing-basic-with-machine-language">Programming
 the MEGA65 — Chapter 9: Mixing BASIC with Machine Language</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>A MEGA65 program does not have to be written entirely in one
 language. BASIC 65 is excellent at the parts of a program that change
@@ -105,10 +105,11 @@ With that in mind, the main places for machine code are:</p>
 <tbody>
 <tr class="odd">
 <td>Bank 0, <code>$1600-$1EFF</code></td>
-<td>2.25KB</td>
+<td>2.25KB (512 bytes with graphics)</td>
 <td><code>SYS $1600</code> from any bank</td>
 <td>The Book's recommended home for routines; also the only range usable
-with <code>SYS TO ... I1</code> in ROMs 920414 to 920418</td>
+with <code>SYS TO ... I1</code> in ROMs 920414 to 920418. The graphics
+commands use <code>$1800-$1FFF</code></td>
 </tr>
 <tr class="even">
 <td>After the BASIC program in bank 0</td>
@@ -147,6 +148,16 @@ reach (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.
 MEGA65 team's own unit-test module for BASIC programs loads here too (<a
 href="https://www.scribd.com/document/743829404/Mega65-Developer-Guide">MEGA65
 Developer Guide</a>).</p>
+<p>The Book describes the whole range as unused by the system, but the
+ROM source shows otherwise. The graphics commands keep their work areas
+in <code>$1800-$1FFF</code>: a brush buffer at <code>$1800</code>,
+clipping variables at <code>$1C00</code>, a buffer for IFF pictures and
+character expansion at <code>$1D00</code>, a scan-line buffer at
+<code>$1E00</code> and their own base page at <code>$1F00</code> (MEGA65 ROM source, <code>kg65vars.src</code>). A program that uses
+SCREEN, LINE, LOADIFF or the other graphics commands should keep its
+routines in <code>$1600-$17FF</code>, which is 512 bytes, and put
+anything larger in banks 4 and 5. The examples in this book use
+<code>$1600</code> for that reason.</p>
 <p>It is a shared resource rather than a reserved one. Resident tools
 such as on-device assemblers may claim part of it, so a program that
 will be used alongside other software should keep its footprint small or
@@ -564,7 +575,8 @@ through the USR vector to a machine-language routine, and uses whatever
 the routine leaves behind as the function's value. The vector is the two
 bytes at <code>$02F8</code>, low byte first, read in the system bank;
 the Book's POKE entry sets it to a routine at <code>$1800</code> (MEGA65
-Book, p. B-194):</p>
+Book, p. B-194), which is safe only in a program that uses no graphics
+commands:</p>
 <pre><code>10 BANK 128
 20 POKE $02F8, 0, 24                   : REM USR VECTOR = $1800</code></pre>
 <p>POKE writes successive bytes from a list, so one statement sets both
@@ -747,7 +759,9 @@ exact.</li>
 comes from the selected bank, and <code>$C000-$FFFF</code> is ROM and
 I/O. Attic RAM is out of reach.</li>
 <li><strong>Placement.</strong> Bank 0 <code>$1600-$1EFF</code> is the
-Book's recommended home for routines; code appended to the program suits
+Book's recommended home for routines, but the graphics commands use
+<code>$1800-$1FFF</code>, so only <code>$1600-$17FF</code> is always
+safe; code appended to the program suits
 single-file releases; banks 4 and 5 hold up to 24KB each in their
 <code>$2000-$7FFF</code> window; attic RAM stores overlays.</li>
 <li><strong>BASIC header.</strong> <code>10 BANK0:SYS$2012</code> at

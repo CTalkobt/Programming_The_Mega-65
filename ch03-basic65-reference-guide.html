@@ -30,7 +30,7 @@ Guide</title>
 <h1
 id="programming-the-mega65--chapter-3-basic-65-reference-guide">Programming
 the MEGA65 — Chapter 3: BASIC 65 Reference Guide</h1>
-<p>Oct 4, 2026 · Updated Oct 15, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every keyword in BASIC 65: commands,
 functions, reserved variables and secondary keywords. It is meant to be
@@ -676,10 +676,21 @@ an error and is not trapped.</li>
 drive keeps its own status, which a program should check after each
 disk command: DS is 0 when
 the last disk operation worked, and <code>DS$</code> gives the drive's
-message. Reading them also clears the error on the drive (MEGA65 Book,
-p. B-84):</p>
+message. The first use of DS or <code>DS$</code> after a disk
+operation reads the drive's command channel, which also clears the
+error on the drive (MEGA65 Book, p. B-84). BASIC keeps the message, so
+since ROM 920390 both keep their values until the next disk operation
+and can be read as often as needed (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). <code>CLR DS</code> forgets the
+kept message, and the next use of DS reads the drive again (MEGA65 ROM
+source, CLR). This replaces the C64's <code>OPEN 15,8,15 : INPUT#15,
+E, E$</code>:</p>
 <pre><code>100 DOPEN#1, &quot;DATA&quot;
 110 IF DS &lt;&gt; 0 THEN PRINT &quot;COULD NOT OPEN FILE DATA&quot; : STOP</code></pre>
+<p>DS is not 0 for every message that matters. Some status codes below
+20 report success with information, such as <code>01, FILES
+SCRATCHED</code> after SCRATCH, so <code>IF DS THEN</code> treats them as
+errors. Test <code>DS &gt;= 20</code> when the information codes should
+pass.</p>
 <p>ST gives the status of the last input or output operation on a
 channel. It is 0 when all is well and is otherwise set by the device;
 when reading a file, a value of 64 means the end of the file was
@@ -1692,7 +1703,7 @@ and pointers.</p>
 <p>Format: <code>WPEEK(address)</code> /
 <code>WPOKE address, word [, word ...]</code></p>
 <pre><code>10 BANK 128
-20 WPOKE $02F8, $1800 : PRINT HEX$(WPEEK($02F8))</code></pre>
+20 WPOKE $02F8, $1600 : PRINT HEX$(WPEEK($02F8))</code></pre>
 <h4 id="setbit-clrbit-hasbit">SETBIT, CLRBIT, HASBIT</h4>
 <p>Tokens <code>$FE $2D $FE $4E</code>, <code>$9C $FE $4E</code>,
 <code>$CE $13</code> · Book pp. B-239, B-52, B-129</p>
@@ -1740,8 +1751,8 @@ registers and adds a MAP offset (O) or keeps BASIC's interrupts running
 (I).</p>
 <p>Format: <code>SYS address [{, a, x, y, z, s}]</code> /
 <code>SYS TO address [{,A a, X x, Y y, Z z, S s, I mode, O offset}]</code></p>
-<pre><code>10 POKE $1800, $18, $8A, $65, $06, $60 : REM CLC : TXA : ADC $06 : RTS
-20 SYS $1800, 77, 11</code></pre>
+<pre><code>10 POKE $1600, $18, $8A, $65, $06, $60 : REM CLC : TXA : ADC $06 : RTS
+20 SYS $1600, 77, 11</code></pre>
 <h4 id="rreg">RREG</h4>
 <p>Token <code>$FE $09</code> · Book p. B-223</p>
 <p>Copies the register values a SYS call returned into variables.</p>
@@ -2017,7 +2028,9 @@ off.</p>
 <p>Reserved variables, no token · Book pp. B-84, B-85, B-251</p>
 <p>DS and <code>DS$</code> give the status of the last disk operation as
 a number and as text; ST gives the status of the last I/O operation, and
-is non-zero at the end of a file.</p>
+is non-zero at the end of a file. DS and <code>DS$</code> keep their
+values until the next disk operation, and <code>CLR DS</code> clears
+them; <a href="#disk-and-device-errors">Disk and device errors</a>, above, has the details.</p>
 <p>Format: <code>DS</code>, <code>DS$</code>, <code>ST</code></p>
 <pre><code>10 DOPEN#1, &quot;DATA&quot;
 20 IF DS &lt;&gt; 0 THEN PRINT DS$ : STOP</code></pre>
@@ -2031,8 +2044,9 @@ program was loaded from.</p>
 <h3 id="colour">Colour</h3>
 <p>Colours are palette entry numbers: 0 to 31 for COLOR and FOREGROUND,
 whose values 16 to 31 select the first 16 colours in bold, and 0 to 255
-for BACKGROUND, BORDER and PEN. The first 16 are the C64 colours: 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7
-yellow and so on.</p>
+for BACKGROUND, BORDER and PEN. The first 16 follow the C64's order: 0 black, 1 white, 2 red, 3 cyan, 4 purple, 5 green, 6 blue, 7
+yellow and so on. The shades are brighter than the C64's, as Chapter 12
+explains.</p>
 <h4 id="color-foreground">COLOR, FOREGROUND</h4>
 <p>Tokens <code>$E7</code>, <code>$FE $39</code> · Book pp. B-56,
 B-115</p>

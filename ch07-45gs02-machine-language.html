@@ -30,7 +30,7 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-7-45gs02-machine-language">Programming
 the MEGA65 — Chapter 7: 45GS02 Machine Language</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Machine language is the processor's own language: the bytes the
 45GS02 fetches and executes. Every BASIC statement eventually becomes
@@ -889,8 +889,179 @@ the basis of the raster effects covered in Chapters 8 and 12. Type
 <code>BANK 128</code> afterwards to return BASIC to the system view.</p>
 <p>The monitor is fine for experiments and for examining memory, but it
 has no labels, comments or source files. For anything larger, use a
-cross-assembler on a PC or an on-device assembler. The examples in the
-rest of this book use assembler syntax with labels.</p>
+cross-assembler on a PC or an on-device assembler; the next section
+lists some. The examples in the rest of this book use assembler syntax
+with labels.</p>
+<h2 id="development-tools">Development Tools</h2>
+<p>Most machine-language programs for the MEGA65 are written on a PC.
+The source is assembled or compiled there into a PRG file, which is
+tested in an emulator and then copied to the MEGA65 to run. Each step
+has several tools to choose from. Most of the assemblers and compilers
+below began as 6502 tools and added the 45GS02 later, so check which
+instructions and addressing modes a tool supports before relying on
+it. Chapter 10 notes where assemblers spell instructions differently.</p>
+<h3 id="the-cc45-suite">The cc45 suite</h3>
+<p>The cc45 suite, also called M65Compiler, is a toolchain written for
+the 45GS02 from the start, rather than adapted from a 6502 one. Its
+author is also the author of this book. Version 1.1.0 has these
+tools (<a href="https://github.com/CTalkobt/M65Compiler">M65Compiler</a>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>cc45</code></td>
+<td>C compiler. It writes assembly, relocatable <code>.o45</code>
+objects, or a finished PRG in one step</td>
+</tr>
+<tr class="even">
+<td><code>ca45</code></td>
+<td>45GS02 assembler. It accepts KickAssembler-style comments,
+<code>* =</code> and <code>.cpu</code></td>
+</tr>
+<tr class="odd">
+<td><code>ln45</code>, <code>ar45</code></td>
+<td>Linker and librarian. ln45 links objects and libraries into a
+binary or a PRG with a BASIC <code>SYS</code> line</td>
+</tr>
+<tr class="even">
+<td><code>nm45</code>, <code>objdump45</code></td>
+<td>List an object's symbols; inspect objects and disassemble PRG
+files</td>
+</tr>
+<tr class="odd">
+<td><code>cp45</code></td>
+<td>The C preprocessor on its own</td>
+</tr>
+<tr class="even">
+<td><code>disk45</code></td>
+<td>Create D81 and other disk images and copy files in and out</td>
+</tr>
+<tr class="odd">
+<td><code>basic45</code></td>
+<td>Turn BASIC 65 source written with labels instead of line numbers
+into a tokenised PRG, optionally linked with C functions it calls</td>
+</tr>
+<tr class="even">
+<td><code>cvt_asm</code></td>
+<td>Convert assembly source between assembler dialects</td>
+</tr>
+</tbody>
+</table>
+<p>cc45 uses the 45GS02's own features where a 6502 compiler cannot.
+<code>long</code> is 32 bits and works through the Q register;
+parameters go on the stack, using stack-relative addressing, or in a
+fixed area of the base page; bitfields are set and cleared with TSB and
+TRB; and functions marked <code>__far</code> are kept in bank 5 and
+called through a small resident stub, so a program can be larger than
+bank 0. A C program becomes a disk image ready for the MEGA65 like
+this:</p>
+<pre><code>cc45 hello.c -o hello.prg               ; compile, assemble and link
+disk45 create work.d81 -n WORK          ; make an empty D81 image
+disk45 add work.d81 hello.prg hello     ; copy the program onto it
+xemu-xmega65 -prgmode 65 -prg hello.prg ; or run it in Xemu</code></pre>
+<p>The PRG starts with a BASIC line that calls the program, so
+<code>RUN</code> starts it. <code>ca45 hello.s45 -o hello.prg</code>
+assembles a source file on its own in the same way.</p>
+<h3 id="other-assemblers-and-compilers">Other assemblers and
+compilers</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Tool</th>
+<th>Kind</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://sourceforge.net/projects/acme-crossass/">ACME</a></td>
+<td>Assembler</td>
+<td>Long-standing Commodore cross-assembler; <code>!cpu m65</code>
+selects the 45GS02</td>
+</tr>
+<tr class="even">
+<td><a href="https://sourceforge.net/projects/tass64/">64tass</a></td>
+<td>Assembler</td>
+<td>Turbo Assembler compatible; spells some 45GS02 instructions
+differently, as Chapter 10 notes</td>
+</tr>
+<tr class="odd">
+<td><a href="https://gitlab.com/jespergravgaard/kickassembler65ce02">KickAssembler
+65CE02</a></td>
+<td>Assembler</td>
+<td>A version of KickAssembler with the 65CE02 and 45GS02
+instructions</td>
+</tr>
+<tr class="even">
+<td><a href="https://cc65.github.io/">cc65</a></td>
+<td>Assembler and C compiler</td>
+<td>The ca65 assembler supports the 45GS02, and its CPU reference is the
+one Chapter 10 follows. The C compiler writes 6502 code</td>
+</tr>
+<tr class="odd">
+<td><a href="https://gitlab.com/camelot/kickc">KickC</a></td>
+<td>C compiler</td>
+<td>Has a MEGA65 target and writes KickAssembler source</td>
+</tr>
+<tr class="even">
+<td><a href="https://www.calypsi.cc/">Calypsi</a></td>
+<td>C compiler</td>
+<td>A C toolchain for 65xx processors with a MEGA65 target</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/llvm-mos/llvm-mos-sdk">llvm-mos</a></td>
+<td>C and C++ compiler</td>
+<td>Clang and LLVM for 6502 processors; its SDK has a
+<code>mega65</code> platform</td>
+</tr>
+</tbody>
+</table>
+<p><a href="https://github.com/MEGA65/mega65-libc">mega65-libc</a> is a
+small C library of MEGA65 functions, such as screen, DMA and Hypervisor
+calls, for use with several of these compilers. Code from a compiler
+that targets the 6502 or 65C02 may assume that the Z register is 0,
+because <code>(zp)</code> addressing on the 45GS02 is really
+<code>(zp),Z</code> (Chapter 10). Some Hypervisor calls return a value
+in Z, so such code should set Z to 0 again after them.</p>
+<h3 id="running-and-transferring-programs">Running and transferring
+programs</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="https://github.com/lgblgblgb/xemu">Xemu</a></td>
+<td>MEGA65 emulator for Linux, Windows and macOS. <code>-prg</code>
+loads and runs a program, and its monitor and debugger help find
+faults, as Chapter 8 describes</td>
+</tr>
+<tr class="even">
+<td><a href="https://github.com/MEGA65/mega65-tools">mega65-tools</a></td>
+<td>The MEGA65 team's own tools, among them <code>mega65_ftp</code>,
+which copies files to and from the SD card over the serial link or
+Ethernet; <code>etherload</code>, which sends a program over Ethernet
+and starts it; and <code>m65</code>, which loads and runs programs over
+the serial link</td>
+</tr>
+<tr class="odd">
+<td><a href="https://github.com/MEGA65/m65dbg">m65dbg</a></td>
+<td>A debugger that runs on the PC and controls the MEGA65 over the
+serial link: breakpoints, single steps and memory views</td>
+</tr>
+</tbody>
+</table>
+<p>Chapter 14 describes M65Connect, a graphical program for copying
+files to the MEGA65, and the Ethernet and serial connections these
+tools use.</p>
 <h2 id="summary">Summary</h2>
 <ul>
 <li><strong>Numbers.</strong> Hex is written with <code>$</code> and
@@ -913,7 +1084,9 @@ and RTN make stack parameters practical; PHW leaves its word high byte
 first. Interrupt handlers
 must also preserve Z and B.</li>
 <li><strong>Tools.</strong> The built-in MONITOR assembles, disassembles
-and examines memory anywhere in the 28-bit space.</li>
+and examines memory anywhere in the 28-bit space. Larger programs are
+written on a PC with a cross-assembler or compiler, such as the cc45
+suite, ACME, 64tass, ca65 or KickAssembler, and tested in Xemu.</li>
 </ul>
 <p>Chapter 8 applies these to the MEGA65's hardware: banking, DMA,
 interrupts and speed control from machine language.</p>

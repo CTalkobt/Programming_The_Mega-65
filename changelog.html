@@ -32,6 +32,26 @@ since a number in the program text is converted from its characters
 each time the line runs, and why integer variables are not.</li>
 <li>Appendix H: added the articles on the MEGA65 Filehost, with a note
 that some were written for older ROMs and cores.</li>
+<li>Chapters 6 and 9: corrected the free memory below BASIC. The ROM's
+graphics commands use <code>$1800-$1FFF</code>, so only
+<code>$1600-$17FF</code> is safe in every program; the examples in
+Chapters 3, 6 and 11 now use <code>$1600</code>.</li>
+<li>Chapter 12: the default palette follows the C64's colour order but
+not its colours; added a program that loads C64-like colours.</li>
+<li>Chapter 15: the <code>@</code> save-and-replace bug affects every
+Commodore drive, not just the 1541 and 1571, and the MEGA65's own DOS
+fixed it in ROM 920303.</li>
+<li>Chapter 3: DS and <code>DS$</code> keep their values until the next
+disk operation, <code>CLR DS</code> clears them, and status codes below
+20 are not errors.</li>
+<li>Chapter 6: the screen-saving example now has a version that works in
+any text mode, using SCRNPTR and RWINDOW.</li>
+<li>Chapter 2: added the escape sequences ESC N and ESC R (line
+pushing), ESC ↑ and ESC ← (save and restore the cursor), ESC Z, ESC G
+and ESC H, and ESC [ and ESC ], with an example that prints in the
+bottom-right corner.</li>
+<li>Chapter 7: new section, Development Tools, covering the cc45 suite,
+other assemblers and C compilers, Xemu, mega65-tools and m65dbg.</li>
 </ul>
 <h2 id="2026-10-15">October 15, 2026</h2>
 <ul>
