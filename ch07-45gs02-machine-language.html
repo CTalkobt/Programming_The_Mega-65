@@ -889,8 +889,8 @@ the basis of the raster effects covered in Chapters 8 and 12. Type
 <code>BANK 128</code> afterwards to return BASIC to the system view.</p>
 <p>The monitor is fine for experiments and for examining memory, but it
 has no labels, comments or source files. For anything larger, use a
-cross-assembler on a PC or an on-device assembler; the next section
-lists some. The examples in the rest of this book use assembler syntax
+cross-assembler on a PC, or an assembler that runs on the MEGA65
+itself; the next section lists some. The examples in the rest of this book use assembler syntax
 with labels.</p>
 <h2 id="development-tools">Development Tools</h2>
 <p>Most machine-language programs for the MEGA65 are written on a PC.
@@ -1009,11 +1009,17 @@ one Chapter 10 follows. The C compiler writes 6502 code</td>
 <td>Has a MEGA65 target and writes KickAssembler source</td>
 </tr>
 <tr class="even">
+<td><a href="http://sun.hasenbraten.de/vbcc/">vbcc</a></td>
+<td>C compiler</td>
+<td>An optimising C compiler whose 6502 version includes a MEGA65
+target in its library</td>
+</tr>
+<tr class="odd">
 <td><a href="https://www.calypsi.cc/">Calypsi</a></td>
 <td>C compiler</td>
 <td>A C toolchain for 65xx processors with a MEGA65 target</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="https://github.com/llvm-mos/llvm-mos-sdk">llvm-mos</a></td>
 <td>C and C++ compiler</td>
 <td>Clang and LLVM for 6502 processors; its SDK has a
@@ -1021,6 +1027,24 @@ one Chapter 10 follows. The C compiler writes 6502 code</td>
 </tr>
 </tbody>
 </table>
+<p>Two Windows development environments also target the MEGA65.
+<a href="https://github.com/GeorgRottensteiner/C64Studio">C64 Studio</a>
+assembles the 45GS02's instructions and comes with MEGA65 sample
+programs. <a href="https://www.ajordison.co.uk/">CBM prg Studio</a> has
+a MEGA65 project type, but its assembler handles 6502, 6510 and 65816
+code, so the 45GS02's extra instructions, such as LDZ, are not
+available in it.</p>
+<h3 id="assembling-on-the-mega65">Assembling on the MEGA65</h3>
+<p>The ROM includes no assembler apart from the monitor's one-line A
+command, but separate programs can be loaded to assemble on the machine
+itself. <a href="https://github.com/dansanderson/easyasm65">EasyAsm</a>,
+by Dan Sanderson, is one. It supports every 45GS02 instruction and
+addressing mode and a subset of ACME's syntax. Source is edited with the
+screen editor's EDIT mode, and the assembled program can be tested in
+memory or written to disk. EasyAsm is a beta: version 0.2 needs ROM
+920401 or later to assemble to disk, and its syntax may change before
+version 1.0 (<a href="https://github.com/dansanderson/easyasm65">EasyAsm
+README</a>).</p>
 <p><a href="https://github.com/MEGA65/mega65-libc">mega65-libc</a> is a
 small C library of MEGA65 functions, such as screen, DMA and Hypervisor
 calls, for use with several of these compilers. Code from a compiler

@@ -2206,6 +2206,10 @@ current screen as an IFF file.</p>
 <code>SAVEIFF filename [,D drive] [,U unit]</code></p>
 <pre><code>10 SAVEIFF &quot;PICTURE&quot;
 20 LOADIFF &quot;PICTURE&quot;</code></pre>
+<p>SAVEIFF saves a screen of any depth. Before ROM 920417 it failed on
+a 256-colour screen with 8 bitplanes (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>); in Xemu with ROM
+920422, an 8-bitplane screen saved and loaded back with its colours
+intact.</p>
 <h3 id="sprites">Sprites</h3>
 <h4 id="sprite">SPRITE</h4>
 <p>Token <code>$FE $07</code> · Book p. B-247</p>

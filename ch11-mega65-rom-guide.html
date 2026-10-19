@@ -531,7 +531,7 @@ SYSFLAGS in ROM 920418 (<a href="https://github.com/MEGA65/mega65-rom-public/blo
 <td><code>$FF32</code></td>
 <td>RESET_RUN</td>
 <td>Reset the computer, optionally running the program in memory (ROM 920416 and later)</td>
-<td>A = 0 for a KERNAL warm boot, 1 for a Hypervisor reset, 2 for a warm boot that then RUNs the BASIC program at $2001</td>
+<td>A = 0 for a KERNAL warm boot, 1 for a Hypervisor reset, 2 for a warm boot that then RUNs the BASIC program at $2001; see the note below about 3</td>
 <td>Does not return</td>
 </tr>
 <tr class="odd">
@@ -711,6 +711,24 @@ SYSFLAGS in ROM 920418 (<a href="https://github.com/MEGA65/mega65-rom-public/blo
 </tr>
 </tbody>
 </table>
+<p>RESET_RUN has one more mode in the ROM source than in the
+documentation. The Book lists A = 0, 1 and 2. The ROM's own comment
+lists A = 3 as "reset + run", a Hypervisor reset followed by a RUN of
+the program at <code>$2001</code>, and calls values above 3 reserved
+(MEGA65 ROM source, <code>reset_run</code>). The routine treats bit 0 of
+A as the reset type, 0 for a KERNAL warm boot and 1 for a Hypervisor
+reset, and bit 1 as the run flag. It stores the run flag at
+<code>$2000</code> in bank 0, the unused byte just below BASIC text,
+which survives a Hypervisor reset. BASIC reads the flag as it starts,
+clears it, and skips its usual NEW when a run was requested. For the Hypervisor reset it calls the Hypervisor through
+<code>$D640</code> with A = <code>$7E</code>. The comment adds that the
+two-bit scheme is a shortcut, and that new modes may need a different
+implementation. So mode 3 is not a documented interface and may change.
+A Hypervisor reset also reloads the ROM from the SD card, so the run
+happens only if the ROM on the card is 920416 or later. Mode 2 is the
+documented way to restart and run a program; in Xemu with ROM 920422 it
+reran a test program as expected. Mode 3 was not tested for this
+book.</p>
 <p>The last six are not among the entries the C65 moved, so they keep
 their C128 addresses. PRIMM at <code>$FF7D</code> is confirmed on the
 MEGA65 (<a
@@ -754,6 +772,26 @@ returns to the instruction after the terminating zero:</p>
         rts             ; execution continues here</code></pre>
 <p>It is the shortest way to print a fixed message from machine
 language, and it needs no pointer setup.</p>
+<h3 id="example-restoring-the-display">Example: restoring the
+display</h3>
+<p>A program that changes the video registers, for a full-colour mode or
+a new screen layout, should put them back before it returns to BASIC.
+Rather than saving and restoring every register, it can call IOINIT,
+which reloads the VIC-II and VIC-IV registers <code>$D000-$D07C</code>
+from the ROM's start-up tables, and then CINT, which restarts the screen
+editor and clears the screen. Both expect interrupts to be disabled:</p>
+<pre><code>        sei
+        jsr $ff84       ; IOINIT: reset the I/O chips, VIC included
+        jsr $ff81       ; CINT: reset the screen editor
+        cli
+        rts</code></pre>
+<p>IOINIT keeps the PAL or NTSC setting. From ROM 920419 it also keeps
+the CRT emulation setting, PALEMU, and from 920422 the HDMI scanlines
+setting, so a program does not undo the user's display preferences;
+RUN/STOP-RESTORE uses the same reset (MEGA65 ROM source,
+<code>ioinit</code>; <a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). To leave the
+program entirely, RESET_RUN with A=0 performs a full KERNAL warm
+boot.</p>
 <h2 id="ram-vectors">RAM Vectors</h2>
 <p>The jump table lets programs call the KERNAL. The RAM vectors let
 programs change what the KERNAL does. Each is a two-byte address in RAM

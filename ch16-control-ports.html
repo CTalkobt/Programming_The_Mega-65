@@ -30,7 +30,7 @@ Ports</title>
 <h1
 id="programming-the-mega65--chapter-16-the-control-ports">Programming
 the MEGA65 — Chapter 16: The Control Ports</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The two controller ports on the MEGA65's left side are the same 9-pin
 ports the C64 had, and they accept the same devices: digital joysticks,
@@ -345,6 +345,14 @@ joystick port through a PMOD connector (MEGA65 Book, p. 15-19).</li>
 </ul>
 <p>Software that relies on either should say so clearly, since a
 standard MEGA65 has neither extra port.</p>
+<p>Controllers made for other systems may use the same 9-pin connector
+with different wiring. A Sega Mega Drive (Genesis) controller is the
+usual example. Plugged straight into a Commodore port it can damage the
+port, so it needs an adapter that converts its signals, such as the one
+Dan Sanderson describes building for the MEGA65 (<a
+href="https://dansanderson.com/lab-notes/sega-adapter/">Dan Sanderson,
+"Sega adapter"</a>). Check the wiring of any controller not sold for
+Commodore machines before connecting it.</p>
 <h2 id="paddles">Paddles</h2>
 <p>A paddle is a dial connected to a variable resistor, and each port
 takes a pair. The SID chip measures the resistance and reports it as a
@@ -414,6 +422,66 @@ the KERNAL's raster interrupt, so the pointer moves smoothly while the
 program does other work (MEGA65 ROM source, editor_irq). RMOUSE returns
 -1 only when the driver is off; it cannot tell whether a mouse is
 actually plugged in. Press RUN/STOP to end the loop, then MOUSE OFF.</p>
+<p>From ROM 920422, <code>SET FAST MOUSE ON</code> doubles the speed of
+the pointer, and <code>SET FAST MOUSE OFF</code> restores it. Like other
+SET commands, it can go in <code>AUTOBOOT.C65</code>. It affects only
+BASIC's driver (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
+<h3 id="mice-without-basic">Mice without BASIC</h3>
+<p>The driver belongs to BASIC and the screen editor, and it shares
+their sprite and screen state, so it is not simply a flag that another
+program can set. MOUSE ON reaches it through the screen editor's own
+jump table at <code>$E000</code>, an entry the MEGA65's documentation
+does not list as a supported interface (MEGA65 ROM source,
+<code>mouse_cmd</code>). A program written in machine language or in a
+compiled language should read the mouse itself.</p>
+<p>A 1351 mouse in proportional mode does not report a position. Each
+axis puts a count on one of the port's paddle lines that rises or falls
+as the mouse moves and wraps round. The MEGA65 core reads all four
+paddle lines continuously into <code>$D620-$D623</code> (POTAX, POTAY,
+POTBX, POTBY, as in the table above). A driver reads the two values for
+its port, normally once a frame, subtracts the values it read last time,
+and adds the differences to the pointer's position, keeping it on the
+screen. Bit 0 of each value is noise and bit 7 is not used, so only
+bits 1 to 6 count. This routine uses the method from Commodore's 1351
+documentation. The KERNAL's own driver, <code>get_denoised_mouse_delta</code>
+in the ROM source, is a variant of it. Like the KERNAL's, this version
+keeps the old reading when the movement is too small to count, so slow
+movements add up:</p>
+<pre><code>; X = 0 to 3 selects POTAX, POTAY, POTBX or POTBY
+; Returns A = signed movement since the last call
+mdelta  lda $d620,x
+        tay             ; keep the new reading
+        sec
+        sbc old,x       ; new - old
+        and #%01111111  ; ignore bit 7
+        cmp #%01000000
+        bcs neg
+        lsr             ; drop the noise bit
+        beq none        ; too small to count
+        bra keep
+neg     ora #%11000000  ; extend the sign
+        cmp #$ff
+        beq none        ; -1 is noise
+        sec
+        ror             ; halve, keeping the sign
+keep    sty old,x       ; remember this reading
+        rts
+none    lda #0          ; no movement: keep the old reading
+        rts
+old     .byte 0, 0, 0, 0</code></pre>
+<p>Tested in Xemu with readings fed from a table, it returns 2 for a
+rise of 4, -4 for a fall of 8, 0 for a change of 1, and handles the wrap
+from <code>$BE</code> to <code>$42</code> as a small rise. The old values
+start at 0, so the first call for each axis may return a jump; call it
+once at start-up and ignore the result.</p>
+<p>Add the X movement to the pointer's X position and subtract the Y
+movement from its Y position, since the mouse's Y count rises as it
+moves away from the user, up the screen. The left button reads as the
+port's fire switch and the right button as its up switch, in
+<code>$DC01</code> for port 1 or <code>$DC00</code> for port 2, as the
+1351 is wired. The KERNAL's driver also limits the
+pointer to the screen area and handles high-resolution sprite
+positions.</p>
 <h2 id="light-pens">Light Pens</h2>
 <p>A light pen detects the moment the display's beam passes under its
 tip, and the video chip latches the position. LPEN(0) and LPEN(1) return

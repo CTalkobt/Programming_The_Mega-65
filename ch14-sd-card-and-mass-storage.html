@@ -30,7 +30,7 @@ Storage</title>
 <h1
 id="programming-the-mega65--chapter-14-the-sd-card-and-mass-storage">Programming
 the MEGA65 — Chapter 14: The SD Card and Mass Storage</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>In West's book this chapter covered the C64's cassette tape. The
 MEGA65 has no cassette port. Its everyday mass storage is the SD card,
@@ -116,6 +116,12 @@ partition</h3>
 </table>
 <p>Files can be organised into subdirectories, which the Freezer's file
 browser and BASIC's CHDIR command understand.</p>
+<p>The system files belong with the core. Each core release includes a
+matching set in its <code>sdcard-files</code> folder, and the Book's
+upgrade steps copy them to the root of the card along with the new core
+(MEGA65 Book, Cores and Flashing). Skipping them leaves a new core
+running an old Freezer and old utilities, which can misbehave in ways
+that are hard to trace back to the update.</p>
 <h2 id="disk-images">Disk Images</h2>
 <p>Most MEGA65 software is distributed as D81 files: images of 3.5"
 Commodore 1581 disks. A mounted image behaves exactly like a real disk
@@ -173,7 +179,13 @@ MOUNT does not take U12, because its U argument chooses the unit to
 mount the image on, but it does use the directory set by CHDIR. Support
 for subdirectories is still developing; for example, changing the
 current directory unmounts an image that was mounted from a subdirectory
-(MEGA65 Book, p. 6-6).</p>
+(MEGA65 Book, p. 6-6). The Freezer has a similar limit. It records only
+the file name of each mounted image, not the directory it came from,
+and it warns that starting one of its tools, which changes to the root
+directory, breaks mounts from subdirectories (<a
+href="https://github.com/MEGA65/mega65-freezemenu">mega65-freezemenu</a>,
+<code>freezer.c</code>). Keeping disk images in the root directory, or
+mounting them with MOUNT from a program, avoids the problem.</p>
 <h3 id="booting-from-an-image">Booting from an image</h3>
 <p>The configuration utility chooses an image to mount at power-on. If
 that image holds a program named <code>AUTOBOOT.C65</code>, it runs
@@ -256,6 +268,29 @@ which can be copied to the card by either method.</li>
 <p>Cross-development tools, covered in the Book's development chapters,
 can also load and run a program in memory over USB serial without
 writing it to the card at all.</p>
+<h3 id="keeping-disk-images-in-one-piece">Keeping disk images in one
+piece</h3>
+<p>The Hypervisor mounts a disk image only if the image is stored in
+one contiguous run of clusters on the card. It checks this as it
+attaches the image and otherwise fails with error <code>$8B</code>, as
+Chapter 11 lists (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>src/hyppo/dos.asm</code>). A PC's file system is free to split a
+file into pieces, so a disk image copied onto a card that already holds
+other files, or overwritten in place, may become fragmented and refuse
+to mount.</p>
+<p>Three habits avoid it:</p>
+<ul>
+<li>Transfer files with mega65_ftp, which places each file in
+contiguous free clusters (<a
+href="https://github.com/MEGA65/mega65-tools">mega65-tools</a>,
+<code>mega65_ftp.c</code>).</li>
+<li>When using a PC, copy everything onto a freshly formatted card in
+one go, so each file is written in one piece.</li>
+<li>Defragment the card's FAT32 partition on the PC after copying.</li>
+</ul>
+<p>The Freezer and the Hypervisor create new images as one contiguous
+block, so images made on the MEGA65 itself are safe.</p>
 <h2 id="summary">Summary</h2>
 <ul>
 <li><strong>Cards.</strong> SDHC, 4 to 32GB, in the internal or rear
