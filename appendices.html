@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch17-major-peripherals.html">&larr; Previous</a></span><a href="index.html">Contents</a><span></span></nav>
 <h1 id="programming-the-mega65--appendices">Programming the MEGA65 —
 Appendices</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="appendix-a-screen-codes-and-colours">Appendix A: Screen Codes
 and Colours</h2>
 <h3 id="screen-codes">Screen codes</h3>
@@ -1373,6 +1373,803 @@ assemblers and compilers, Xemu and the MEGA65 team's transfer tools,
 are listed in <a
 href="ch07-45gs02-machine-language.html#development-tools">Chapter 7,
 Development Tools</a>.</p>
+<h2 id="appendix-i-glossary">Appendix I: Glossary</h2>
+<p>This glossary explains the technical and Commodore terms used in this
+book. Where a term has a fuller explanation, the entry says which
+chapter or appendix to read. Words in <em>italics</em> have entries of
+their own.</p>
+<p><a href="#glossary-0-9">0-9</a> · <a href="#glossary-a">A</a> · <a href="#glossary-b">B</a> · <a href="#glossary-c">C</a> · <a href="#glossary-d">D</a> · <a href="#glossary-e">E</a> · <a href="#glossary-f">F</a> · <a href="#glossary-g">G</a> · <a href="#glossary-h">H</a> · <a href="#glossary-i">I</a> · <a href="#glossary-j">J</a> · <a href="#glossary-k">K</a> · <a href="#glossary-l">L</a> · <a href="#glossary-m">M</a> · <a href="#glossary-n">N</a> · <a href="#glossary-o">O</a> · <a href="#glossary-p">P</a> · <a href="#glossary-q">Q</a> · <a href="#glossary-r">R</a> · <a href="#glossary-s">S</a> · <a href="#glossary-t">T</a> · <a href="#glossary-u">U</a> · <a href="#glossary-v">V</a> · <a href="#glossary-w">W</a> · <a href="#glossary-z">Z</a></p>
+<h3 id="glossary-0-9">0-9</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>4510</strong></td>
+<td>The CPU designed for the Commodore 65, a 65CE02 with the <code>MAP</code> instruction added for memory management. The 45GS02 runs its code unchanged. See Chapter 5.</td>
+</tr>
+<tr class="even">
+<td><strong>45GS02</strong></td>
+<td>The MEGA65's CPU. It runs 6502, 65CE02 and 4510 code and adds 32-bit pointers, the virtual Q register and the hooks the Hypervisor uses. Chapters 7 and 10 describe its instructions.</td>
+</tr>
+<tr class="odd">
+<td><strong>6502</strong></td>
+<td>The 8-bit CPU, designed by MOS Technology, that Commodore used in the PET and VIC-20. The C64's 6510 is a 6502 with an I/O port at <code>$00</code>/<code>$01</code>. Every later CPU in the family keeps its instructions.</td>
+</tr>
+<tr class="even">
+<td><strong>6510</strong></td>
+<td>The C64's CPU, a 6502 with an I/O port at <code>$00</code> and <code>$01</code>. See <em>6502</em> and <em>CPU port</em>.</td>
+</tr>
+<tr class="odd">
+<td><strong>65CE02</strong></td>
+<td>A CMOS 6502 that added the Z register, a movable base page, a 16-bit stack pointer, 16-bit branches and word instructions. The 4510 is built on it.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-a">A</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Accumulator</strong></td>
+<td>Register A, the CPU register that arithmetic and logic instructions work on.</td>
+</tr>
+<tr class="even">
+<td><strong>Address</strong></td>
+<td>A number that identifies one byte of memory or one register. The CPU uses 16-bit addresses (64KB); the MEGA65 as a whole uses 28-bit addresses (256MB). See Chapter 5.</td>
+</tr>
+<tr class="odd">
+<td><strong>Addressing mode</strong></td>
+<td>The way an instruction finds its operand: immediate (<code>#$20</code>), absolute, zero page, indexed, indirect and so on. Chapter 7 lists the 45GS02's modes.</td>
+</tr>
+<tr class="even">
+<td><strong>Assembler</strong></td>
+<td>A program that turns mnemonics into machine code. The built-in monitor assembles one instruction at a time with its <code>A</code> command; PC assemblers are listed in Chapter 7.</td>
+</tr>
+<tr class="odd">
+<td><strong>Attic RAM</strong></td>
+<td>8MB of external RAM at <code>$8000000</code>. It is larger and slower than chip RAM, and the VIC-IV can't display it. Not every board that runs the MEGA65 core has it. See Chapter 5.</td>
+</tr>
+<tr class="even">
+<td><strong>Attribute</strong></td>
+<td>A setting stored with a character cell, such as blink, reverse, underline or alternate palette. On the MEGA65 attributes are kept in colour RAM. See Chapter 12.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-b">B</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Bank</strong></td>
+<td>A 64KB section of memory. The C65 divided its first megabyte into sixteen banks, 0 to 15, and BASIC 65's <code>BANK</code> command uses the same numbering. Banking also means switching which memory appears in the CPU's 64KB view; Chapter 5 describes the mechanisms.</td>
+</tr>
+<tr class="even">
+<td><strong>Base page</strong></td>
+<td>The 256-byte page that zero-page instructions use. On a 6502 it is always <code>$0000-$00FF</code>; on the 45GS02 the B register chooses it. See Chapter 7.</td>
+</tr>
+<tr class="odd">
+<td><strong>BCD</strong></td>
+<td>Binary-coded decimal: each nybble of a byte holds one decimal digit, so <code>$42</code> means 42. The CPU works in BCD when the D flag is set (<code>SED</code>).</td>
+</tr>
+<tr class="even">
+<td><strong>Big-endian</strong></td>
+<td>Storing a multi-byte number with its most significant byte first. The 6502 family is not big-endian; see <em>little-endian</em>.</td>
+</tr>
+<tr class="odd">
+<td><strong>Binary</strong></td>
+<td>Base 2. BASIC 65 and most assemblers write binary numbers with a <code>%</code> prefix, as in <code>%10100000</code>. Appendix C converts between bases.</td>
+</tr>
+<tr class="even">
+<td><strong>Bit</strong></td>
+<td>A binary digit, 0 or 1. The bits of a byte are numbered 0 (least significant, worth 1) to 7 (most significant, worth 128).</td>
+</tr>
+<tr class="odd">
+<td><strong>Bitmap</strong></td>
+<td>A screen made of individual pixels rather than characters, with each pixel's colour set by one or more bits in memory. See Chapter 12.</td>
+</tr>
+<tr class="even">
+<td><strong>Bitplane</strong></td>
+<td>One layer of a bitmap that holds one bit of every pixel's colour. Several bitplanes stacked together give more colours. The VIC-III and VIC-IV can display up to eight. See Chapter 12.</td>
+</tr>
+<tr class="odd">
+<td><strong>Bitstream</strong></td>
+<td>The file that configures an FPGA. A MEGA65 core is distributed as a bitstream, usually packaged as a <code>.cor</code> file.</td>
+</tr>
+<tr class="even">
+<td><strong>Border</strong></td>
+<td>The area around the text or graphics window, set by <code>$D020</code>. Changing its colour while a routine runs is a quick way to see how long the routine takes (Chapter 8).</td>
+</tr>
+<tr class="odd">
+<td><strong>BRK</strong></td>
+<td>The 6502's software interrupt instruction. Monitors use it as a breakpoint. See Chapter 8 and Appendix G.</td>
+</tr>
+<tr class="even">
+<td><strong>Byte</strong></td>
+<td>Eight bits, the unit the CPU reads and writes. It holds a value from 0 to 255 (<code>$00-$FF</code>), or from -128 to 127 if treated as signed.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-c">C</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>C64 mode</strong></td>
+<td>The mode in which the MEGA65 runs as a Commodore 64, with the C64 KERNAL and BASIC 2 and the CPU at 1MHz. <code>GO64</code> enters it. See Chapter 1.</td>
+</tr>
+<tr class="even">
+<td><strong>C65</strong></td>
+<td>The Commodore 65, a C64 successor that Commodore developed around 1990–91 but never released. The MEGA65 is based on its design and runs its BASIC 10, now developed as BASIC 65.</td>
+</tr>
+<tr class="odd">
+<td><strong>Cartridge</strong></td>
+<td>A ROM or other hardware plugged into the cartridge (expansion) port. See Chapter 17.</td>
+</tr>
+<tr class="even">
+<td><strong>Character set</strong></td>
+<td>The shapes of the characters on a text screen, usually eight bytes per character, one byte per row of eight pixels. Also called a font or charset. It can be redefined in RAM.</td>
+</tr>
+<tr class="odd">
+<td><strong>Chip RAM</strong></td>
+<td>The 384KB of RAM inside the FPGA, at <code>$0000000-$005FFFF</code>. It runs at full speed and is the only RAM the VIC-IV can display, so screens, bitmaps and sprites must be in it. See Chapter 5.</td>
+</tr>
+<tr class="even">
+<td><strong>CIA</strong></td>
+<td>Complex Interface Adapter, the MOS 6526. The C64 has two, at <code>$DC00</code> and <code>$DD00</code>, which read the keyboard and joysticks, drive the serial bus and provide timers and a time-of-day clock. The MEGA65 contains compatible versions. See Chapter 16.</td>
+</tr>
+<tr class="odd">
+<td><strong>Colour RAM</strong></td>
+<td>Memory holding the colour of each character on a text screen. On the C64 it is 1KB of 4-bit memory at <code>$D800</code>; on the MEGA65 it is 32KB of 8-bit memory at <code>$FF80000</code>, whose first 1KB still appears at <code>$D800</code>. See Chapter 5.</td>
+</tr>
+<tr class="even">
+<td><strong>Compiler</strong></td>
+<td>A program that translates a whole program, in a language such as C or BASIC, into machine code before it runs. Compiled programs run much faster than interpreted ones. Chapter 7 lists compilers for the MEGA65.</td>
+</tr>
+<tr class="odd">
+<td><strong>Core</strong></td>
+<td>The design loaded into the MEGA65's FPGA, which makes it behave as a particular machine. The MEGA65 core is the main one; others turn the hardware into, for example, a C64 or another computer. The core's version decides which hardware features exist.</td>
+</tr>
+<tr class="even">
+<td><strong>CPU</strong></td>
+<td>Central processing unit, the chip that runs programs. The MEGA65's CPU is the <em>45GS02</em>.</td>
+</tr>
+<tr class="odd">
+<td><strong>CPU port</strong></td>
+<td>Address <code>$01</code>, whose low three bits (LORAM, HIRAM, CHAREN) choose whether BASIC ROM, KERNAL ROM, I/O and the character ROM appear in the C64 memory map. <code>$00</code> sets which bits are outputs. See Chapter 5.</td>
+</tr>
+<tr class="even">
+<td><strong>Cycle</strong></td>
+<td>One tick of the CPU's clock. Each instruction takes a whole number of cycles. At 1MHz a cycle lasts one microsecond; at the MEGA65's full 40.5MHz, about 25 nanoseconds. See Chapter 7.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-d">D</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>D81</strong></td>
+<td>The disk image format for the 3.5-inch 1581 drive and the C65's internal drive: 80 tracks, 800KB. The MEGA65 mounts D81 files from the SD card as drives. See Chapter 14.</td>
+</tr>
+<tr class="even">
+<td><strong>Decimal</strong></td>
+<td>Base 10, the everyday number system and the one BASIC uses unless told otherwise. Decimal mode, set by the D flag, is the CPU's <em>BCD</em> arithmetic. Appendix C converts between bases.</td>
+</tr>
+<tr class="odd">
+<td><strong>Direct mode</strong></td>
+<td>Typing a line without a line number, so BASIC runs it as soon as RETURN is pressed. Most statements work in direct mode; a few, such as <code>RENUMBER</code>, work only there. See Chapter 3.</td>
+</tr>
+<tr class="even">
+<td><strong>Disassembler</strong></td>
+<td>A program that turns machine code back into mnemonics so it can be read. The built-in monitor disassembles with its <code>D</code> command (Appendix G).</td>
+</tr>
+<tr class="odd">
+<td><strong>Disk image</strong></td>
+<td>A file that holds the contents of a whole floppy disk, such as a D81, D64 or D71 file.</td>
+</tr>
+<tr class="even">
+<td><strong>DMA</strong></td>
+<td>Direct memory access: copying or filling memory with a dedicated controller instead of the CPU. On the MEGA65 the controller is DMAgic.</td>
+</tr>
+<tr class="odd">
+<td><strong>DMAgic</strong></td>
+<td>The MEGA65's DMA controller, inherited from the C65 and extended. It copies, fills and swaps memory anywhere in the 28-bit address space, following a list of jobs in memory. BASIC 65's <code>EDMA</code> uses it. See Chapters 5 and 8.</td>
+</tr>
+<tr class="even">
+<td><strong>DOS</strong></td>
+<td>Disk Operating System: the code, in the drive or in the ROM, that manages files on a disk. Commands are sent to it on channel 15 or with BASIC 65's disk commands. See Chapter 15.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-e">E</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>E flag</strong></td>
+<td>The 45GS02 status flag that chooses the stack: when set, an 8-bit stack in page 1 as on a 6502; when clear, a 16-bit stack pointer. See Chapter 5.</td>
+</tr>
+<tr class="even">
+<td><strong>EOM</strong></td>
+<td>End Of Mapping, the instruction that re-enables interrupts after <code>MAP</code>. It shares the opcode <code>$EA</code> with <code>NOP</code>, and as a prefix it turns <code>(zp),Z</code> into the 32-bit <code>[zp],Z</code> mode. See Chapters 5 and 10.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-f">F</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Fast mode</strong></td>
+<td>Running the CPU above 1MHz. The MEGA65 offers 1, 2, 3.5 and 40.5MHz; MEGA65 mode starts at 40.5MHz. BASIC 65's <code>FAST</code> and <code>SPEED</code> select a speed. See Chapter 8.</td>
+</tr>
+<tr class="even">
+<td><strong>FAT32</strong></td>
+<td>The file system on the MEGA65's SD card, the same one used by PCs and cameras. Disk images and other files live in it. See Chapter 14.</td>
+</tr>
+<tr class="odd">
+<td><strong>FCM</strong></td>
+<td>Full Colour Mode, a VIC-IV text mode in which each character is 8×8 pixels with one byte, and so up to 256 colours, per pixel. See Chapter 12.</td>
+</tr>
+<tr class="even">
+<td><strong>Flag</strong></td>
+<td>A single bit in the status register P that records something about the last operation: N (negative), V (overflow), E, B (break), D (decimal), I (interrupt disable), Z (zero) and C (carry). Branch instructions test them.</td>
+</tr>
+<tr class="odd">
+<td><strong>Flat addressing</strong></td>
+<td>Reaching any 28-bit address through a four-byte pointer with the <code>[zp],Z</code> addressing mode, ignoring banking. See Chapter 5.</td>
+</tr>
+<tr class="even">
+<td><strong>FPGA</strong></td>
+<td>Field-Programmable Gate Array, a chip whose logic is set by loading a bitstream. The MEGA65 uses one to implement its CPU, video, sound and other chips in hardware rather than emulating them in software.</td>
+</tr>
+<tr class="odd">
+<td><strong>Freezer</strong></td>
+<td>The Hypervisor's menu, opened by holding RESTORE, which stops the running program and lets you change settings, mount disks, inspect memory, or save and restore the machine's state. See Chapter 2.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-g">G</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Garbage collection</strong></td>
+<td>Reclaiming string memory that old values of string variables no longer use. BASIC does it automatically when string space runs out, which can cause a pause. See Chapter 6.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-h">H</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Hexadecimal</strong></td>
+<td>Base 16, written with the digits 0–9 and A–F. Each hex digit is one nybble, so a byte is two digits. Commodore software writes hex with a <code>$</code> prefix, as in <code>$D020</code>. Appendix C converts between bases.</td>
+</tr>
+<tr class="even">
+<td><strong>Hi-res</strong></td>
+<td>High resolution: one bit per pixel, so each pixel is either the foreground or the background colour. It is the alternative to <em>multicolour</em>, which halves the horizontal resolution to give more colours. The VIC-IV also has a 640-pixel-wide mode. See Chapter 12.</td>
+</tr>
+<tr class="odd">
+<td><strong>Hypervisor</strong></td>
+<td>The MEGA65's low-level operating layer, which runs in a protected mode outside the normal memory map. It starts the machine, loads the ROM, provides SD card file services, mounts disk images and runs the Freezer. See Chapters 5 and 11.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-i">I</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>I/O</strong></td>
+<td>Input/output. Also the <code>$D000-$DFFF</code> area of the memory map where the video, sound, CIA and other chips' registers appear.</td>
+</tr>
+<tr class="even">
+<td><strong>I/O personality</strong></td>
+<td>Which set of registers the MEGA65 shows in the I/O area: C64 (VIC-II), C65 (VIC-III) or MEGA65 (VIC-IV). The knock switches between them. See Chapter 5.</td>
+</tr>
+<tr class="odd">
+<td><strong>IEC bus</strong></td>
+<td>Commodore's serial bus for disk drives and printers, connected with 6-pin DIN cables. The MEGA65 has an IEC port. See Chapters 15 and 17.</td>
+</tr>
+<tr class="even">
+<td><strong>Index register</strong></td>
+<td>A CPU register whose value is added to an address: X, Y and, on the 65CE02 and later, Z.</td>
+</tr>
+<tr class="odd">
+<td><strong>Insert mode</strong></td>
+<td>The screen editor's state after spaces are opened up with SHIFT+INST/DEL. Like <em>quote mode</em>, it records control keys as characters, for as many characters as spaces were inserted. ESC then O cancels it. See Chapter 2.</td>
+</tr>
+<tr class="even">
+<td><strong>Interpreter</strong></td>
+<td>A program that runs another program by reading it and carrying out each statement as it goes, rather than translating it to machine code first. BASIC 65 is an interpreter, which is why the same work is slower in BASIC than in machine language. See Chapter 4.</td>
+</tr>
+<tr class="odd">
+<td><strong>Interrupt</strong></td>
+<td>A signal that makes the CPU stop what it is doing, run a handler routine and then carry on. See <em>IRQ</em> and <em>NMI</em>, and Chapter 7.</td>
+</tr>
+<tr class="even">
+<td><strong>IRQ</strong></td>
+<td>Interrupt request, the maskable interrupt. The <code>SEI</code> instruction blocks it and <code>CLI</code> allows it. The KERNAL uses a timer IRQ to scan the keyboard; the VIC can raise one at a chosen raster line.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-j">J</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Jiffy</strong></td>
+<td>One-sixtieth of a second, the unit of the C64's software clock in <code>TI</code>. BASIC 65's <code>TI</code> is a finer timer instead (Chapter 3), so C64 programs that time things with it need changing.</td>
+</tr>
+<tr class="even">
+<td><strong>Jump table</strong></td>
+<td>A list of <code>JMP</code> instructions at fixed addresses that lead to ROM routines, so programs keep working when the routines move between ROM versions. The KERNAL's is at the top of memory. See Chapter 11.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-k">K</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>KB, MB</strong></td>
+<td>Kilobyte (1,024 bytes) and megabyte (1,024KB). In this book, as in most Commodore documentation, they are powers of two.</td>
+</tr>
+<tr class="even">
+<td><strong>KERNAL</strong></td>
+<td>Commodore's name, with its unusual spelling, for the operating-system part of the ROM: screen and keyboard handling, file and device I/O, and the interrupt handlers. It is reached through its jump table. See Chapter 11.</td>
+</tr>
+<tr class="odd">
+<td><strong>Knock</strong></td>
+<td>The two-byte sequence written to <code>$D02F</code> to change the I/O personality and unlock the extra registers. See Chapter 5.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-l">L</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Little-endian</strong></td>
+<td>Storing a multi-byte number with its least significant byte first, at the lower address. The 6502 family is little-endian: the address <code>$D020</code> is stored as <code>$20 $D0</code>, and a 28-bit pointer such as <code>$0FF80000</code> as <code>$00 $00 $F8 $0F</code>. Sometimes called low-endian or low-byte-first.</td>
+</tr>
+<tr class="even">
+<td><strong>LSB, MSB</strong></td>
+<td>Least and most significant byte (or bit): the low and high parts of a number. For a 16-bit value, <code>LSB = V AND 255</code> and <code>MSB = INT(V / 256)</code>. Also written lo-byte and hi-byte.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-m">M</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Machine language</strong></td>
+<td>Programs written as the CPU's own instructions, rather than interpreted like BASIC. Usually written in assembly language and assembled into machine code. See Chapter 7.</td>
+</tr>
+<tr class="even">
+<td><strong>MAP</strong></td>
+<td>The 4510 instruction that redirects each 8KB block of the CPU's 64KB view to another part of memory. The 45GS02 extends it to the 28-bit address space. See Chapter 5.</td>
+</tr>
+<tr class="odd">
+<td><strong>Matrix Mode</strong></td>
+<td>A debugging console run by a small helper processor in the core, separate from the main CPU. MEGA+TAB opens and closes it over the running display. See Chapter 8.</td>
+</tr>
+<tr class="even">
+<td><strong>MEGA65 mode</strong></td>
+<td>The MEGA65's native mode, with BASIC 65, the 40.5MHz CPU and the VIC-IV. The machine starts in it.</td>
+</tr>
+<tr class="odd">
+<td><strong>MHz</strong></td>
+<td>Megahertz, a million cycles per second: the unit of CPU clock speed.</td>
+</tr>
+<tr class="even">
+<td><strong>Mnemonic</strong></td>
+<td>The short name of an instruction, such as <code>LDA</code> or <code>STA</code>, written in assembly language. An assembler turns each mnemonic and its operand into an <em>opcode</em> and operand bytes. Chapter 10 lists the 45GS02's mnemonics.</td>
+</tr>
+<tr class="odd">
+<td><strong>Monitor</strong></td>
+<td>A program for examining and changing memory, disassembling and assembling machine code, and running it. The MEGA65 has one built in, opened with <code>MONITOR</code>. See Appendix G.</td>
+</tr>
+<tr class="even">
+<td><strong>Multicolour</strong></td>
+<td>A VIC-II mode, kept by the VIC-IV, that halves horizontal resolution so that each pair of bits chooses one of four colours. Used for characters, bitmaps and sprites.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-n">N</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>NCM</strong></td>
+<td>Nybble Colour Mode, a VIC-IV text mode in which each character is 16×8 pixels with a nybble, and so one of 16 colours, per pixel. See Chapter 12.</td>
+</tr>
+<tr class="even">
+<td><strong>NMI</strong></td>
+<td>Non-maskable interrupt, which <code>SEI</code> cannot block. On Commodore machines the RESTORE key and CIA 2 raise it.</td>
+</tr>
+<tr class="odd">
+<td><strong>NTSC, PAL</strong></td>
+<td>The North American and European television standards. They differ in frame rate (60 and 50Hz) and lines per frame, which changes video timing. The MEGA65 can produce either. See Chapter 2.</td>
+</tr>
+<tr class="even">
+<td><strong>Nybble</strong></td>
+<td>Four bits, half a byte, also spelled nibble. A byte has a high nybble (bits 4–7) and a low nybble (bits 0–3), and each nybble is one hex digit. C64 colour RAM stores one nybble per character.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-o">O</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Opcode</strong></td>
+<td>The byte that tells the CPU which instruction to run, such as <code>$A9</code> for <code>LDA #</code>. The bytes after it are the operand. Appendix D maps the 45GS02's opcodes.</td>
+</tr>
+<tr class="even">
+<td><strong>Operand</strong></td>
+<td>The value or address an instruction works on, given after the opcode.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-p">P</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Page</strong></td>
+<td>A 256-byte block of memory whose addresses share the same high byte, such as <code>$C000-$C0FF</code>. Page 0 is zero page and page 1 holds the 6502 stack. Crossing a page boundary costs an extra cycle on some instructions.</td>
+</tr>
+<tr class="even">
+<td><strong>Palette</strong></td>
+<td>The table that turns a colour number into actual red, green and blue levels. The VIC-IV has 256 entries per palette and several palettes. See Chapter 12.</td>
+</tr>
+<tr class="odd">
+<td><strong>PEEK, POKE</strong></td>
+<td>BASIC's commands for reading and writing one byte of memory. In BASIC 65 they work in the bank chosen by <code>BANK</code>.</td>
+</tr>
+<tr class="even">
+<td><strong>PETSCII</strong></td>
+<td>PET Standard Code of Information Interchange, Commodore's version of ASCII, with graphics characters and control codes for colour and cursor movement. It is what <code>CHR$</code> and <code>ASC</code> use. See Appendix B.</td>
+</tr>
+<tr class="odd">
+<td><strong>Pixel</strong></td>
+<td>One dot of the picture.</td>
+</tr>
+<tr class="even">
+<td><strong>PRG</strong></td>
+<td>A program file. It starts with a two-byte load address, little-endian, followed by the bytes to load there. BASIC programs and machine code are both saved as PRG files, with <code>DSAVE</code> and <code>BSAVE</code>. See Chapters 9 and 15.</td>
+</tr>
+<tr class="odd">
+<td><strong>Program counter</strong></td>
+<td>The CPU register (PC) that holds the address of the next instruction. Jumps, branches, subroutine calls and interrupts work by changing it.</td>
+</tr>
+<tr class="even">
+<td><strong>Program mode</strong></td>
+<td>Typing a line that starts with a line number, so BASIC stores it as part of the program instead of running it. The program runs with <code>RUN</code>. Compare <em>direct mode</em>, and see Chapter 3.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-q">Q</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Q register</strong></td>
+<td>The 45GS02's virtual 32-bit register, made from A (low byte), X, Y and Z (high byte), used by the quad instructions. See Chapter 7.</td>
+</tr>
+<tr class="even">
+<td><strong>Quad</strong></td>
+<td>A 32-bit value: four bytes, stored little-endian. The 45GS02's quad instructions, such as <code>LDQ</code> and <code>ADCQ</code>, work on quads through the <em>Q register</em>. See Chapter 7.</td>
+</tr>
+<tr class="odd">
+<td><strong>Quote mode</strong></td>
+<td>The screen editor's state after typing a quotation mark, in which cursor and colour keys are stored in the string as control characters instead of acting at once. See Chapter 2.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-r">R</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>RAM</strong></td>
+<td>Random-access memory, which can be read and written and loses its contents when the power goes off. The MEGA65 has three kinds, <em>chip RAM</em>, <em>attic RAM</em> and <em>colour RAM</em>, which differ in size, speed and what can see them. See Chapter 5.</td>
+</tr>
+<tr class="even">
+<td><strong>Raster</strong></td>
+<td>The beam's path across the screen, one line at a time, top to bottom. The raster line is the line being drawn; programs read it from the VIC to time changes to the picture. See Chapter 8.</td>
+</tr>
+<tr class="odd">
+<td><strong>Raster interrupt</strong></td>
+<td>An IRQ that the VIC raises when it reaches a chosen raster line, used to change colours, modes or sprites part-way down the screen. See Chapter 8.</td>
+</tr>
+<tr class="even">
+<td><strong>Raster rewrite buffer</strong></td>
+<td>The VIC-IV's internal buffer in which each display line is built before it is shown. GOTOX entries in a screen row move the drawing position, so characters can be placed at any X position and layered. See Chapter 12.</td>
+</tr>
+<tr class="odd">
+<td><strong>Register</strong></td>
+<td>A storage location inside a chip. CPU registers (A, X, Y and so on) are inside the processor; chip registers appear at addresses in the I/O area, such as <code>$D020</code> for the border colour.</td>
+</tr>
+<tr class="even">
+<td><strong>REL</strong></td>
+<td>A relative file. See <em>relative file</em>.</td>
+</tr>
+<tr class="odd">
+<td><strong>Relative file</strong></td>
+<td>A file of type REL, made of numbered records of a fixed length, given with <code>L</code> when the file is created. <code>RECORD</code> moves to any record directly, so records can be read in any order. See Chapter 15.</td>
+</tr>
+<tr class="even">
+<td><strong>ROM</strong></td>
+<td>Read-only memory. On the MEGA65 the ROM is a 128KB image loaded from the SD card into chip RAM at <code>$20000-$3FFFF</code> and write-protected. It holds the KERNAL, BASIC 65, the screen editor, the DOS and the character sets. See Chapters 5 and 11.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-s">S</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Screen code</strong></td>
+<td>The value stored in screen memory to show a character. It differs from the character's PETSCII code: <code>A</code> is 65 in PETSCII but 1 as a screen code. See Appendix A.</td>
+</tr>
+<tr class="even">
+<td><strong>Screen memory</strong></td>
+<td>The memory holding the screen code of each character on a text screen. On the C64 it is 1KB, at <code>$0400</code> by default; the VIC-IV can place it anywhere in chip RAM. Colours are held separately in <em>colour RAM</em>. See Chapter 12.</td>
+</tr>
+<tr class="odd">
+<td><strong>SD card</strong></td>
+<td>The memory card that holds the MEGA65's ROM, cores, disk images and files. See Chapter 14.</td>
+</tr>
+<tr class="even">
+<td><strong>SEQ</strong></td>
+<td>A sequential file. See <em>sequential file</em>.</td>
+</tr>
+<tr class="odd">
+<td><strong>Sequential file</strong></td>
+<td>A file of type SEQ, read and written in order from start to end with <code>PRINT#</code>, <code>INPUT#</code> and <code>GET#</code>, and extended with <code>APPEND</code>. See Chapter 15.</td>
+</tr>
+<tr class="even">
+<td><strong>SID</strong></td>
+<td>Sound Interface Device, the MOS 6581 and later 8580 sound chip of the C64, with three voices, an envelope generator and a filter. The MEGA65 has four, for twelve voices in stereo. See Chapter 13.</td>
+</tr>
+<tr class="odd">
+<td><strong>Signed number</strong></td>
+<td>A number that can be negative, normally stored as two's complement, with the top bit as the sign. A signed byte holds -128 to 127. See Chapter 7.</td>
+</tr>
+<tr class="even">
+<td><strong>Sprite</strong></td>
+<td>A small graphic that the VIC draws over the background at any position, independent of the screen contents. Commodore's documents also call it a MOB (movable object block). The VIC-IV adds 16-colour, 64-pixel-wide and variable-height sprites. See Chapter 12.</td>
+</tr>
+<tr class="odd">
+<td><strong>Stack</strong></td>
+<td>The memory the CPU uses to store return addresses and saved registers, last in, first out. On a 6502 it is page 1; on the 45GS02 it can be anywhere. See Chapter 7.</td>
+</tr>
+<tr class="even">
+<td><strong>Stack pointer</strong></td>
+<td>The CPU register (SP) that points into the <em>stack</em>, moving down as values are pushed and up as they are pulled. On the 45GS02 it is 8 bits when the <em>E flag</em> is set and 16 bits when it is clear. See Chapter 5.</td>
+</tr>
+<tr class="odd">
+<td><strong>Status register</strong></td>
+<td>The CPU register (P) that holds the <em>flags</em>: N, V, E, B, D, I, Z and C. <code>PHP</code> and <code>PLP</code> save and restore it. See Chapter 7.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-t">T</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Text mode</strong></td>
+<td>A screen made of characters, each drawn from a character set, with a screen code in <em>screen memory</em> and a colour in <em>colour RAM</em> for each cell. It is the normal display; compare <em>bitmap</em>. The VIC-IV adds FCM and NCM text modes. See Chapter 12.</td>
+</tr>
+<tr class="even">
+<td><strong>Token</strong></td>
+<td>The single byte (or two bytes) that BASIC stores in place of a keyword, so <code>PRINT</code> takes one byte. See Chapter 6.</td>
+</tr>
+<tr class="odd">
+<td><strong>Two's complement</strong></td>
+<td>The usual way to store negative numbers: invert every bit and add 1, so -1 in a byte is <code>$FF</code>. Addition then works the same for signed and unsigned values.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-u">U</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>UART</strong></td>
+<td>Universal asynchronous receiver/transmitter, the hardware for serial (RS-232 style) communication. See Chapter 17.</td>
+</tr>
+<tr class="even">
+<td><strong>Unsigned number</strong></td>
+<td>A number that can't be negative, so every bit counts towards its value. An unsigned byte holds 0 to 255 and a 16-bit value 0 to 65535. Compare <em>signed number</em>.</td>
+</tr>
+<tr class="odd">
+<td><strong>USR</strong></td>
+<td>A file type that works like SEQ but is marked for an application's own use. See Chapter 15.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-v">V</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Vector</strong></td>
+<td>A RAM or ROM location holding the address of a routine. The CPU's hardware vectors at <code>$FFFA-$FFFF</code> point to the NMI, reset and IRQ handlers; the KERNAL's RAM vectors let programs redirect its routines. See Chapter 11.</td>
+</tr>
+<tr class="even">
+<td><strong>VIC</strong></td>
+<td>Video Interface Chip (later Controller), Commodore's family of video chips. The VIC-20 used the original VIC (6560/6561); the C64 the VIC-II (6567/6569); the C65 the VIC-III (4567). The MEGA65's VIC-IV adds higher resolutions, more colours, larger sprites and the raster rewrite buffer, and can behave as either earlier chip. See Chapter 12.</td>
+</tr>
+<tr class="odd">
+<td><strong>VIC-II</strong></td>
+<td>The C64's video chip (MOS 6567/6569). See <em>VIC</em>.</td>
+</tr>
+<tr class="even">
+<td><strong>VIC-III</strong></td>
+<td>The C65's video chip (CSG 4567). See <em>VIC</em>.</td>
+</tr>
+<tr class="odd">
+<td><strong>VIC-IV</strong></td>
+<td>The MEGA65's video chip. See <em>VIC</em> and Chapter 12.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-w">W</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Wait state</strong></td>
+<td>A cycle in which the CPU waits for slower memory or hardware. Attic RAM needs them; chip RAM does not.</td>
+</tr>
+<tr class="even">
+<td><strong>Word</strong></td>
+<td>In 6502 terms, a 16-bit value: two bytes, stored little-endian. The 45GS02 has word instructions such as <code>INW</code> and <code>ASW</code>. The 45GS02's 32-bit values are called <em>quads</em>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="glossary-z">Z</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Zero page</strong></td>
+<td>Addresses <code>$0000-$00FF</code>, which instructions can reach with a one-byte address, faster and shorter than a full address. On the 45GS02 the same instructions use the base page, which can be moved. See <em>base page</em>.</td>
+</tr>
+</tbody>
+</table>
 <nav class="chapnav"><span><a href="ch17-major-peripherals.html">&larr; Previous</a></span><a href="index.html">Contents</a><span></span></nav>
 </body>
 </html>
