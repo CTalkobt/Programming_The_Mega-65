@@ -696,8 +696,13 @@ default mix:</p>
         sta sid3+$04    ; triangle, gate off: release</code></pre>
 <p>The SID registers, apart from the four read-only ones, cannot be read
 back at <code>$D400</code>. The MEGA65 does keep a readable copy of
-what was written to all four SIDs at <code>$FF65000-$FF6507F</code>
-(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026); the Book does not document it, so a program that needs a
+what was written to all four SIDs at <code>$FF65000-$FF6507F</code>,
+laid out like <code>$D400-$D47F</code>, so the copy of a register is at
+<code>$FF65000</code> plus its offset from <code>$D400</code>. It was
+added in May 2024 and is in release 0.97 and later cores (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>iomapper.vhdl</code>, <code>sid_6581.vhdl</code>). It is reached
+with a 32-bit pointer. The Book does not document it, so a program that needs a
 register's current value, for example to change one control bit, is
 safest keeping its own copy in RAM.</p>
 <h2 id="digital-audio-with-audio-dma">Digital Audio with Audio DMA</h2>

@@ -149,7 +149,14 @@ bus lines itself, with the timing of the original machines. For each
 byte it sends or receives, and for each command such as LISTEN or
 UNTALK, it disables interrupts and drops the CPU to 1 MHz, then restores
 the speed and interrupts afterwards (MEGA65 ROM source,
-<code>disk_sei</code>, <code>disk_cli</code>). A program that prints or
+<code>disk_sei</code>, <code>disk_cli</code>). It slows the CPU by
+clearing the FAST bit in <code>$D031</code>, so the drop doesn't happen
+when full speed has been forced with <code>POKE 0,65</code> or with CAPS
+LOCK down: the core then ignores FAST, and the transfer runs at 40.5 MHz.
+The core can cancel the force while the bus is active, but only when bit
+1 of <code>$D7F1</code> is set, and the ROM doesn't set it (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). A program that prints or
 reads a disk therefore runs slowly while it does so, and its raster
 interrupts can be delayed, so timing-sensitive code should not run
 during IEC transfers.</p>
@@ -719,8 +726,8 @@ that feeds both.</p>
 <li><strong>Printers.</strong> OPEN a channel to device 4 or 5 on the
 IEC bus and use PRINT#, or redirect output with CMD. Secondary address 7
 selects lower case on Commodore printers, and channels 128 and up add a
-line feed to each line. The KERNAL runs the bus at 1 MHz with interrupts
-off.</li>
+line feed to each line. The KERNAL normally runs the bus at 1 MHz with
+interrupts off.</li>
 <li><strong>Cartridges.</strong> C64 cartridges with the CBM80 signature
 start the machine in C64 mode; MEGA65 cartridges carry "M65" at
 <code>$8007</code>. Cartridge ROM appears from <code>$4000000</code>.</li>

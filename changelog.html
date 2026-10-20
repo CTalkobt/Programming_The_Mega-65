@@ -44,6 +44,9 @@ horizontal character scaling with CHRXSCL, the raster rewrite buffer's
 time budget per line and what happens when it runs out, and a raster
 rewrite buffer demo in BASIC 65.</li>
 <li>Chapter 13: how PLAY times notes, with a table of TEMPO values.</li>
+<li>Chapter 13: the readable copy of the SID registers at
+<code>$FF65000</code> has the same layout as <code>$D400</code>, and
+has been in cores since release 0.97.</li>
 <li>Chapter 14: D81 and D64 disk images compared, and changing disks
 from a program with MOUNT, MOUNT OFF, SET DISK and RDISK(1).</li>
 <li>Chapter 15: USR files explained; worked examples of a notes file, a
@@ -58,6 +61,9 @@ register.</li>
 from machine language, how cartridges are started, sending and
 receiving Ethernet frames, reading and setting the real-time clock,
 and the registers for DVI output and digital audio.</li>
+<li>Chapter 17: the KERNAL's drop to 1 MHz during IEC transfers doesn't
+happen when full speed is forced with <code>POKE 0,65</code> or CAPS
+LOCK.</li>
 <li>Appendix I: new memory map, gathering the 28-bit address space, bank
 0 in MEGA65 mode, the CPU's view during SYS, the I/O area and the top of
 memory in one place.</li>
