@@ -239,6 +239,40 @@ you</h3>
 <p>A program cannot always assume the speed it set is the speed it gets.
 RUN/STOP-RESTORE resets the speed to 40.5 MHz (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), and the user can
 change speed in the Freezer.</p>
+<p>CAPS LOCK down has the same effect as <code>POKE 0,65</code>: the CPU
+runs at 40.5 MHz whatever the speed bits say (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). In C64 mode this is a quick way to speed up a
+slow program, but it also changes how disk loads behave, because the
+KERNAL controls speed during disk access in two different ways:</p>
+<ul>
+<li><strong>The internal drive and disk images.</strong> Both KERNALs
+hand these to the ROM's DOS, which doesn't use the IEC bus. In C64 mode
+the KERNAL sets FAST on the way in, so the DOS runs at 3.5 MHz while the
+rest of the KERNAL runs at 1 MHz (MEGA65 ROM source,
+<code>dos_in</code>). With CAPS LOCK down, both run at 40.5 MHz, so a
+load from a D81 image should be quicker. In MEGA65 mode the CPU is
+already at full speed, so CAPS LOCK changes nothing. The size of the
+gain in C64 mode hasn't been measured for this book.</li>
+<li><strong>IEC drives in MEGA65 mode.</strong> The KERNAL drops to
+1 MHz for each byte by clearing FAST, as Chapter 17 describes, and CAPS
+LOCK overrides that. The MEGA65 KERNAL times the bus by waiting for the
+drive's replies and for raster lines, not by counting instructions
+(MEGA65 ROM source, <code>serial_delay</code>, <code>acptr</code>), so
+transfers should still work, but they gain little: the drive sets the
+pace, and in burst mode the CIA's shift register moves the bits in
+hardware.</li>
+<li><strong>IEC drives in C64 mode.</strong> The C64 KERNAL's serial
+routines time the bus with instruction delays, such as four NOPs to hold
+each bit valid and a <code>DEX</code> loop for 1 ms (MEGA65 ROM source,
+<code>kernel64.src</code>, <code>isour</code>, <code>w1ms</code>). At
+40.5 MHz those delays are about forty times too short for the IEC timing
+rules, so loads from a real drive may fail or hang. Release CAPS LOCK
+before loading from an IEC drive in C64 mode. The core can cancel forced
+full speed while the bus is active, but only when bit 1 of
+<code>$D7F1</code> is set, and neither KERNAL sets it. Fast loaders that
+count cycles break for the same reason.</li>
+</ul>
 <p>Nor is 1 MHz an exact copy of a C64. At 1, 2 and 3.5 MHz each
 instruction takes the 6502's number of cycles, but the memory accesses
 inside it may fall on different cycles, and timing can differ by up to
