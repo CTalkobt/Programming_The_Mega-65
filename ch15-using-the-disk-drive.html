@@ -30,15 +30,17 @@ Drive</title>
 <h1
 id="programming-the-mega65--chapter-15-using-the-disk-drive">Programming
 the MEGA65 — Chapter 15: Using the Disk Drive</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Most of this chapter applies equally to a disk image on the SD card,
 the MEGA65's internal 3.5" drive and a Commodore drive on the IEC port.
 All three speak Commodore DOS, so ordinary file handling written for one
 works on the others. The MEGA65's own DOS adds features an older drive
 lacks, such as partitions; the text notes where that matters. Chapter 14 explained images and unit numbers;
-this chapter covers the drive itself, files of each type, the drive's
-status, and disk access from machine language.</p>
+this chapter covers the drive itself, files of each type with worked
+examples, the drive's status, the housekeeping commands that copy,
+rename, delete and recover files and tidy whole disks, and disk access
+from machine language.</p>
 <h2 id="drives-units-and-drive-numbers">Drives, Units and Drive
 Numbers</h2>
 <p>Every drive is reached through a unit number. Units 8 to 11 are
@@ -96,8 +98,9 @@ address</td>
 </tr>
 <tr class="odd">
 <td>USR</td>
-<td>Like SEQ, but marked for application-specific use</td>
-<td>DOPEN, APPEND</td>
+<td>Sequential data like SEQ, with a different type in the directory;
+see <a href="#usr-files">USR files</a></td>
+<td>DOPEN or OPEN with <code>,U</code> in the name, APPEND</td>
 </tr>
 <tr class="even">
 <td>REL</td>
@@ -142,6 +145,85 @@ SAVE, DOPEN and OPEN all accept it, as in <code>OPEN 2,8,2,
 "@SCORES,S,W"</code> (<a
 href="https://files.mega65.org/html/main.php?ar=015ff11d-ba3a-4f5d-ab39-99ceb21295ea">MEGA65
 Filehost, "DOS - Tip: save-and-replace bug"</a>).</p>
+<h4 id="example-a-notes-file">Example: a notes file</h4>
+<p>This program adds a line to a file of notes each time it runs, then
+lists the whole file. APPEND# fails with <code>62, FILE NOT
+FOUND</code> the first time, before the file exists, so the program
+then creates it with DOPEN and W. A failed APPEND# or DOPEN still leaves
+its channel number in use, so DCLOSE it before opening it again, or the
+second open stops with <code>?FILE OPEN ERROR</code>:</p>
+<pre><code>10 LINE INPUT &quot;NOTE: &quot;; N$
+20 APPEND#2, &quot;NOTES&quot;
+30 IF DS = 62 THEN DCLOSE#2 : DOPEN#2, &quot;NOTES&quot;, W
+40 IF DS THEN PRINT DS$ : DCLOSE#2 : END
+50 PRINT#2, N$
+60 DCLOSE#2
+70 DOPEN#2, &quot;NOTES&quot;
+80 DO : LINE INPUT#2, L$ : PRINT L$ : LOOP UNTIL ST
+90 DCLOSE#2</code></pre>
+<p>LINE INPUT and LINE INPUT# take a whole line, commas and colons
+included, where INPUT# would stop at the first comma. That suits free
+text; for files of separate values, such as the scores above, INPUT#
+and commas are the better choice.</p>
+<h4 id="example-a-high-score-table">Example: a high-score table</h4>
+<p>A game keeps its best ten scores in arrays while it runs, reads them
+from disk at the start, and writes them back after each game. When the
+file is missing, as it is the first time, DS is not 0 after DOPEN and
+the program keeps the empty table it has just made. Saving uses
+<code>@</code> to replace the old file in one step, so it is meant for
+the internal drive and disk images; on an IEC drive, scratch the old
+file first:</p>
+<pre><code>10 DIM N$(9), S(9)
+20 FOR I = 0 TO 9 : N$(I) = &quot;NOBODY&quot; : S(I) = 0 : NEXT
+30 DOPEN#2, &quot;HISCORES&quot;
+40 IF DS = 0 THEN FOR I = 0 TO 9 : INPUT#2, N$(I), S(I) : NEXT
+50 DCLOSE#2
+60 FOR K = 1 TO 3 : READ NM$, SC        : REM THREE NEW SCORES
+70 IF SC &lt;= S(9) THEN 120               : REM NOT GOOD ENOUGH
+80 P = 9
+90 DO WHILE P &gt; 0 : IF S(P - 1) &gt;= SC THEN EXIT
+100 N$(P) = N$(P - 1) : S(P) = S(P - 1) : P = P - 1 : LOOP
+110 N$(P) = NM$ : S(P) = SC
+120 NEXT
+130 DOPEN#2, &quot;@HISCORES&quot;, W
+140 FOR I = 0 TO 9 : PRINT#2, N$(I) &quot;,&quot; S(I) : NEXT
+150 DCLOSE#2
+160 FOR I = 0 TO 9 : PRINT I + 1, N$(I), S(I) : NEXT
+170 DATA ALICE, 1200, BOB, 900, CAROL, 1500</code></pre>
+<p>Lines 80 to 110 find the new score's place, moving each lower score
+down one place. Run the program a second time with different DATA and
+the table read from disk merges with the new scores. Starting every
+name as <code>NOBODY</code> rather than an empty string means every line
+of the file has something before its comma.</p>
+<h3 id="usr-files">USR files</h3>
+<p>A USR file is a sequential file with a different type in the
+directory. The DOS stores and reads it exactly as it does a SEQ file:
+the type is just a number in the file's directory entry, 1 for SEQ and
+3 for USR, and only REL files and partitions get special treatment
+(MEGA65 ROM source, dos.src). PRINT#, INPUT#, GET#, APPEND# and COPY
+all work on USR files as on SEQ files (MEGA65 Book, pp. B-20, B-59).
+TYPE is the exception: the Book says it shows USR files too (p. B-270),
+but it asks the DOS for a SEQ file, so on a USR file it stops with
+<code>64, FILE TYPE MISMATCH</code> (MEGA65 ROM source, TYPE; tested
+with ROM 920422).</p>
+<p>The type is a label. A program can give its own data files the USR
+type so that they stand apart from ordinary text files in a directory
+listing, and so that a pattern can pick them out: <code>DIR
+"*=U"</code> lists only USR files, and <code>=S</code>,
+<code>=P</code> and <code>=R</code> do the same for the other types.</p>
+<p>DOPEN creates a SEQ file unless told otherwise, so add
+<code>,U</code> to the name to create a USR file. With OPEN, the type
+letter goes before the mode letter, as in <code>,S,W</code> for a
+sequential file (MEGA65 Book, DOPEN):</p>
+<pre><code>10 DOPEN#2, &quot;LEVELS,U&quot;, W
+20 PRINT#2, &quot;LEVEL ONE&quot; : DCLOSE#2
+30 APPEND#2, &quot;LEVELS,U&quot;
+40 PRINT#2, &quot;LEVEL TWO&quot; : DCLOSE#2
+50 OPEN 2, 8, 2, &quot;LEVELS,U,R&quot;
+60 DO : INPUT#2, L$ : PRINT L$ : LOOP UNTIL ST
+70 CLOSE 2</code></pre>
+<p>When reading, the MEGA65's DOS also finds the file without the
+<code>,U</code>: <code>DOPEN#2, "LEVELS"</code> opens it.</p>
 <h3 id="relative-files">Relative files</h3>
 <p>A relative file holds numbered records of a fixed length, given with
 L when the file is first created. RECORD moves to any record directly,
@@ -154,6 +236,83 @@ sequential file would have to be read from the start:</p>
 50 DCLOSE#3</code></pre>
 <p>Each record must fit its length, including the carriage return PRINT#
 adds.</p>
+<h4 id="example-a-stock-list">Example: a stock list</h4>
+<p>A relative file makes a simple database when each record has a
+number that identifies it, such as a part number. This program creates
+a stock list with four parts, then looks up one part and changes its
+quantity. Each record holds a name and a number separated by a comma,
+so INPUT# can read them back as two fields. A length of 24 leaves room
+for a name of up to 16 characters, the comma, a quantity of up to six
+characters and the carriage return:</p>
+<pre><code>10 DOPEN#3, &quot;STOCK&quot;, L24
+20 IF DS THEN PRINT DS$ : STOP
+30 FOR R = 1 TO 4 : READ N$, Q
+40 RECORD#3, R : PRINT#3, N$ &quot;,&quot; Q
+50 NEXT
+60 DCLOSE#3
+70 DATA BOLTS, 120, NUTS, 300, WASHERS, 75, SCREWS, 40
+100 DOPEN#3, &quot;STOCK&quot;, L24
+110 INPUT &quot;PART NUMBER&quot;; R
+120 RECORD#3, R : INPUT#3, N$, Q
+130 IF ASC(N$) = 255 THEN PRINT &quot;NO SUCH PART&quot; : GOTO 170
+140 PRINT N$; Q; &quot;IN STOCK&quot; : INPUT &quot;CHANGE BY&quot;; C
+150 RECORD#3, R : PRINT#3, N$ &quot;,&quot; Q + C
+160 IF DS THEN PRINT DS$
+170 DCLOSE#3</code></pre>
+<p>Lines 100 to 170 are the update. Reading a record moves the file on
+to the next one, so line 150 gives RECORD again before writing the
+changed record back in the same place. The DOS fills a new relative
+file to the end of its last block with empty records, and an empty
+record reads back as the single character <code>CHR$(255)</code>; line
+130 uses this to spot a part number that was never written. Once the
+file exists, <code>DOPEN#3, "STOCK", L</code> opens it without giving
+the length again (MEGA65 Book, DOPEN).</p>
+<p>RECORD numbers start at 1. Positioning beyond the last record and
+writing there makes the DOS extend the file with empty records, as long
+as the disk has room (MEGA65 Book, p. B-206).</p>
+<h3 id="reading-the-directory-from-a-program">Reading the directory from
+a program</h3>
+<p>DIR prints the directory but gives a program nothing to work with.
+To get the names into variables, open the directory as a file:
+<code>OPEN 1,8,0,"$"</code>. Secondary address 0 asks for it in the same
+form LOAD "$" produces, a BASIC program with one line per entry: each
+line starts with a two-byte link and a two-byte line number, which holds
+the file's size in blocks, then the text of the line and a zero byte.
+The first line is the disk name and ID, and the last is BLOCKS FREE
+(MEGA65 ROM source, dos.src). This program reads it into arrays:</p>
+<pre><code>10 DIM N$(143), T$(143), B(143) : C = -1
+20 OPEN 1, 8, 0, &quot;$&quot;
+30 GET#1, A$, A$                    : REM SKIP THE LOAD ADDRESS
+40 DO
+50 GET#1, A$, A$ : IF ST THEN EXIT   : REM LINK; END OF DIRECTORY
+60 GET#1, L$, H$ : BL = ASC(L$) + 256 * ASC(H$)
+70 L$ = &quot;&quot;
+80 DO
+90 GET#1, A$ : IF ASC(A$) THEN L$ = L$ + A$
+100 LOOP WHILE ASC(A$)
+110 Q = INSTR(L$, CHR$(34)) : IF Q = 0 THEN FR = BL : EXIT
+120 R = INSTR(L$, CHR$(34), Q + 1)
+130 C = C + 1 : N$(C) = MID$(L$, Q + 1, R - Q - 1) : B(C) = BL
+140 F$ = MID$(L$, R + 1)
+150 DO WHILE LEFT$(F$, 1) = &quot; &quot; : F$ = MID$(F$, 2) : LOOP
+160 T$(C) = F$
+170 LOOP
+180 CLOSE 1
+190 PRINT &quot;DISK: &quot;; N$(0); &quot;  ID: &quot;; T$(0)
+200 FOR I = 1 TO C : PRINT N$(I), LEFT$(T$(I), 3), B(I) : NEXT
+210 PRINT C; &quot;FILES,&quot;; FR; &quot;BLOCKS FREE&quot;</code></pre>
+<p>Each line is collected into <code>L$</code>; the name is whatever
+lies between the first two quotation marks, and the rest, with leading
+spaces removed, is the type. The BLOCKS FREE line has no quotation
+marks, which ends the loop. Element 0 of the arrays holds the disk name,
+padded with spaces to 16 characters, and the ID. BASIC 65's ASC returns
+0 for an empty string, so the program works whether GET# returns a zero
+byte as <code>CHR$(0)</code> or as an empty string.</p>
+<p>The type text can carry markers: <code>*</code> before the type for
+a file that was never properly closed, and <code>&lt;</code> after it
+for a locked file (MEGA65 ROM source, dos.src). The name may include a
+pattern, as with DIR: <code>"$0:M*"</code> reads only names beginning
+with M, and <code>"$0:*=S"</code> only SEQ files.</p>
 <h3 id="drive-status">Drive status</h3>
 <p>Every disk operation leaves a status in the drive, which BASIC 65
 reads into DS and <code>DS$</code>. <code>DS$</code> has the form
@@ -176,6 +335,14 @@ the common ones are:</p>
 <td>Files scratched (the track value gives how many)</td>
 </tr>
 <tr class="odd">
+<td>03, 04</td>
+<td>Files locked, files unlocked (the track value gives how many)</td>
+</tr>
+<tr class="even">
+<td>05</td>
+<td>Files restored after scratching (the track value gives how many)</td>
+</tr>
+<tr class="odd">
 <td>20-29</td>
 <td>Read or write errors: the disk is damaged, unformatted or
 write-protected</td>
@@ -185,12 +352,21 @@ write-protected</td>
 <td>Write protect on</td>
 </tr>
 <tr class="odd">
+<td>50</td>
+<td>Record not present: a relative file was positioned past its last
+record</td>
+</tr>
+<tr class="even">
 <td>62</td>
 <td>File not found</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>63</td>
 <td>File exists</td>
+</tr>
+<tr class="even">
+<td>64</td>
+<td>File type mismatch: the file exists, but with another type</td>
 </tr>
 <tr class="odd">
 <td>72</td>
@@ -203,8 +379,213 @@ write-protected</td>
 </tbody>
 </table>
 <p>These are the standard Commodore DOS codes, which the MEGA65's drives
-share with the 1581. Checking DS after each DOPEN and save is the single
+share with the 1581; codes 03 to 05 come from the MEGA65's own DOS,
+which has the commands that produce them (MEGA65 ROM source, dos.src).
+Checking DS after each DOPEN and save is the single
 most effective way to make a program that uses disks reliable.</p>
+<h2 id="disk-housekeeping">Disk Housekeeping</h2>
+<p>On the C64, every housekeeping job, from deleting a file to
+formatting a disk, meant sending a command string to the drive's
+command channel. BASIC 65 has a keyword for each, which builds the
+command string and sends it for you. The table gives both; the command
+strings are the ones BASIC 65 sends, with drive number 0 (MEGA65 ROM
+source, tabld). Chapter 3 lists the full syntax of each keyword.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Task</th>
+<th>BASIC 65</th>
+<th>Command string</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Copy a file</td>
+<td><code>COPY "OLD" TO "NEW"</code></td>
+<td><code>C0:NEW=0:OLD</code></td>
+</tr>
+<tr class="even">
+<td>Join two SEQ files</td>
+<td><code>CONCAT "MORE" TO "ALL"</code></td>
+<td><code>C0:ALL=0:ALL,0:MORE</code></td>
+</tr>
+<tr class="odd">
+<td>Rename a file</td>
+<td><code>RENAME "OLD" TO "NEW"</code></td>
+<td><code>R0:NEW=0:OLD</code></td>
+</tr>
+<tr class="even">
+<td>Scratch (delete) files</td>
+<td><code>SCRATCH "OLD"</code>, also DELETE and ERASE</td>
+<td><code>S0:OLD</code></td>
+</tr>
+<tr class="odd">
+<td>List scratched files</td>
+<td><code>DIR R</code></td>
+<td><code>_</code>, opened like <code>$</code></td>
+</tr>
+<tr class="even">
+<td>Recover scratched files</td>
+<td><code>SCRATCH "OLD", R</code></td>
+<td><code>F-R0:OLD</code></td>
+</tr>
+<tr class="odd">
+<td>Lock, unlock files</td>
+<td><code>LOCK "NAME"</code>, <code>UNLOCK "NAME"</code></td>
+<td><code>F-L0:NAME</code>, <code>F-U0:NAME</code></td>
+</tr>
+<tr class="even">
+<td>Validate a disk</td>
+<td><code>COLLECT</code></td>
+<td><code>V0</code></td>
+</tr>
+<tr class="odd">
+<td>Initialise a drive</td>
+<td><code>DCLEAR</code></td>
+<td><code>I0</code></td>
+</tr>
+<tr class="even">
+<td>Format a disk</td>
+<td><code>HEADER "NAME", IID</code>, also FORMAT</td>
+<td><code>N0:NAME,ID</code></td>
+</tr>
+<tr class="odd">
+<td>Copy a whole disk</td>
+<td><code>BACKUP U8 TO U9</code></td>
+<td><code>D1=0</code></td>
+</tr>
+</tbody>
+</table>
+<p>The copy, rename, scratch, validate, initialise and format commands
+are common to Commodore drives and work on IEC drives too. Listing and
+recovering scratched files and locking files are commands of the C65's
+DOS, which the MEGA65 inherited, so they work only on the internal drive
+and on disk images (MEGA65 ROM source, dos.src). In direct mode,
+SCRATCH, HEADER and BACKUP first ask <code>ARE YOU SURE?</code> and go
+ahead only if the answer starts with Y; in a program they do not
+ask.</p>
+<p>File names in these commands take the same patterns as DIR:
+<code>*</code> matches any characters, <code>?</code> any one
+character, and from ROM 920314 <code>#</code> matches a digit and
+<code>$</code> a letter (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>; MEGA65 Book, p. B-71). <code>SCRATCH "OLD*"</code>
+deletes every file whose name begins with OLD, so list the same pattern
+with DIR first to see what it will catch.</p>
+<h3 id="copying-renaming-and-scratching">Copying, renaming and
+scratching</h3>
+<p>COPY with both names on the same unit makes a second copy of a file
+on the same disk, under a new name. Given two different units, as in
+<code>COPY "M*", U8 TO U9</code>, it copies files from one drive to
+another, and <code>COPY U8 TO U9</code> copies every file. The copy
+between units works with any mix of disk images, the internal drive and
+IEC drives, but it keeps the original names, and it copies only PRG, SEQ
+and USR files, not REL files (MEGA65 Book, p. B-59). Before writing
+each file, it scratches any file of the same name on the target disk
+(MEGA65 ROM source, COPY), so it replaces older copies without
+warning.</p>
+<p>RENAME changes a single file's name; the new name must not exist
+already, and patterns are not allowed (MEGA65 Book, p. B-209).
+CONCAT adds the contents of one SEQ file to the end of another.</p>
+<p>SCRATCH deletes every file that matches. It leaves alone locked
+files, files still open, and files that were never properly closed
+(MEGA65 ROM source, dos.src). The status message counts the files
+deleted: in direct mode SCRATCH prints, for example, <code>01, FILES
+SCRATCHED,04,00</code> for four files.</p>
+<p>LOCK protects files from SCRATCH, and UNLOCK removes the protection.
+A locked file shows a <code>&lt;</code> after its type in the
+directory. LOCK and UNLOCK appeared in ROM 920301 (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>).</p>
+<h3 id="recovering-scratched-files">Recovering scratched files</h3>
+<p>Scratching a file does not wipe its data. The DOS clears the type
+byte of the directory entry, keeping a copy of it elsewhere in the
+entry, and marks the file's blocks as free in the BAM, the disk's map of
+used blocks. Until something else is written over those blocks, the
+file can be brought back (MEGA65 ROM source, dos.src).</p>
+<p><code>DIR R</code> lists the scratched files that can still be
+recovered, with a <code>-</code> after the type, and nothing else; it
+takes a pattern, as in <code>DIR "OLD*", R</code>. <code>SCRATCH "OLD",
+R</code> then restores the file: it puts the type back and marks the
+file's blocks as used again. It also takes a pattern, and its status
+message, <code>05, FILES RESTORED</code>, counts the files restored.
+Both forms come from the C65 and are present in every MEGA65 ROM
+(MEGA65 ROM source, DIR and SCRATCH; MEGA65 Book, pp. B-71,
+B-234).</p>
+<pre><code>SCRATCH &quot;NOTES&quot;
+DIR R               : REM SHOWS 1 &quot;NOTES&quot; SEQ -
+SCRATCH &quot;NOTES&quot;, R</code></pre>
+<p>Recover a file straight away. If a later save has reused some of its
+blocks, the DOS restores the file anyway, without an error (MEGA65 ROM
+source, dos.src), and the recovered file holds a mixture of old and new
+data and shares blocks with the newer file. Only files scratched by the
+MEGA65's DOS can be recovered this way, because only it keeps the copy
+of the type. A
+quick format (below) clears the directory, so it is not a way back
+either.</p>
+<h3 id="checking-and-tidying-a-disk">Checking and tidying a disk</h3>
+<p>A file that was being written when the program stopped, the machine
+was reset or the disk ran out of space is left as a "splat" file, shown
+with a <code>*</code> before its type. Its blocks are marked as used
+but its contents are incomplete, and SCRATCH will not delete it.
+COLLECT, the DOS's validate command, deals with it: it rebuilds the BAM
+from the files in the directory, deletes splat files, and frees any
+block that no file uses. The block count then matches the files the
+directory lists. The one danger is to disks with blocks a program has
+allocated directly, with block commands rather than files, such as boot
+blocks: COLLECT does not know about them and frees them too (MEGA65
+Book, p. B-54).</p>
+<p>DCLEAR sends the initialise command. The drive closes all its files
+and channels and reads the BAM again, and BASIC closes its channels to
+that unit (MEGA65 Book, p. B-64). It is the way to start afresh after a
+disk error.</p>
+<p>Two commands check the data itself. <code>DVERIFY "NAME"</code>
+compares the program in memory with the file on disk, a quick check
+after DSAVE (MEGA65 Book, p. B-88). <code>SET VERIFY ON</code> makes the
+DOS read back every block it writes to a 3.5" disk, which catches a
+failing disk at the moment of saving (MEGA65 Book, p. B-238); a block
+that does not match is reported as <code>25, WRITE ERROR</code> (MEGA65
+ROM source, dos.src).</p>
+<h3 id="formatting-and-copying-whole-disks">Formatting and copying
+whole disks</h3>
+<p>HEADER and FORMAT are the same command. With an ID, as in
+<code>HEADER "GAMES", IG1</code>, it is a full format: every track is
+written, and any disk or D81 image becomes an empty 1581-format disk.
+Without an ID it is a quick format, which works only on a disk that is
+already in 1581 format: it writes the new name, an empty first
+directory block and an empty BAM, keeping the old ID (MEGA65 ROM
+source, dos.src; MEGA65 Book, p. B-130). The DOS formats only
+1581-format disks and D81 images; trying it on a D64 image gives
+<code>75, FORMAT ERROR</code> (MEGA65 ROM source, dos.src).</p>
+<p>BACKUP makes an exact copy of a whole disk, name and ID included,
+formatting the target as it goes. <code>BACKUP U8 TO U9</code> works
+between the MEGA65's two managed drives, so it copies a disk image to
+another image, or the internal drive to an image or back. It cannot
+copy between a managed drive and an IEC drive; for that, use
+<code>COPY U8 TO U10</code>, which copies file by file. The form
+<code>BACKUP D0 TO D1, U10</code> is for dual-drive units on the IEC
+port, which copy the disk themselves (MEGA65 Book, p. B-25).</p>
+<h3 id="the-command-channel">The command channel</h3>
+<p>Channel 15 of a drive takes command strings and returns the status.
+BASIC 65's DISK command sends a string, as in <code>DISK "V0"</code>,
+and DS and <code>DS$</code> read the status (MEGA65 Book, p. B-73). The
+C64 way also works, and is the way to send a command to a drive that
+has no BASIC 65 keyword for it:</p>
+<pre><code>10 OPEN 15, 8, 15
+20 PRINT#15, &quot;R0:SCORES.OLD=0:SCORES&quot;
+30 INPUT#15, E, E$, T, S
+40 PRINT E; E$; T; S
+50 CLOSE 15</code></pre>
+<p>Reading the channel with INPUT# gives the four parts of the message
+in separate variables, so after a scratch, <code>T</code> holds the
+number of files deleted.</p>
+<p>One caution applies to DS in a program. BASIC 65 keeps the last
+status message it read, and the housekeeping commands do not clear it
+when they run in a program (MEGA65 ROM source, trans), so DS can still
+show the result of an earlier command. Give <code>CLR DS</code> just
+before the command, and the next use of DS reads the drive afresh:</p>
+<pre><code>10 CLR DS : SCRATCH &quot;TEMP*&quot;
+20 PRINT DS$</code></pre>
 <h2 id="booting-disks">Booting Disks</h2>
 <p>There are three ways to start software from a disk (MEGA65 Book, pp.
 6-9, 6-10):</p>
@@ -277,9 +658,19 @@ to the IEC port. D selects the second drive of a dual unit.</li>
 mounted with MOUNT or the Freezer, using DD disks or taped HD disks,
 formatted with FORMAT.</li>
 <li><strong>Files.</strong> PRG for programs, SEQ and USR for sequential
-data, REL for random-access records, CBM for subdirectories.</li>
+data, REL for random-access records, CBM for subdirectories. A USR file
+is a SEQ file with a different label; add <code>,U</code> to the name
+to create one.</li>
+<li><strong>Directory.</strong> <code>OPEN 1,8,0,"$"</code> and GET#
+read the directory into a program, in the form LOAD "$" produces.</li>
 <li><strong>Status.</strong> DS and <code>DS$</code> report every
-operation; codes below 20 mean success.</li>
+operation; codes below 20 mean success. In a program, give
+<code>CLR DS</code> before a housekeeping command whose result you
+check.</li>
+<li><strong>Housekeeping.</strong> COPY, CONCAT, RENAME, SCRATCH, LOCK,
+COLLECT, DCLEAR, HEADER and BACKUP each send a DOS command;
+<code>DIR R</code> lists scratched files and <code>SCRATCH "NAME",
+R</code> recovers them on the MEGA65's own drives.</li>
 <li><strong>Booting.</strong> SHIFT+RUN/STOP, BOOT and
 <code>AUTOBOOT.C65</code>.</li>
 <li><strong>Machine language.</strong> SETBNK, SETLFS, SETNAM, OPEN,

@@ -30,7 +30,7 @@ Peripherals</title>
 <h1
 id="programming-the-mega65--chapter-17-major-peripherals">Programming
 the MEGA65 — Chapter 17: Major Peripherals</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter covers the MEGA65's remaining connections to the outside
 world: the IEC serial bus for printers, the cartridge port, Ethernet,
@@ -47,12 +47,112 @@ printing to it, or by redirecting all screen output with CMD:</p>
 20 PRINT#4, &quot;MEGA65 PRINTER TEST&quot;
 30 CMD 4 : LIST       : REM SEND A LISTING TO THE PRINTER
 40 PRINT#4 : CLOSE 4  : REM RESTORE SCREEN OUTPUT AND CLOSE</code></pre>
-<p>The secondary address selects a printer mode on Commodore printers;
-for example, 7 selects upper and lower case on many models. Consult the
-printer's own manual for its modes and control codes.</p>
+<p>CMD can also send a string before it starts redirecting, such as a
+title or a printer setup code: <code>CMD 4, "MY PROGRAM"</code>. End the
+redirection with PRINT# before closing, so that the last line is sent
+(MEGA65 Book, CMD).</p>
+<h3 id="secondary-addresses-and-control-codes">Secondary addresses and
+control codes</h3>
+<p>On Commodore's printers the secondary address chooses the character
+set. <code>OPEN 1, 4</code>, or secondary address 0, prints upper case
+and graphics characters; <code>OPEN 1, 4, 7</code> prints upper and
+lower case. Within a line, control codes printed like any other
+character change the style. These are the codes Commodore gave for its
+printers in the C64's documentation (<a href="https://archive.org/details/c64-programmer-ref">Commodore 64 Programmer's Reference Guide</a>, pp. 338–339):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>CHR$(10)</code></td>
+<td>Line feed</td>
+</tr>
+<tr class="even">
+<td><code>CHR$(13)</code></td>
+<td>Return; Commodore printers add a line feed themselves</td>
+</tr>
+<tr class="odd">
+<td><code>CHR$(14)</code>, <code>CHR$(15)</code></td>
+<td>Start and end double-width characters</td>
+</tr>
+<tr class="even">
+<td><code>CHR$(18)</code>, <code>CHR$(146)</code></td>
+<td>Start and end reverse characters</td>
+</tr>
+<tr class="odd">
+<td><code>CHR$(17)</code></td>
+<td>Switch to the upper and lower case set</td>
+</tr>
+<tr class="even">
+<td><code>CHR$(145)</code></td>
+<td>Switch to the upper case and graphics set</td>
+</tr>
+<tr class="odd">
+<td><code>CHR$(8)</code></td>
+<td>Start dot-programmable graphics</td>
+</tr>
+</tbody>
+</table>
+<pre><code>10 OPEN 4, 4, 7                       : REM UPPER AND LOWER CASE
+20 PRINT#4, CHR$(14); &quot;REPORT&quot;; CHR$(15) : REM DOUBLE-WIDTH TITLE
+30 PRINT#4, CHR$(18); &quot;TOTAL&quot;; CHR$(146); 1234
+40 CLOSE 4</code></pre>
+<p>Printers from other makers, and interfaces that connect them to the
+IEC bus, have their own codes and secondary addresses; consult their
+manuals.</p>
+<p>Such printers often need a line feed after each return, which
+Commodore printers supply for themselves. BASIC 65 adds it when the
+channel number is 128 or more: PRINT# to such a channel ends each line
+with a return and a line feed instead of a return alone (MEGA65 Book,
+OPEN; MEGA65 ROM source, <code>crdo</code>). <code>OPEN 132, 4</code>
+therefore suits a printer that needs line feeds, and would double-space
+on a Commodore printer.</p>
+<h3 id="printing-from-machine-language">Printing from machine
+language</h3>
+<p>Machine language prints through the same KERNAL routines as a disk
+file, which Chapter 15 used, with CHKOUT in place of CHKIN. An empty
+file name is enough for a printer:</p>
+<pre><code>        lda #0          ; data and file name in bank 0
+        ldx #0
+        jsr $ff6b       ; SETBNK
+        lda #4          ; logical file 4
+        ldx #4          ; device 4: the printer
+        ldy #7          ; secondary address 7: upper and lower case
+        jsr $ffba       ; SETLFS
+        lda #0          ; no file name
+        jsr $ffbd       ; SETNAM
+        jsr $ffc0       ; OPEN
+        bcs done
+        ldx #4
+        jsr $ffc9       ; CHKOUT: send output to file 4
+        bcs done        ; for example, no printer switched on
+        ldx #0
+loop    lda text,x
+        beq done
+        jsr $ffd2       ; BSOUT: send a byte
+        inx
+        bne loop
+done    jsr $ffcc       ; CLRCHN: output back to the screen
+        lda #4
+        jsr $ffc3       ; CLOSE
+        rts
+
+text    .text &quot;HELLO FROM THE MEGA65&quot;, 13, 0</code></pre>
+<h3 id="the-bus-and-the-cpu">The bus and the CPU</h3>
 <p>The same bus carries disk drives and modern devices such as SD2IEC,
-as Chapter 15 described. Bus activity slows the CPU temporarily, so
-timing-sensitive code should not run during IEC transfers.</p>
+as Chapter 15 described. The KERNAL drives it by setting and reading the
+bus lines itself, with the timing of the original machines. For each
+byte it sends or receives, and for each command such as LISTEN or
+UNTALK, it disables interrupts and drops the CPU to 1 MHz, then restores
+the speed and interrupts afterwards (MEGA65 ROM source,
+<code>disk_sei</code>, <code>disk_cli</code>). A program that prints or
+reads a disk therefore runs slowly while it does so, and its raster
+interrupts can be delayed, so timing-sensitive code should not run
+during IEC transfers.</p>
 <h2 id="the-cartridge-port">The Cartridge Port</h2>
 <p>The expansion port accepts C64 cartridges. Switching the MEGA65 on
 with a C64 cartridge in place starts it in GO64 mode, where most C64
@@ -62,6 +162,89 @@ instead start in MEGA65 mode. Cartridge ROM is mapped into
 the 28-bit address space from <code>$4000000</code> upward, where
 MEGA65-mode software can reach it with flat addressing or MAP, as
 Chapter 5 described.</p>
+<h3 id="how-the-mega65-starts-a-cartridge">How the MEGA65 starts a
+cartridge</h3>
+<p>At power-on the Hypervisor enables the port, resets the cartridge
+briefly so that cartridges which need a reset pulse are seen, and starts
+the machine through the C64 KERNAL's reset routine, as the C65 did. For
+Ultimax cartridges, which replace the KERNAL, it arranges for the
+cartridge's own reset vector to be used instead (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+Hypervisor <code>main.asm</code>, <code>go64</code>). The C64 reset
+routine looks for the C64 cartridge signature, the characters
+<code>CBM80</code> at <code>$8004</code>. If it finds them it jumps
+through the cartridge's start vector at <code>$8000</code>, exactly as a
+C64 does, and the cartridge runs in C64 mode. Otherwise the start-up
+continues into MEGA65 mode (MEGA65 ROM source, C64 KERNAL
+<code>start</code>).</p>
+<p>From ROM 920385, the MEGA65 ROM recognises cartridges made for
+MEGA65 mode. The change log calls the format experimental, and full
+auto-starting needs a newer core (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). During
+start-up the ROM reads the cartridge at <code>$4008006</code> to
+<code>$4008009</code>. If bit 0 of the first byte is set and the next
+three bytes are "M65", it copies <code>$2000</code> bytes from
+<code>$4008000</code> to <code>$8000</code> in bank 0, maps in the
+KERNAL and jumps to <code>$8000</code>; later restarts through the
+system vector jump to <code>$8003</code> instead (MEGA65 ROM source,
+<code>has_m65cart</code>, <code>boot_cart</code>). The start of the
+cartridge's ROM is therefore laid out like this:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Offset</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$8000</code></td>
+<td>Cold start code, normally a JMP</td>
+</tr>
+<tr class="even">
+<td><code>$8003</code></td>
+<td>Warm start code, normally a JMP</td>
+</tr>
+<tr class="odd">
+<td><code>$8006</code></td>
+<td>Flags: bit 0 set</td>
+</tr>
+<tr class="even">
+<td><code>$8007-$8009</code></td>
+<td>"M65": <code>$4D</code>, <code>$36</code>, <code>$35</code></td>
+</tr>
+</tbody>
+</table>
+<p>The core reaches the port's C64-style addresses at
+<code>$7FF0000-$7FFFFFF</code>, so a cartridge's I/O 1 and I/O 2 areas,
+<code>$DE00-$DFFF</code> on a C64, are at <code>$7FFDE00-$7FFDFFF</code>
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>slow_devices.vhdl</code>). A few registers in the
+MEGA65 I/O personality control the port:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D7FB</code> bit 1</td>
+<td>CARTEN: 1 enables the cartridge port</td>
+</tr>
+<tr class="even">
+<td><code>$D7FD</code> bit 6</td>
+<td>NOGAME: must be 0 for the cartridge's /GAME line to take
+effect</td>
+</tr>
+<tr class="odd">
+<td><code>$D7FD</code> bit 7</td>
+<td>NOEXROM: must be 0 for the cartridge's /EXROM line to take
+effect</td>
+</tr>
+</tbody>
+</table>
+<p>(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>.) The Hypervisor sets
+these up before starting the machine, and most programs never need to
+touch them.</p>
 <p>Switch the computer off before inserting or removing a cartridge.</p>
 <h2 id="ethernet">Ethernet</h2>
 <p>The MEGA65 has an Ethernet port. Its everyday use is file transfer
@@ -92,7 +275,8 @@ status</td>
 </tr>
 <tr class="even">
 <td><code>$D6E4</code></td>
-<td>Command register</td>
+<td>Command register (write); reading gives the number of receive
+buffers</td>
 </tr>
 <tr class="odd">
 <td><code>$D6E5</code></td>
@@ -100,20 +284,139 @@ status</td>
 mode</td>
 </tr>
 <tr class="even">
-<td><code>$D6E9</code> onward</td>
+<td><code>$D6E9-$D6EE</code></td>
 <td>The MAC address</td>
 </tr>
 </tbody>
 </table>
-<p>Frames are built in, and received into, buffers that appear in place
-of part of the I/O area when the Ethernet I/O personality is selected
-with the knock <code>$45</code>, <code>$54</code> described in Chapter
-5. The MEGA65 has no built-in MAC address: it uses the one set on the
+<p>Frames are received into, and built in, 2KB buffers at
+<code>$FFDE800-$FFDEFFF</code>. Reading there gives the receive buffer
+the CPU is currently looking at; writing fills the single transmit
+buffer, which cannot be read back. The same 2KB also appears at
+<code>$D800-$DFFF</code>, in place of colour RAM and the other I/O
+there, when the Ethernet I/O personality is selected with the knock
+<code>$45</code>, <code>$54</code> described in Chapter 5 (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>ethernet.vhdl</code>). The Book's Ethernet appendix says the
+buffers appear at <code>$D000</code>, but the core places them at
+<code>$D800</code>. With the knock, interrupts must be turned off first,
+as the Book warns, because the CIAs at <code>$DC00</code> and
+<code>$DD00</code> are out of reach until the program switches back
+with <code>$47</code>, <code>$53</code>. Flat addressing at
+<code>$FFDE800</code> avoids the problem and is the better choice in
+machine language.</p>
+<p>The MEGA65 has no built-in MAC address: it uses the one set on the
 configuration utility's Network page, and networking does not work while
-that is all zeros (MEGA65 Book, p. 4-7).</p>
+that is all zeros (MEGA65 Book, p. 4-7). The Hypervisor copies it into
+<code>$D6E9-$D6EE</code> at start-up (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hypervisor
+<code>syspart.asm</code>), and a program can read it from there while
+bit 1 of <code>$D6E5</code> is clear:</p>
+<pre><code>10 FOR I = 0 TO 5
+20 PRINT RIGHT$(HEX$(PEEK($D6E9 + I)), 2); : IF I &lt; 5 THEN PRINT &quot;:&quot;;
+30 NEXT : PRINT</code></pre>
+<h3 id="receiving-a-frame">Receiving a frame</h3>
+<p>The controller has a ring of receive buffers, 32 of them on current
+boards, R3 to R6; reading <code>$D6E4</code> returns the number. One buffer at a time is visible
+to the CPU, and the controller fills the others as frames arrive. RXQ,
+bit 5 of <code>$D6E1</code>, is set while at least one more received
+frame is waiting. Bits 1 and 2 of <code>$D6E1</code> give the number of
+free buffers, but read 3 whenever three or more are free. Bit 6 of
+<code>$D6E0</code>, RXBLKD, is set when every buffer is full, and frames
+arriving then are lost (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>ethernet.vhdl</code>).</p>
+<p>To move to the next frame, write <code>$01</code> and then
+<code>$03</code> to <code>$D6E1</code>: the change of bit 1 from 0 to 1
+frees the buffer the CPU was looking at and shows it the next one (MEGA65
+Book, Ethernet appendix). These writes also clear bits 6 and 7, so they
+leave the Ethernet interrupts disabled. Writing 0 and then 3 to
+<code>$D6E0</code> resets the controller and empties the ring.</p>
+<p>Each receive buffer starts with a two-byte header (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>ethernet.vhdl</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Offset</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>Frame length, low byte</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>Bits 0–2: frame length, high bits. Bit 4: multicast frame. Bit 5:
+broadcast frame. Bit 6: addressed to this MEGA65's MAC address. Bit 7:
+the frame's CRC check failed</td>
+</tr>
+<tr class="odd">
+<td>2 onward</td>
+<td>The frame itself, starting with its destination MAC address</td>
+</tr>
+</tbody>
+</table>
+<p>Frames whose CRC check fails are kept only if NOCRC, bit 1 of
+<code>$D6E5</code>, is set. This routine waits for a frame and fetches
+its length, using a 32-bit pointer:</p>
+<pre><code>ethbuf  = $fb             ; four bytes: pointer to $FFDE800
+
+getfrm  lda #$00
+        sta ethbuf
+        lda #$e8
+        sta ethbuf+1
+        lda #$fd
+        sta ethbuf+2
+        lda #$0f
+        sta ethbuf+3
+wait    lda $d6e1
+        and #%00100000    ; RXQ: is a frame waiting?
+        beq wait
+        lda #$01
+        sta $d6e1         ; bit 1 low...
+        lda #$03
+        sta $d6e1         ; ...then high: show the next frame
+        ldz #0
+        lda [ethbuf],z    ; length, low byte
+        sta len
+        inz
+        lda [ethbuf],z    ; flags and length, high bits
+        and #%00000111
+        sta len+1
+        ldz #0            ; leave Z at 0, for code that uses STZ
+        rts
+
+len     .word 0</code></pre>
+<p>The frame's bytes then follow from offset 2. Z reaches only 256 bytes,
+so step <code>ethbuf+1</code> for longer frames, or copy the frame out
+with DMA, which is much faster. A frame on a busy network can arrive
+every few microseconds, so a program that polls once a video frame may
+lose some; the Book recommends the receive interrupt, enabled with RXQEN,
+bit 7 of <code>$D6E1</code>, for serious use (MEGA65 Book, Ethernet
+appendix).</p>
+<h3 id="sending-a-frame">Sending a frame</h3>
+<p>To send, wait until TXIDLE, bit 7 of <code>$D6E0</code>, is set; write
+the frame into the transmit buffer from <code>$FFDE800</code>; put its
+length in <code>$D6E2</code> and <code>$D6E3</code>; and write
+<code>$01</code>, STARTTX, to <code>$D6E4</code>. The controller adds the
+CRC itself (MEGA65 Book, Ethernet appendix; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>ethernet.vhdl</code>). The frame must begin with the destination
+and source MAC addresses and a two-byte type, as every Ethernet frame
+does. This BASIC program broadcasts a minimum-size frame with type
+<code>$88B5</code>, which is reserved for local experiments:</p>
+<pre><code>10 B = $FFDE800
+20 IF (PEEK($D6E0) AND 128) = 0 THEN 20                    : REM WAIT FOR TXIDLE
+30 FOR I = 0 TO 5 : POKE B + I, $FF : NEXT                 : REM TO: EVERYONE
+40 FOR I = 0 TO 5 : POKE B + 6 + I, PEEK($D6E9 + I) : NEXT : REM FROM: THIS MEGA65
+50 POKE B + 12, $88 : POKE B + 13, $B5                     : REM FRAME TYPE
+60 FOR I = 14 TO 59 : POKE B + I, 0 : NEXT                 : REM 46 BYTES OF DATA
+70 POKE $D6E2, 60 : POKE $D6E3, 0                          : REM LENGTH
+80 POKE $D6E4, 1                                           : REM SEND</code></pre>
+<p>Another computer on the same network can see the frame with a packet
+capture tool such as Wireshark. There is only one transmit buffer, so the
+next frame cannot be written until this one has gone.</p>
 <p>Writing a network stack, even a simple one for UDP, is a substantial
-project. Community libraries implement TCP/IP for the MEGA65, and the
-Book's Ethernet appendix documents the controller in full.</p>
+project. The Book points to WeeIP, a TCP/IP library ported to the MEGA65,
+at <a href="https://github.com/mega65/mega65-weeip">github.com/mega65/mega65-weeip</a>,
+and its Ethernet appendix documents the controller in full.</p>
 <h2 id="the-uart">The UART</h2>
 <p>The C65 included a UART, a serial port controller, and the MEGA65
 keeps its registers at <code>$D600-$D606</code> (MEGA65 Book, register
@@ -140,7 +443,8 @@ appendix):</p>
 </tr>
 <tr class="even">
 <td><code>$D603</code>, <code>$D604</code></td>
-<td>Baud rate divisor</td>
+<td>Baud rate divisor, 16 bits: the baud rate is 7.09375 MHz divided by
+it</td>
 </tr>
 <tr class="odd">
 <td><code>$D605</code>, <code>$D606</code></td>
@@ -219,6 +523,18 @@ can store a few settings. It is small, 64 bytes on R3 boards and only 16
 on R4 and later, and the Book suggests it for machine configuration, so
 programs should use it sparingly (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026, <code>mega65r4_i2c.vhdl</code>). Boards from R4
 onward have extra RTC registers, documented in the Book.</p>
+<p><code>TI$</code> gives the time as <code>HH:MM:SS</code> and
+<code>DT$</code> the date as <code>DD-MMM-YYYY</code>, such as
+<code>19-OCT-2026</code>. The year register holds only the last two
+digits, and <code>DT$</code> puts "20" in front of them. Each use reads
+the clock afresh, and the ROM reads each register over and over until it
+gets the same value 256 times in a row, so that it never catches a value
+in the middle of changing (MEGA65 ROM source, <code>read_rtc</code>,
+<code>Get_DT_RTC</code>). Unlike a C64, the MEGA65 keeps <code>TI</code>
+separate: it is a timer built from CIA counters, counting seconds with
+a resolution of a microsecond, and has nothing to do with the clock or
+with <code>TI$</code> (MEGA65 ROM source, <code>Get_TI_CIA</code>;
+<a href="https://files.mega65.org/html/main.php?ar=c1b963e3-1cf6-4698-8788-69ffeb3edb25">MEGA65 Filehost, "Tips on the timer, counter, clock and RTC for the MEGA65"</a>).</p>
 <h3 id="the-clock-on-r4-and-later-boards">The clock on R4 and later
 boards</h3>
 <p>On R4, R5 and R6 boards the CPU does not reach the clock chip, an
@@ -234,7 +550,8 @@ of the battery-backed RAM at full speed stores only the last one. Pause
 between writes; a fiftieth of a second is ample.</li>
 <li><strong>Read back after a pause too.</strong> A read straight after a
 write still shows the old value until the core's next pass.</li>
-<li><strong>Write only the RAM.</strong> The 64-byte block from
+<li><strong>Apart from the time and date, write only the
+RAM.</strong> The 64-byte block from
 <code>$FFD7140</code> follows the chip's own register layout: the 16
 bytes of RAM are at <code>$FFD7150-$FFD715F</code>, and
 <code>$FFD714D-$FFD714F</code> are the chip's EEPROM control registers,
@@ -255,6 +572,70 @@ the raster for fine timing.</li>
 30 SLEEP 0.05                     : REM LET THE CORE SEND IT
 40 NEXT
 50 DATA 1, 2, 3, 4</code></pre>
+<h3 id="reading-the-clock-from-machine-language">Reading the clock from
+machine language</h3>
+<p>The clock is outside the first megabyte, so machine language reads it
+through a 32-bit pointer, as the ROM does:</p>
+<pre><code>rtc     = $fb             ; four bytes: pointer to $FFD7110
+
+gettime ldx #3
+setp    lda rtcadr,x
+        sta rtc,x
+        dex
+        bpl setp
+        ldz #0
+        lda [rtc],z       ; seconds, BCD
+        sta secs
+        inz
+        lda [rtc],z       ; minutes
+        sta mins
+        inz
+        lda [rtc],z       ; hours
+        and #$7f          ; drop the flag in bit 7
+        sta hours
+        ldz #0            ; leave Z at 0, for code that uses STZ
+        rts
+
+rtcadr  .byte $10, $71, $fd, $0f
+secs    .byte 0
+mins    .byte 0
+hours   .byte 0</code></pre>
+<p>A reading taken just as the seconds roll over can pair the new seconds
+with the old minutes. To be safe, read the seconds again at the end and
+start over if they have changed, or compare repeated reads as the ROM
+does.</p>
+<h3 id="setting-the-clock">Setting the clock</h3>
+<p>The usual way to set the clock is the configuration utility's Chipset
+page, which writes the new time to the chip as soon as RETURN is pressed;
+the Book's entries for <code>TI$</code> and <code>DT$</code> send
+readers there (MEGA65 Book, configuration utility, Chipset page). A
+program can also write the BCD values to the registers. Writes go to
+the chip over its I2C bus, one at a time, on both kinds of board, so
+pause after each one as described above (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>mega65r3_i2c.vhdl</code>, <code>mega65r4_i2c.vhdl</code>).</p>
+<p>R3 boards need one more step. Their clock chip, an ISL12020M, ignores
+writes to the time until bit 6 of <code>$FFD7118</code> is set, and the
+configuration utility sets that bit before writing the time and clears
+it afterwards. It also sets bit 7 of the hours, so that the chip keeps
+24-hour time (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>mega65_config.s</code>,
+<code>doCommitRTC</code>). On R4 and later, <code>$FFD7118</code> is
+one of the RV-3032's alarm registers, and no unlocking is needed.
+<code>PEEK($D629)</code> returns 3 on an R3 board and the board's
+revision number, such as 6, on R5 and later (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>c65uart.vhdl</code>), so a program can tell the two apart:</p>
+<pre><code>10 RT = $FFD7110 : R3 = PEEK($D629) = 3
+20 INPUT &quot;HOURS (0-23)&quot;; H$ : INPUT &quot;MINUTES&quot;; M$
+30 IF R3 THEN POKE RT + 8, PEEK(RT + 8) OR $40 : SLEEP 0.05
+40 POKE RT, 0 : SLEEP 0.05                  : REM SECONDS
+50 POKE RT + 1, DEC(M$) : SLEEP 0.05        : REM MINUTES
+60 POKE RT + 2, DEC(H$) OR $80 : SLEEP 0.05 : REM HOURS, 24-HOUR
+70 IF R3 THEN POKE RT + 8, PEEK(RT + 8) AND $BF : SLEEP 0.05
+80 PRINT TI$</code></pre>
+<p>DEC reads a string of hexadecimal digits, so the digits typed come
+out as the matching BCD value: <code>DEC("45")</code> is
+<code>$45</code>, which is 45 in BCD. The program does not check what is
+typed, and a value such as <code>$4A</code> would confuse the clock. The
+date registers are written the same way.</p>
 <h2 id="video-and-audio-outputs">Video and Audio Outputs</h2>
 <p>The MEGA65 drives a VGA connector and a digital video connector at
 the same time. The digital output can also carry sound, which the
@@ -285,7 +666,38 @@ second</td>
 </table>
 <p>Bit 7 of <code>$D06F</code> is set in NTSC mode, so a program can
 adapt timing, as Chapters 8 and 13 showed. The user can switch modes in
-the Freezer while a program runs.</p>
+the Freezer while a program runs. A few more bits control the outputs
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, <code>c65uart.vhdl</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D06F</code> bit 6</td>
+<td>VGAHDTV: use timing that suits older VGA monitors better, instead of
+the exact HDTV timing</td>
+</tr>
+<tr class="even">
+<td><code>$D61A</code> bit 1</td>
+<td>DVI: send plain DVI on the digital connector, with no sound</td>
+</tr>
+<tr class="odd">
+<td><code>$D61A</code> bit 3</td>
+<td>Digital audio sample rate: 1 for 44.1 kHz, 0 for 48 kHz</td>
+</tr>
+</tbody>
+</table>
+<p>The Hypervisor sets <code>$D61A</code> at start-up from the Video
+page's digital video setting, "enhanced (with audio)" or "dvi only (no
+audio)", which is bit 1 (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hypervisor
+<code>syspart.asm</code>, <code>mega65_config.inc</code>). Other bits of
+<code>$D61A</code> control other things, such as a board LED, so change
+one with <code>POKE $D61A, PEEK($D61A) OR 2</code> or
+<code>AND 253</code> rather than writing the whole byte.</p>
 <p>Development cores add a 15 kHz output for CRT monitors such as the
 Commodore 1084S: composite sync on the VGA connector's horizontal-sync
 pin, with RGB on its colour pins. It is enabled by the cable, which must
@@ -305,21 +717,28 @@ that feeds both.</p>
 <h2 id="summary">Summary</h2>
 <ul>
 <li><strong>Printers.</strong> OPEN a channel to device 4 or 5 on the
-IEC bus and use PRINT#, or redirect output with CMD.</li>
-<li><strong>Cartridges.</strong> C64 cartridges start the machine in C64
-mode; cartridge ROM appears from <code>$4000000</code>.</li>
+IEC bus and use PRINT#, or redirect output with CMD. Secondary address 7
+selects lower case on Commodore printers, and channels 128 and up add a
+line feed to each line. The KERNAL runs the bus at 1 MHz with interrupts
+off.</li>
+<li><strong>Cartridges.</strong> C64 cartridges with the CBM80 signature
+start the machine in C64 mode; MEGA65 cartridges carry "M65" at
+<code>$8007</code>. Cartridge ROM appears from <code>$4000000</code>.</li>
 <li><strong>Ethernet.</strong> Used for file transfer, and programmable
-through <code>$D6E0</code> onward and the Ethernet I/O personality. A
-MAC address must be set.</li>
+through <code>$D6E0</code> onward. Frames are received and sent through
+the buffer at <code>$FFDE800</code>. A MAC address must be set.</li>
 <li><strong>UART.</strong> The C65's serial controller at
 <code>$D600</code>; not connected to any external port on current
 boards.</li>
 <li><strong>Real-time clock.</strong> BCD time and date at
 <code>$FFD7110</code>, a little battery-backed RAM (64 bytes on R3,
 16 on R4 and later), and
-<code>TI$</code> and <code>DT$</code> in BASIC.</li>
+<code>TI$</code> and <code>DT$</code> in BASIC. Set it in the
+configuration utility, or by writing the registers one at a time; R3
+boards need bit 6 of <code>$FFD7118</code> set first.</li>
 <li><strong>Outputs.</strong> VGA and digital video in PAL or NTSC;
-audio through the 3.5mm jack and digital video.</li>
+audio through the 3.5mm jack and digital video, which
+<code>$D61A</code> bit 1 turns off.</li>
 </ul>
 <p>The appendices that follow gather reference tables used throughout
 the book.</p>

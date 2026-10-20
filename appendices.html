@@ -1373,7 +1373,378 @@ assemblers and compilers, Xemu and the MEGA65 team's transfer tools,
 are listed in <a
 href="ch07-45gs02-machine-language.html#development-tools">Chapter 7,
 Development Tools</a>.</p>
-<h2 id="appendix-i-glossary">Appendix I: Glossary</h2>
+<h2 id="appendix-i-memory-map">Appendix I: Memory Map</h2>
+<p>This appendix gathers in one place the memory addresses that the
+chapters describe. It is a map, not a full reference: each table says
+which chapter explains the area, and Appendix E lists the individual
+registers. Addresses are written as in Chapter 5: four hex digits for
+an address the CPU sees in its 64KB window, and up to seven for a full
+28-bit address.</p>
+<h3 id="the-28-bit-address-space-1">The 28-Bit Address Space</h3>
+<p>Every byte the MEGA65 can reach has a 28-bit address. Only a small
+part of the 256MB space is populated (Chapter 5).</p>
+<table>
+<thead>
+<tr class="header">
+<th>28-bit address</th>
+<th>Size</th>
+<th>Contents</th>
+<th>Chapter</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0000000-$000FFFF</code></td>
+<td>64KB</td>
+<td>Chip RAM, bank 0: system areas, text screen, BASIC program text and scalar variables</td>
+<td>5, 6</td>
+</tr>
+<tr class="even">
+<td><code>$0010000-$001FFFF</code></td>
+<td>64KB</td>
+<td>Chip RAM, bank 1: BASIC arrays and string text</td>
+<td>6</td>
+</tr>
+<tr class="odd">
+<td><code>$0020000-$003FFFF</code></td>
+<td>128KB</td>
+<td>Chip RAM, banks 2 and 3: the ROM, normally write-protected</td>
+<td>11</td>
+</tr>
+<tr class="even">
+<td><code>$0040000-$005FFFF</code></td>
+<td>128KB</td>
+<td>Chip RAM, banks 4 and 5: BASIC graphics, or program data reserved with <code>MEM</code></td>
+<td>6, 9</td>
+</tr>
+<tr class="odd">
+<td><code>$4000000</code> upward</td>
+<td>varies</td>
+<td>Cartridge port</td>
+<td>17</td>
+</tr>
+<tr class="even">
+<td><code>$8000000-$87FFFFF</code></td>
+<td>8MB</td>
+<td>Attic RAM (not on every board)</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td><code>$FF80000-$FF87FFF</code></td>
+<td>32KB</td>
+<td>Colour RAM</td>
+<td>5, 12</td>
+</tr>
+<tr class="even">
+<td><code>$FFD0000-$FFD3FFF</code></td>
+<td>16KB</td>
+<td>I/O, one 4KB block per personality</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td><code>$FFF8000-$FFFBFFF</code></td>
+<td>16KB</td>
+<td>Hypervisor</td>
+<td>5, 11</td>
+</tr>
+</tbody>
+</table>
+<p>The first 2KB of colour RAM also appears at
+<code>$001F800-$001FFFF</code>, at the top of bank 1, so that range
+can't be used as ordinary RAM. The first 1KB appears at
+<code>$D800</code> in the I/O area, as on the C64.</p>
+<h3 id="bank-0-in-mega65-mode">Bank 0 in MEGA65 Mode</h3>
+<p>BASIC 65 and the KERNAL use bank 0 as follows. The areas below
+<code>$1600</code> belong to the system: the MEGA65 team treats the
+KERNAL's zero page as private, so its use can change between ROM
+versions (Chapter 11).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Contents</th>
+<th>Chapter</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0000-$00FF</code></td>
+<td>Zero page, used by the KERNAL and BASIC 65. <code>$00</code> and <code>$01</code> are the CPU port</td>
+<td>5, 11</td>
+</tr>
+<tr class="even">
+<td><code>$0100-$01FF</code></td>
+<td>Stack, while the E flag is set</td>
+<td>7</td>
+</tr>
+<tr class="odd">
+<td><code>$02F8-$02F9</code></td>
+<td>USR vector, read in the system bank</td>
+<td>9, 11</td>
+</tr>
+<tr class="even">
+<td><code>$0314-$0333</code></td>
+<td>KERNAL RAM vectors (IRQ, BRK, NMI, I/O routines, monitor)</td>
+<td>11</td>
+</tr>
+<tr class="odd">
+<td><code>$0800-$0FCF</code></td>
+<td>80×25 text screen</td>
+<td>6, 12</td>
+</tr>
+<tr class="even">
+<td><code>$1600-$17FF</code></td>
+<td>Free for machine code in every program</td>
+<td>9</td>
+</tr>
+<tr class="odd">
+<td><code>$1800-$1EFF</code></td>
+<td>Free only in programs that don't use the graphics commands, which keep work areas here: brush buffer at <code>$1800</code>, clipping at <code>$1C00</code>, IFF buffer at <code>$1D00</code>, scan-line buffer at <code>$1E00</code></td>
+<td>9</td>
+</tr>
+<tr class="even">
+<td><code>$1F00-$1FFF</code></td>
+<td>Base page of the graphics commands</td>
+<td>9</td>
+</tr>
+<tr class="odd">
+<td><code>$2001-$F6FF</code></td>
+<td>BASIC program text, about 54KB; scalar variables are also kept in bank 0</td>
+<td>6</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-the-cpu-sees-1">What the CPU Sees</h3>
+<p>In C64 mode the CPU's 64KB window is the C64's memory map,
+controlled by the CPU port at <code>$01</code>. These are the default
+contents (Chapter 5):</p>
+<table>
+<thead>
+<tr class="header">
+<th>CPU address</th>
+<th>C64 mode default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0000-$9FFF</code></td>
+<td>RAM</td>
+</tr>
+<tr class="even">
+<td><code>$A000-$BFFF</code></td>
+<td>C64 BASIC ROM</td>
+</tr>
+<tr class="odd">
+<td><code>$C000-$CFFF</code></td>
+<td>RAM</td>
+</tr>
+<tr class="even">
+<td><code>$D000-$DFFF</code></td>
+<td>I/O</td>
+</tr>
+<tr class="odd">
+<td><code>$E000-$FFFF</code></td>
+<td>C64 KERNAL ROM</td>
+</tr>
+</tbody>
+</table>
+<p>In MEGA65 mode there is no fixed layout, since the KERNAL and
+BASIC 65 change the map as they run. During a <code>SYS</code> call,
+though, the window is always built the same way (Chapter 9):</p>
+<table>
+<thead>
+<tr class="header">
+<th>CPU address</th>
+<th>During SYS</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$0000-$1FFF</code></td>
+<td>Always bank 0</td>
+</tr>
+<tr class="even">
+<td><code>$2000-$7FFF</code></td>
+<td>The bank selected with <code>BANK</code> or a long address, 0 to 5</td>
+</tr>
+<tr class="odd">
+<td><code>$8000-$BFFF</code></td>
+<td>Always bank 0</td>
+</tr>
+<tr class="even">
+<td><code>$C000-$FFFF</code></td>
+<td>ROM and I/O, in every bank</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-io-area">The I/O Area</h3>
+<p>With the MEGA65 (VIC-IV) I/O personality selected, the
+<code>$D000-$DFFF</code> area holds the chips below. The C64 and C65
+personalities show only the parts their machines had (Chapter 5). The
+blocks are taken from the core's register list (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core,
+iomap.txt</a>).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Contents</th>
+<th>Chapter</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D000-$D02E</code></td>
+<td>VIC-II registers: sprites, raster, screen control, colours</td>
+<td>8, 12</td>
+</tr>
+<tr class="even">
+<td><code>$D02F</code></td>
+<td>KEY: the knock that selects the I/O personality</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td><code>$D030-$D047</code></td>
+<td>VIC-III registers: ROM banking, H640 and other modes, bitplanes</td>
+<td>5, 12</td>
+</tr>
+<tr class="even">
+<td><code>$D048-$D07F</code></td>
+<td>VIC-IV registers: screen layout, pointers, the raster rewrite buffer, sprite extensions</td>
+<td>12</td>
+</tr>
+<tr class="odd">
+<td><code>$D080-$D09F</code></td>
+<td>F011 floppy controller</td>
+<td>15</td>
+</tr>
+<tr class="even">
+<td><code>$D100-$D3FF</code></td>
+<td>Palette: red, green and blue values for entries 0-255</td>
+<td>12</td>
+</tr>
+<tr class="odd">
+<td><code>$D400-$D47F</code></td>
+<td>The four SIDs, 32 bytes each, at <code>$D400</code>, <code>$D420</code>, <code>$D440</code> and <code>$D460</code></td>
+<td>13</td>
+</tr>
+<tr class="even">
+<td><code>$D600-$D63F</code></td>
+<td>UART, keyboard, and system registers, including the core version and board type at <code>$D629</code> and <code>$D630-$D635</code></td>
+<td>11, 16, 17</td>
+</tr>
+<tr class="odd">
+<td><code>$D640-$D67F</code></td>
+<td>Hypervisor trap registers</td>
+<td>5, 11</td>
+</tr>
+<tr class="even">
+<td><code>$D680-$D6AF</code></td>
+<td>SD card controller and floppy and IEC support</td>
+<td>14, 15</td>
+</tr>
+<tr class="odd">
+<td><code>$D6C0-$D6CF</code></td>
+<td>FPGA and flash registers, used to reconfigure the FPGA</td>
+<td>11</td>
+</tr>
+<tr class="even">
+<td><code>$D6E0-$D6EF</code></td>
+<td>Ethernet controller</td>
+<td>17</td>
+</tr>
+<tr class="odd">
+<td><code>$D6F4-$D6FD</code></td>
+<td>Audio mixer and direct digital audio</td>
+<td>13</td>
+</tr>
+<tr class="even">
+<td><code>$D700-$D70F</code></td>
+<td>DMAgic</td>
+<td>5, 8</td>
+</tr>
+<tr class="odd">
+<td><code>$D711-$D75F</code></td>
+<td>Audio DMA: four sample channels</td>
+<td>13</td>
+</tr>
+<tr class="even">
+<td><code>$D768-$D7EB</code></td>
+<td>Math accelerator: dividers and multipliers</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td><code>$D7EF</code></td>
+<td>Hardware random number generator</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td><code>$D7F0-$D7FE</code></td>
+<td>CPU control, including speed</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td><code>$D800-$DBFF</code></td>
+<td>Colour RAM, first 1KB</td>
+<td>5, 12</td>
+</tr>
+<tr class="even">
+<td><code>$DC00-$DC0F</code></td>
+<td>CIA 1: keyboard, joysticks, timers</td>
+<td>16</td>
+</tr>
+<tr class="odd">
+<td><code>$DD00-$DD0F</code></td>
+<td>CIA 2: IEC bus, VIC-II bank, timers</td>
+<td>15, 16</td>
+</tr>
+<tr class="even">
+<td><code>$DE00-$DFFF</code></td>
+<td>Cartridge I/O areas</td>
+<td>17</td>
+</tr>
+</tbody>
+</table>
+<p>When <code>CRAM2K</code> in <code>$D030</code> is set,
+<code>$DC00-$DFFF</code> shows the second kilobyte of colour RAM in
+place of the CIAs and cartridge I/O (Chapter 5).</p>
+<h3 id="the-top-of-memory">The Top of Memory</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Contents</th>
+<th>Chapter</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$FF2F-$FFF5</code></td>
+<td>KERNAL jump table: extended entries from <code>$FF2F</code>, standard C64 entries from <code>$FF81</code></td>
+<td>11</td>
+</tr>
+<tr class="even">
+<td><code>$FFFA-$FFFB</code></td>
+<td>NMI vector</td>
+<td>7, 11</td>
+</tr>
+<tr class="odd">
+<td><code>$FFFC-$FFFD</code></td>
+<td>RESET vector</td>
+<td>11</td>
+</tr>
+<tr class="even">
+<td><code>$FFFE-$FFFF</code></td>
+<td>IRQ and BRK vector</td>
+<td>7, 11</td>
+</tr>
+</tbody>
+</table>
+<p>The ROM's own layout in banks 2 and 3 is shown in <a
+href="ch11-mega65-rom-guide.html#where-things-are">Chapter 11, Where
+Things Are</a>. It is not an interface, and changes between ROM
+versions.</p>
+<h2 id="appendix-j-glossary">Appendix J: Glossary</h2>
 <p>This glossary explains the technical and Commodore terms used in this
 book. Where a term has a fuller explanation, the entry says which
 chapter or appendix to read. Words in <em>italics</em> have entries of

@@ -14,7 +14,54 @@ href="https://github.com/CTalkobt/Programming_The_Mega-65/commits/main">Git
 repository</a>.</p>
 <h2 id="2026-10-19">October 19, 2026</h2>
 <ul>
-<li>Appendix I: new glossary of technical and Commodore terms, from
+<li>Index: new index of topics, BASIC 65 keywords and registers, linked
+from the Contents page.</li>
+<li>All pages: printing a page now leaves out the navigation bars, uses
+black text on white, and keeps listings and table rows from splitting
+across pages.</li>
+<li>Chapter 2: new table of keys held at start-up, such as NO SCROLL for
+the core menu, a digit for <code>MEGA65n.ROM</code> and RUN/STOP for
+the monitor.</li>
+<li>Chapter 3: PRINT USING lists every format character, including
+<code>%D</code>, <code>%F</code>, <code>%X</code> and zero padding, with
+examples and the ROMs that added them. The width in <code>%w.pF</code>
+doesn't count the decimal point, unlike in the MEGA65 Book's
+example.</li>
+<li>Chapter 3: RND explains how each argument seeds the generator, and
+describes the hardware random number generator at <code>$D7EF</code>;
+TEMPO gives its range, default and beats per minute.</li>
+<li>Chapter 3: in a program, SCRATCH, RENAME, COPY and the other disk
+housekeeping commands don't update DS and <code>DS$</code>, which can
+still hold an older message; use <code>CLR DS</code> before them.</li>
+<li>Chapter 4: corrected the width of <code>"%7.2F"</code>, which is
+eight characters, not seven.</li>
+<li>Chapter 8: new list of common machine-language pitfalls.</li>
+<li>Chapter 11: identifying the board and core through
+<code>$D629</code>, <code>$D628</code> and <code>$D630-$D635</code>, and
+starting another core slot from a program.</li>
+<li>Chapter 12: custom text screen sizes with an 88 × 30 example,
+horizontal character scaling with CHRXSCL, the raster rewrite buffer's
+time budget per line and what happens when it runs out, and a raster
+rewrite buffer demo in BASIC 65.</li>
+<li>Chapter 13: how PLAY times notes, with a table of TEMPO values.</li>
+<li>Chapter 14: D81 and D64 disk images compared, and changing disks
+from a program with MOUNT, MOUNT OFF, SET DISK and RDISK(1).</li>
+<li>Chapter 15: USR files explained; worked examples of a notes file, a
+high-score table, a relative-file stock list and a program that reads
+the directory; a new section on disk housekeeping, with the
+command-channel string for each BASIC 65 disk command; listing and
+recovering scratched files with <code>DIR R</code> and
+<code>SCRATCH "name",R</code>; more drive status codes.</li>
+<li>Chapter 16: Amiga mouse autodetection and the <code>$D61B</code>
+register.</li>
+<li>Chapter 17: printer secondary addresses and control codes, printing
+from machine language, how cartridges are started, sending and
+receiving Ethernet frames, reading and setting the real-time clock,
+and the registers for DVI output and digital audio.</li>
+<li>Appendix I: new memory map, gathering the 28-bit address space, bank
+0 in MEGA65 mode, the CPU's view during SYS, the I/O area and the top of
+memory in one place.</li>
+<li>Appendix J: new glossary of technical and Commodore terms, from
 4510 and attic RAM to VIC, nybble, little-endian and zero page,
 grouped by letter, with pointers to the chapters that explain them. It
 also covers the PRG, SEQ, USR and REL file types.</li>

@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-11-mega65-rom-guide">Programming
 the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
 DOS, the monitor, the character sets, and a complete set of C64 ROMs for
@@ -46,7 +46,7 @@ Sanderson, MEGA65 Digest</a>). Almost everything else is internal.</p>
 <p>This chapter therefore concentrates on the stable interfaces:</p>
 <ul>
 <li>How the ROM is organised and how to tell which version is
-installed</li>
+installed, and on which model and core</li>
 <li>The KERNAL jump table, including the C65 additions</li>
 <li>The RAM vectors for interrupts and I/O</li>
 <li>The Hypervisor's DOS functions</li>
@@ -178,6 +178,131 @@ digits at <code>$20016</code>-<code>$2001C</code>, for example
 not part of the ROM's supported interface, and it may not work with
 future ROM versions. A program that must also run on ROMs older than
 920417 can fall back on it, accepting that risk.</p>
+<h3 id="identifying-the-model-and-core">Identifying the model and
+core</h3>
+<p>The ROM version says nothing about the hardware or the core. For
+those, the core has read-only registers in the MEGA65 I/O personality,
+so a machine-language program must make the <code>$D02F</code> knock
+before reading them; BASIC 65 already has that personality selected.
+<code>$D629</code> holds a model ID (MEGA65 Book, p. U-3; <a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>c65uart.vhdl</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Hardware</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$01</code>-<code>$04</code></td>
+<td>MEGA65 desktop, board revisions R1 to R4; R3 and R3A both give
+<code>$03</code></td>
+</tr>
+<tr class="even">
+<td><code>$05</code>, <code>$06</code>, …</td>
+<td>MEGA65 desktop, R5 and later: the board's major revision, such as
+<code>$06</code> for R6</td>
+</tr>
+<tr class="odd">
+<td><code>$21</code>, <code>$22</code></td>
+<td>MEGAphone handheld, R1 and R4</td>
+</tr>
+<tr class="even">
+<td><code>$40</code>-<code>$42</code></td>
+<td>Nexys4, Nexys4 DDR and Nexys4 DDR with widget board</td>
+</tr>
+<tr class="odd">
+<td><code>$60</code>-<code>$62</code></td>
+<td>QMTECH A100T, A200T and K325T boards</td>
+</tr>
+<tr class="even">
+<td><code>$FD</code></td>
+<td>QMTECH Wukong A100T board</td>
+</tr>
+<tr class="odd">
+<td><code>$FE</code></td>
+<td>VHDL simulation</td>
+</tr>
+</tbody>
+</table>
+<p>The Book's list stops at R3. From R5, the core reads the board's
+major revision from straps on the board, and bits 4-7 of
+<code>$D628</code> give the minor revision; on earlier boards those bits
+read 0. Bits 0-3 of <code>$D628</code> belong to the J21 expansion
+header, not to the revision (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>c65uart.vhdl</code>).</p>
+<p>Four further registers identify the core itself, the same build
+shown in Matrix Mode:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D630</code>-<code>$D631</code></td>
+<td>Build date stamp, low byte first</td>
+</tr>
+<tr class="even">
+<td><code>$D632</code>-<code>$D635</code></td>
+<td>First eight hex digits of the core's git commit, least significant
+byte first</td>
+</tr>
+</tbody>
+</table>
+<p>The register comments in the core describe the date stamp as days
+since 1 January 2020, but the build script computes it as (year − 2020)
+× 366 + day of the year, counting 1 January as day 1 (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>c65uart.vhdl</code>, <code>version.sh</code>). The commit number
+is the quickest way to match a core against the builds listed on the
+Filehost. The registers at <code>$D62A</code>-<code>$D62F</code> give the
+same information for the keyboard's firmware.</p>
+<pre><code>10 BANK 128
+20 PRINT &quot;MODEL ID: &quot;;HEX$(PEEK($D629))
+30 D=WPEEK($D630):Y=2020+INT((D-1)/366):N=D-(Y-2020)*366
+40 PRINT &quot;CORE BUILT ON DAY&quot;;N;&quot;OF&quot;;Y
+50 PRINT &quot;COMMIT: &quot;;HEX$(WPEEK($D634));HEX$(WPEEK($D632))</code></pre>
+<p>Hyppo, the Hypervisor, has a version of its own, which its getversion
+service returns (see <a href="#services-at-d640">Services at
+<code>$D640</code></a>).</p>
+<h3 id="starting-another-core">Starting another core</h3>
+<p>The flash memory holds several cores in slots, and the flash menu
+starts the one the user picks (MEGA65 Book, pp. 5-7, 5-8). A program can
+do the same. It writes the flash address of the core to
+<code>$D6C8</code>-<code>$D6CB</code>, least significant byte first, and
+then writes <code>$42</code> to <code>$D6CF</code> to reconfigure the
+FPGA. The flash menu stores the address divided by 256. A core's
+bitstream starts 4KB into its slot, after the slot's header, and on R3 to
+R6 boards each slot is 8MB long, so slot <em>n</em> starts at
+<em>n</em> × <code>$800000</code> + <code>$1000</code> (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>sdcardio.vhdl</code>, flash menu <code>megaflash.c</code> and
+<code>mf_utility.c</code>). Slot 1, for example, is at
+<code>$801000</code>, written as <code>$10</code>, <code>$80</code>,
+<code>$00</code>, <code>$00</code>:</p>
+<pre><code>10 S=1 : REM SLOT NUMBER
+20 BANK 128
+30 POKE $D6C8,$10,(S AND 1)*128,INT(S/2),0
+40 POKE $D6CF,$42
+50 PRINT &quot;SLOT&quot;;S;&quot;DID NOT START&quot;</code></pre>
+<p>This is not a reset. The FPGA loads the new core from scratch, as at
+power-on, and everything in memory is lost. The new core keeps running
+until the machine is switched off, because the reset button does not
+change which core is running (MEGA65 Book, p. 5-8). If the slot holds no
+valid core, the FPGA searches on through the flash and, if it finds
+nothing, starts the factory core in slot 0 (MEGA65 Book, p. 5-13).
+The address registers are zero when a core starts, so
+<code>POKE $D6CF,$42</code> on its own restarts the machine from flash
+address 0, the factory core in slot 0. If the program carries on to
+line 50, the reconfiguration failed. The flash menu refuses to start
+other cores when the running core was loaded over JTAG, because
+reconfiguration is then unreliable.</p>
 <h2 id="the-kernal-jump-table">The KERNAL Jump Table</h2>
 <p>The jump table is a list of JMP instructions at the top of the
 KERNAL, each at a fixed address. Programs call the fixed address, and
@@ -1539,7 +1664,9 @@ page are private and change between releases.</li>
 <code>$20000-$3FFFF</code>. Versions are six-digit numbers: 92xxxx for
 release and beta ROMs, 99xxxx for development ROMs built alongside them.
 VERSIONQ returns the version from ROM 920417; <code>$FF80</code> is
-always <code>$FF</code>.</li>
+always <code>$FF</code>. <code>$D629</code> gives the model,
+<code>$D630</code>-<code>$D635</code> the core's build date and commit,
+and <code>$D6C8</code>-<code>$D6CF</code> can start another core.</li>
 <li><strong>Jump table.</strong> The 39 entries at
 <code>$FF81-$FFF3</code> sit at the C64's addresses, though a few hold
 different routines or take different arguments. The extended block runs

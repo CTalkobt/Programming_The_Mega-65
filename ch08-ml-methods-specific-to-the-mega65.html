@@ -30,7 +30,7 @@ the MEGA65</title>
 <h1
 id="programming-the-mega65--chapter-8-ml-methods-specific-to-the-mega65">Programming
 the MEGA65 — Chapter 8: ML Methods Specific to the MEGA65</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 7 described the 45GS02 in isolation. Real programs run on a
 machine full of state that someone else set up: the KERNAL's memory map,
@@ -48,6 +48,7 @@ rather than to the 6502 family in general:</p>
 <li>Raster interrupts</li>
 <li>Loading files through the Hypervisor</li>
 <li>Debugging with the monitor</li>
+<li>Common pitfalls</li>
 </ul>
 <p>Two styles of program appear here. A cooperative program runs
 alongside BASIC and the KERNAL, called with SYS and returning with RTS;
@@ -780,6 +781,58 @@ href="https://github.com/lgblgblgb/xemu">Xemu</a>; MEGA65 Book, monitor
 appendix). An emulator's timing may not match the hardware in every
 detail, so timing-critical code should always be checked on real
 hardware.</p>
+<h2 id="common-pitfalls">Common Pitfalls</h2>
+<p>A few mistakes catch almost every programmer new to the MEGA65,
+because the code looks right and works on a C64. Each is covered in more
+detail elsewhere; this list collects them.</p>
+<ul>
+<li><p><strong>Absolute addresses ignore B.</strong> Only the base page
+modes use the B register; absolute modes always mean the address
+written (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). Most instructions have no base page,Y mode,
+only LDX and STX do, so an assembler turns <code>STA $20,Y</code> into
+the absolute <code>STA $0020,Y</code>. With B set to
+<code>$16</code>, that writes to <code>$0020</code>, not to
+<code>$1620</code> as the programmer meant. The same happens to JMP and
+JSR, and to any operand an assembler widens to 16 bits. When B is moved,
+index base page variables with X, or use the full address (see <a
+href="ch07-45gs02-machine-language.html#addressing-modes">Addressing
+Modes</a> in Chapter 7).</p></li>
+<li><p><strong>Z is not always zero.</strong> Code written for the 6502
+or 65C02 assumes nothing changes Z, because <code>(zp)</code> is really
+<code>(zp),Z</code> and STZ stores Z (see <a
+href="ch07-45gs02-machine-language.html#the-stz-trap">The STZ trap</a>).
+Hypervisor calls that return values in Z break that assumption. The
+getversion service, the usual first call, returns the HDOS version in
+Y.Z; on Hyppo 1.3 that leaves <code>$03</code> in Z (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo
+<code>dos.asm</code>). Follow such a call with <code>LDZ #0</code> if any
+code afterwards assumes Z is zero (see <a
+href="ch11-mega65-rom-guide.html#services-at-d640">Services at
+<code>$D640</code></a>).</p></li>
+<li><p><strong>The DMA list address moves.</strong> DMAgic reads a job
+list through the list address registers themselves, incrementing them
+as it goes; that is how a chained job finds the next one. After a job,
+<code>$D700</code>-<code>$D702</code> and <code>$D704</code> no longer
+hold the start of the list. Writing only <code>$D705</code> again
+reruns the list only as long as it does not cross a page boundary.
+Writing <code>$D700</code>, like <code>$D702</code>, also clears the
+megabyte bits (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). Set every list address register before each
+job, in the order given in <a href="#advanced-dma">Advanced
+DMA</a>.</p></li>
+<li><p><strong>RUN/STOP and RESTORE stop a SYS routine.</strong> From
+ROM 920380, pressing RUN/STOP and RESTORE while a machine-language
+routine called by SYS is running breaks into the monitor with the
+routine's registers, instead of warm-starting BASIC (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>). This is useful for debugging (see <a
+href="#the-built-in-monitor">The built-in monitor</a>), but a
+cooperative routine that must not be interrupted halfway has to point
+the NMI vector at its own handler while it runs; a takeover program
+already does.</p></li>
+</ul>
 <h2 id="summary">Summary</h2>
 <ul>
 <li><strong>Two styles.</strong> Cooperative routines start from the SYS
@@ -813,6 +866,10 @@ KERNAL.</li>
 <li><strong>Debugging.</strong> The monitor, BRK breakpoints, border
 probes, the Freezer, Matrix Mode and emulators each cover different
 kinds of failure.</li>
+<li><strong>Pitfalls.</strong> Absolute modes ignore B, Hypervisor calls
+such as getversion can leave Z non-zero, the DMA list address registers
+advance during a job, and from ROM 920380 RUN/STOP and RESTORE break
+into the monitor during a SYS routine.</li>
 </ul>
 <p>Chapter 9 turns to combining machine language with BASIC 65.</p>
 <nav class="chapnav"><span><a href="ch07-45gs02-machine-language.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch09-mixing-basic-with-machine-language.html">Next &rarr;</a></span></nav>

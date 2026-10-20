@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-12-graphics">Programming the
 MEGA65 — Chapter 12: Graphics</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The VIC-IV is three video chips in one. It behaves as a VIC-II for
 C64 software, adds the C65's VIC-III features of 80 columns, bitplanes
@@ -178,7 +178,7 @@ memory directly, at byte granularity, anywhere the chip can see.</p>
 <tr class="odd">
 <td><code>$D07B</code></td>
 <td>DISPROWS</td>
-<td>Number of character rows drawn</td>
+<td>Number of character rows drawn, minus one</td>
 </tr>
 </tbody>
 </table>
@@ -324,6 +324,175 @@ uses it, and most MEGA65 games build their graphics from characters.</p>
 <p>When changing size by hand, set LINESTEP and CHRCOUNT to match, and
 make sure screen memory and colour RAM are large enough. From BASIC, the
 editor's own screen-size commands handle this for you.</p>
+<h3 id="custom-screen-sizes">Custom screen sizes</h3>
+<p>The four sizes in the table are the only ones the screen editor
+knows. ESC X, ESC 4, ESC 8 and ESC 5 switch between them (<a
+href="ch02-getting-to-know-the-mega65.html#escape-sequences">Chapter
+2</a>), and WINDOW can only confine the editor to a smaller area of the
+current size. The VIC-IV itself has no fixed size. It draws as many rows
+and columns as a few registers tell it to, inside a display 800 pixels
+wide, so a program can have a 30-row screen, an 88-column one, or
+both:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Name</th>
+<th>Purpose</th>
+<th>Value at 80 × 25, PAL</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D048</code>, <code>$D049</code> bits 3-0</td>
+<td>TBDRPOS</td>
+<td>Raster line where the top border ends</td>
+<td>104</td>
+</tr>
+<tr class="even">
+<td><code>$D04A</code>, <code>$D04B</code> bits 3-0</td>
+<td>BBDRPOS</td>
+<td>Raster line where the bottom border starts</td>
+<td>504</td>
+</tr>
+<tr class="odd">
+<td><code>$D04C</code>, <code>$D04D</code> bits 3-0</td>
+<td>TEXTXPOS</td>
+<td>Pixel where the first column starts</td>
+<td>80</td>
+</tr>
+<tr class="even">
+<td><code>$D04E</code>, <code>$D04F</code> bits 3-0</td>
+<td>TEXTYPOS</td>
+<td>Raster line where the first text row starts</td>
+<td>104</td>
+</tr>
+<tr class="odd">
+<td><code>$D05C</code>, <code>$D05D</code> bits 5-0</td>
+<td>SDBDRWD</td>
+<td>Width of each side border, in pixels</td>
+<td>80</td>
+</tr>
+<tr class="even">
+<td><code>$D05E</code></td>
+<td>CHRCOUNT</td>
+<td>Characters drawn per row</td>
+<td>80</td>
+</tr>
+<tr class="odd">
+<td><code>$D058-$D059</code></td>
+<td>LINESTEP</td>
+<td>Bytes from one row to the next</td>
+<td>80</td>
+</tr>
+<tr class="even">
+<td><code>$D07B</code></td>
+<td>DISPROWS</td>
+<td>Number of text rows drawn, minus one</td>
+<td>24</td>
+</tr>
+</tbody>
+</table>
+<p>The vertical registers count physical raster lines. In the 25-row
+modes each row of character pixels is drawn on two lines, so a character
+row is 16 lines high, and in the 50-row modes it is 8; either way the
+standard text area is 400 lines tall, from line 104 to line 504 in PAL.
+The horizontal registers count pixels of the 800-pixel line, and the two
+80-pixel side borders leave 640 for text. A write to SDBDRWD moves both
+side borders at once. The upper four bits of <code>$D049</code>,
+<code>$D04B</code>, <code>$D04D</code> and <code>$D04F</code> belong to
+sprite settings, and <code>$D05D</code> holds HOTREG in bit 7 (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<p>A bigger screen needs four things. First, HOTREG must be off: with it
+on, the next write to a hot register makes the VIC-IV recalculate the
+borders, the text position, the row count, LINESTEP and CHRCOUNT for one
+of the four standard sizes, undoing everything (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>). Second, the borders move apart and TEXTYPOS
+moves up to the new top border. Third, DISPROWS, CHRCOUNT and LINESTEP
+are set for the new size; for extra columns, SDBDRWD and TEXTXPOS are
+both set to (800 − 8 × columns) / 2. Fourth, SCRNPTR and COLPTR point
+at memory big enough for the screen, because the bytes after the
+editor's 80 × 25 screen at <code>$0800</code> belong to the system (<a
+href="https://files.mega65.org/html/main.php?ar=572a990d-a7f8-42d3-8edf-4988ff7b1e29">MEGA65
+Filehost, "Big Screens for Fun And Profit"</a>).</p>
+<p>This program makes an 88 × 30 screen at <code>$50000</code>, with its
+colours at offset <code>$2000</code> in colour RAM, waits for a key and
+puts everything back. It is for PAL only: an NTSC display has 480
+visible lines instead of 576, which leaves too little room above and
+below the standard text area.</p>
+<pre><code>10 REM 88 X 30 TEXT SCREEN (PAL ONLY)
+20 SA=$50000 : CO=$2000 : W=88 : H=30
+30 DIM R(22) : FOR I=0 TO 7 : R(I)=PEEK($D048+I) : R(I+8)=PEEK($D058+I)
+40 NEXT : FOR I=0 TO 5 : R(I+16)=PEEK($D060+I) : NEXT : R(22)=PEEK($D07B)
+50 EDMA 3,W*H,46,SA : REM SCREEN CODE 46 IS &quot;.&quot;
+60 EDMA 3,W*H,7,$FF80000+CO : REM YELLOW
+70 FOR Y=0 TO H-1 : A=SA+Y*W
+80 POKE A,48+INT(Y/10) : POKE A+1,48+MOD(Y,10) : POKE A+W-1,42 : NEXT
+90 CLRBIT $D05D,7 : REM HOTREG OFF
+100 WPOKE $D048,56 : WPOKE $D04A,536 : REM TOP AND BOTTOM BORDER
+110 WPOKE $D04E,56 : POKE $D07B,H-1 : REM TEXTYPOS, DISPROWS
+120 POKE $D05C,48 : WPOKE $D04C,48 : REM SIDE BORDER, TEXTXPOS
+130 WPOKE $D058,W : POKE $D05E,W : REM LINESTEP, CHRCOUNT
+140 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,CO : REM SCRNPTR, COLPTR
+150 GETKEY K$
+160 FOR I=0 TO 7 : POKE $D048+I,R(I) : POKE $D058+I,R(I+8) : NEXT
+170 FOR I=0 TO 5 : POKE $D060+I,R(I+16) : NEXT : POKE $D07B,R(22)</code></pre>
+<p>Each row starts with its number and ends with an asterisk, so the
+edges are easy to see. Thirty rows of 16 lines take 480 lines, from 56
+to 536, and 88 columns of 8 pixels take 704 pixels, leaving 48 for each
+side border. Lines 30 and 40 save the registers the program changes,
+and lines 160 and 170 restore them; restoring <code>$D05D</code> also
+turns HOTREG back on. The WPOKEs in lines 100 to 120 clear the sprite
+bits in the upper half of <code>$D049</code>, <code>$D04B</code> and
+<code>$D04D</code>, which matters only to a program using those sprite
+features. In 80 × 50 mode, where a row is 8 lines high, the same 480
+lines hold 60 rows (DISPROWS 59).</p>
+<p>The screen editor does not know about any of this. Its row and column
+counts are fixed by the four standard sizes, and it finds the character
+it is working on from SCRNPTR but always takes colour RAM addresses from
+<code>$FF80000</code>, ignoring COLPTR (MEGA65 ROM source,
+<code>setup_line</code>). A program that stops with SCRNPTR still
+pointing at its own screen therefore finds READY, and anything typed
+after it, written into that screen at the editor's 80-column spacing.
+This is why the example restores the registers before it ends. Making
+the editor itself use extra rows means changing KERNAL variables that
+are not a supported interface, and may move in a later ROM.</p>
+<h3 id="scaling-characters">Scaling characters</h3>
+<p>CHRXSCL, at <code>$D05A</code>, sets the width of text pixels in
+120ths: for each pixel of the 800-pixel line, the VIC-IV moves
+CHRXSCL/120 pixels along the row it has built. The standard value is
+120, which gives 8-pixel characters in 80-column mode. A value of 60
+doubles the width of every character, so an 80-column screen shows its
+first 40 characters across the whole text area, each as wide as a
+40-column character; 240 halves the width, so 80 characters fit in 320
+pixels. Values above 240 make characters no narrower. In 40-column mode
+the VIC-IV halves the value first, so 120 still gives the usual
+40-column characters and 240 gives 8-pixel ones (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<p>CHRXSCL scales everything drawn through the Raster Rewrite Buffer
+described below: text, the VIC-II-style bitmap modes, and GOTOX
+positions with them. Bitplanes and sprites are drawn separately and do
+not change. The hot registers do not reset CHRXSCL, so a program must
+put it back itself:</p>
+<pre><code>10 POKE $D05A,60 : REM DOUBLE-WIDTH TEXT PIXELS
+20 GETKEY K$
+30 POKE $D05A,120 : REM NORMAL WIDTH</code></pre>
+<p>Characters 40 to 79 of each row are now drawn beyond the right
+border, so lowering CHRCOUNT to 40 at the same time saves the VIC-IV
+work without changing what is seen. When tested, Xemu did not display
+CHRXSCL as the core describes, so check the result on a real
+MEGA65.</p>
+<p>The vertical counterpart, CHRYSCL at <code>$D05B</code>, sets how
+many raster lines each row of character pixels is drawn on, minus one:
+1 in the 25-row modes and 0 in the 50-row modes. The register
+description in the core calls it the number of lines per text row, but
+the logic counts lines per pixel row. While HOTREG is on, any write to a
+hot register sets it back to the standard value for the mode (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
 <h3 id="attributes">Attributes</h3>
 <p>In normal text mode, each character has one byte of screen memory,
 its screen code, and one byte of colour RAM. The low four bits of colour
@@ -885,6 +1054,130 @@ Sanderson</a>).</p>
 emulator, so test RRB-heavy code on both. Bit 5 of <code>$D60F</code>,
 REALHW, reads 1 on a real MEGA65 and 0 in Xemu, if a program needs to
 adjust.</p>
+<h3 id="the-cycle-budget">The cycle budget</h3>
+<p>The VIC-IV builds each line while the line before it is on the
+screen, clocked at 81 MHz, three times the 27 MHz rate at which pixels go
+to the display. A PAL line is 864 pixels long and an NTSC line 858, so
+there are about 2,590 cycles per line in PAL and 2,570 in NTSC to fetch
+and draw everything on the next line. When the characters are done, the
+sprite data for the line is fetched in the same time, so sprites take a
+share too. With DBLRR set, a line is built only every second raster
+line, which doubles the time (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, <code>frame_generator.vhdl</code>,
+<code>pixel_driver.vhdl</code>).</p>
+<p>Drawing a character into the buffer takes one cycle per pixel, whether
+the pixel is transparent or not: 8 cycles for an ordinary or FCM
+character and 16 for a 16-pixel-wide NCM character. The VIC-IV draws one
+character while it fetches the next, so the total per character is not
+simply fetch plus draw (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>). Working estimates, worked out by MEGA65
+game developers, reviewed by the core's designer and checked against a
+game close to the limit, are:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Entry</th>
+<th>Cycles (estimate)</th>
+<th>Per line, about</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Monochrome character</td>
+<td>11</td>
+<td>230</td>
+</tr>
+<tr class="even">
+<td>Multicolour character, single-width pixels</td>
+<td>12</td>
+<td>210</td>
+</tr>
+<tr class="odd">
+<td>FCM character</td>
+<td>18</td>
+<td>140</td>
+</tr>
+<tr class="even">
+<td>NCM character</td>
+<td>26</td>
+<td>98</td>
+</tr>
+<tr class="odd">
+<td>GOTOX</td>
+<td>2</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The last column assumes about 2,550 cycles for the whole line (<a
+href="https://files.mega65.org/html/main.php?ar=647eb223-aa17-4c23-97d2-34917f808291">MEGA65
+Filehost, "RRB Time Calculations"</a>). The figures are for planning,
+not guarantees: add up the busiest row, leave a margin for sprites, and
+test. By this reckoning a 40-column row of FCM characters with a second
+full FCM layer and two GOTOX entries needs about 1,450 cycles and fits
+easily, while five full layers of 20 NCM characters need about 2,600 and
+do not fit without DBLRR.</p>
+<h3 id="running-out-of-time">Running out of time</h3>
+<p>By default the VIC-IV never abandons a line it has not finished. It
+carries on into the time meant for the next line, which then is not
+built properly, so lines go missing or are garbled, as in the test
+above. Setting NORRBWRAP, bit 3 of <code>$D07C</code>, makes the VIC-IV
+stop a late line when the next one is due to start, so only the
+unfinished part of that line is lost (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<p>The same bit controls wrap-around. The drawing position is 10 bits
+wide, so normally drawing past position 1023 continues at 0, the first
+pixel of the text area. A GOTOX to 1024 − <em>n</em> therefore puts a
+character <em>n</em> pixels to the left of the first column, with only
+its right-hand part visible, which lets objects slide in from the left
+edge. With NORRBWRAP set, drawing stops at the end of the buffer instead
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<h3 id="an-rrb-demo-in-basic">An RRB demo in BASIC</h3>
+<p>This program draws a checked pattern on a 40-column SEAM screen and
+moves three balls across it, each on its own row, using no sprites.
+Every row has 44 entries: 40 pattern characters, a GOTOX with
+transparency, the ball (or a space), a GOTOX to 320, the right edge in
+40-column mode, and one more character after it. So CHRCOUNT is 44 and
+LINESTEP 88.</p>
+<pre><code>10 REM RRB DEMO: BALLS OVER A PATTERN
+20 SA=$50000 : CA=$FF82000 : W=88
+30 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
+40 TX=WPEEK($D04C) : HR=PEEK($D05D)
+50 FOR Y=0 TO 24 : A=Y*W
+60 FOR E=0 TO 39 : WPOKE SA+A+E*2,102 : WPOKE CA+A+E*2,$0B00 : NEXT
+70 WPOKE SA+A+80,0 : WPOKE CA+A+80,$0090 : REM GOTOX 0, TRANSPARENT
+80 WPOKE SA+A+82,32 : WPOKE CA+A+82,$0100 : REM OBJECT (A SPACE)
+90 WPOKE SA+A+84,320 : WPOKE CA+A+84,$0010 : REM GOTOX 320
+100 WPOKE SA+A+86,32 : WPOKE CA+A+86,$0100 : NEXT
+110 FOR Y=6 TO 18 STEP 6 : WPOKE SA+Y*W+82,81 : NEXT : REM BALLS
+120 CLRBIT $D05D,7 : CLRBIT $D031,7 : WPOKE $D04C,80
+130 SETBIT $D054,0 : WPOKE $D058,W : POKE $D05E,44
+140 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
+150 FOR X=0 TO 312
+160 WPOKE SA+6*W+80,X : WPOKE SA+12*W+80,312-X
+170 WPOKE SA+18*W+80,MOD(X*3,313) : SLEEP 0.02 : NEXT
+180 SETBIT $D031,7 : CLRBIT $D054,0
+190 FOR I=0 TO 13 : POKE $D058+I,R(I) : NEXT
+200 WPOKE $D04C,TX : POKE $D05D,HR</code></pre>
+<p>Lines 50 to 100 build the rows. Screen and colour words are written
+low byte first, so <code>$0090</code> puts <code>$90</code> in the first
+colour byte: the GOTOX flag (<code>$10</code>) and transparency
+(<code>$80</code>). <code>$0B00</code> leaves the first colour byte
+clear and puts colour 11, dark grey, in the second, and
+<code>$0100</code> makes the ball white. Screen code 102 is the checked
+character and 81 the ball. Lines 120 to 140 clear HOTREG, switch to 40
+columns, turn on SEAM and point SCRNPTR and COLPTR at the new screen and
+its colours, which are at offset <code>$2000</code> in colour RAM.</p>
+<p>Moving a ball needs one WPOKE: the X position in its row's first
+GOTOX, in 40-column pixels from 0 to 319. Because transparency is on,
+the pattern shows through the corners of the ball. Nothing is copied or
+erased as the balls move, which is what makes the RRB cheap for many
+objects. Lines 180 to 200 put the screen back, including HOTREG, so the
+program ends at an ordinary READY prompt.</p>
 <h3 id="smooth-scrolling">Smooth scrolling</h3>
 <p>The VIC-IV also scrolls more freely than the VIC-II. Coarse scrolling
 is a matter of changing SCRNPTR and COLPTR, which can point anywhere, so
@@ -1401,6 +1694,11 @@ and how far apart rows are.</li>
 <code>$D016</code>, <code>$D018</code>, <code>$D031</code> and
 <code>$DD00</code> overwrite the VIC-IV pointers when written; clear
 HOTREG, bit 7 of <code>$D05D</code>, to take full control.</li>
+<li><strong>Screen size</strong> is not fixed: TBDRPOS, BBDRPOS,
+TEXTYPOS, TEXTXPOS, SDBDRWD, DISPROWS, CHRCOUNT and LINESTEP give custom
+sizes such as 88 × 30 in PAL, and CHRXSCL at <code>$D05A</code> scales
+text pixels horizontally. The screen editor knows only its four standard
+sizes.</li>
 <li><strong>SEAM</strong>, enabled by CHR16, gives two bytes per
 character, 8,192 characters, and access to FCM and NCM. LINESTEP must be
 at least twice CHRCOUNT. A screen word of <code>$FFFF</code> ends the
@@ -1420,7 +1718,9 @@ variable-height and high-resolution modes, and a movable pointer list at
 pixels wide, at a high memory cost.</li>
 <li><strong>The Raster Rewrite Buffer</strong> uses GOTOX entries to
 place characters at any X position and layer them with transparency, for
-many-object and parallax graphics.</li>
+many-object and parallax graphics. It has about 2,590 cycles of an
+81 MHz clock per PAL line, one per pixel drawn plus fetching, so the
+busiest row sets the limit; DBLRR doubles it.</li>
 </ul>
 <p>Chapter 13 turns to sound.</p>
 <nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>

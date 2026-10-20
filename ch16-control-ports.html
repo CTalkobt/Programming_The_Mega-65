@@ -30,7 +30,7 @@ Ports</title>
 <h1
 id="programming-the-mega65--chapter-16-the-control-ports">Programming
 the MEGA65 — Chapter 16: The Control Ports</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>The two controller ports on the MEGA65's left side are the same 9-pin
 ports the C64 had, and they accept the same devices: digital joysticks,
@@ -482,6 +482,147 @@ port's fire switch and the right button as its up switch, in
 1351 is wired. The KERNAL's driver also limits the
 pointer to the screen area and handles high-resolution sprite
 positions.</p>
+<h3 id="amiga-mice-and-autodetection">Amiga mice and autodetection</h3>
+<p>An Amiga mouse works differently from a 1351. It has no paddle
+circuitry; it reports movement as pulses on the four direction lines,
+two lines for each axis, which the computer must count. The MEGA65 core
+can do the counting and present the result as if a 1351 were plugged
+in, so BASIC's driver, the routine above and C64 software written for a
+1351 all work with an Amiga mouse. The Input page's mouse mode setting,
+"amiga to 1351 enabled", turns this on. The Hypervisor copies the Input
+page's settings into <code>$D61B</code> when the MEGA65 starts, and a
+program can change them by writing the register. The feature has been
+in the core since January 2018, before the first release core, so every
+core has it (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>mouse_input.vhdl</code>,
+<code>c65uart.vhdl</code>; Hypervisor <code>syspart.asm</code>). The bits
+written are:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Effect when written as 1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>Port 1: translate an Amiga mouse into 1351 form (Input page, joy 1
+mouse mode)</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>Port 2: the same</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>Port 1: assume an Amiga mouse more readily, and turn off the core's
+1351 de-jitter (Input page, joy 1 1351 de-jitter: off)</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>Port 2: the same</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>Debug: turn off the typing queue's filter against repeated
+keys</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>Debug: turn off the typing queue's filter against keyboard
+glitches</td>
+</tr>
+</tbody>
+</table>
+<p>With bit 0 or 1 set, the core watches that port. A 1351 or a paddle
+gives paddle readings somewhere in the middle of the range, but an Amiga
+mouse leaves both lines at an extreme, with the top four bits of each
+reading all 0 or all 1. A joystick can never press up and down, or left
+and right, at the same time, but an Amiga mouse's pulses often hold
+both lines of a pair low together. When the core sees both signs at once,
+it puts the port into Amiga mode. In that mode it:</p>
+<ul>
+<li>counts the pulses into a position for each axis and presents it on
+the port's paddle lines in 1351 form, so it reaches both the SID's
+paddle registers and <code>$D620-$D623</code>;</li>
+<li>hides the four direction lines, so the port's joystick bits read as
+centred;</li>
+<li>passes the right button, which an Amiga mouse puts on the paddle X
+line, pin 9, to the port's up line, where a 1351's right button would
+be.</li>
+</ul>
+<p>The port leaves Amiga mode as soon as a paddle reading moves away
+from the extremes, or after about six seconds in which all four
+direction lines stay released. Any movement restarts the six seconds.
+Neither an Amiga mouse nor the MEGA65 has a pull-up resistor on pin 9,
+so the core notes that the right button needs one added, either in the
+mouse or in an extension lead (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>mouse_input.vhdl</code>).</p>
+<p>Setting bit 2 or 3 as well makes the core enter Amiga mode straight
+away when translation is switched on while a direction line is active,
+and turns off the core's smoothing of 1351 readings. The Book recommends
+leaving that smoothing, the Input page's "1351 de-jitter" setting, on
+when a 1351 is used (MEGA65 Book, configuration utility, Input
+page).</p>
+<p>Reading <code>$D61B</code> does not return the bits written. The core
+labels the value it returns as a debugging aid, so later cores may
+change it:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Bit</th>
+<th>Meaning when read</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>Port 1's paddle readings are both at an extreme: no 1351 or paddle
+is there</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>Port 1 is in Amiga mode</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>Port 2's paddle readings are both at an extreme</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>Port 2 is in Amiga mode</td>
+</tr>
+<tr class="odd">
+<td>4–7</td>
+<td>Port 2's up, left, down and right lines, 0 while closed</td>
+</tr>
+</tbody>
+</table>
+<p>Bit 1 or 3 tells a program that an Amiga mouse is being translated on
+that port. Bit 0 or 2 says only that no 1351 is present, since a
+joystick or an empty port also leaves the paddle lines at an extreme.
+The configuration utility uses bit 0 this way: it sets bit 0, reads it
+back, and treats a 0 as a 1351 in port 1 (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>mega65_config.s</code>).</p>
+<pre><code>10 M = PEEK($D61B)
+20 IF M AND 2 THEN PRINT &quot;AMIGA MOUSE IN PORT 1&quot;
+30 IF (M AND 1) = 0 THEN PRINT &quot;1351 OR PADDLES IN PORT 1&quot;</code></pre>
+<p>Because Amiga mode hides the direction lines, a joystick that the
+core mistakes for an Amiga mouse goes dead, and stays dead while it is
+being used. A tip on the MEGA65 Filehost describes JOY(1) and JOY(2)
+falling to 0 a second or so into a two-player game, puts it down to the
+Amiga mouse translation, and turns that off with <code>POKE $D61B,
+PEEK($D61B) AND $F0</code> (<a
+href="https://files.mega65.org/html/main.php?ar=34f6e3c5-310e-4e4d-aaad-a0d49d395a8d">MEGA65
+Filehost, "BASIC65 - Tip: support of two joysticks"</a>). Since a read
+does not return the written bits, that POKE copies port 2's direction
+lines into bits 4 to 7. While port 2's joystick is idle those lines read
+1, so it sets bits 6 and 7 and turns off both keyboard filters. Write
+the value outright instead:</p>
+<pre><code>10 POKE $D61B, 0 : REM AMIGA MOUSE TRANSLATION OFF ON BOTH PORTS</code></pre>
+<p>This also leaves the 1351 de-jitter on for both ports. A program
+cannot read back the user's own setting, so it cannot restore it
+exactly when it ends.</p>
 <h2 id="light-pens">Light Pens</h2>
 <p>A light pen detects the moment the display's beam passes under its
 tip, and the video chip latches the position. LPEN(0) and LPEN(1) return
@@ -603,7 +744,9 @@ buttons 2 and 3 from the paddle registers <code>$D620-$D623</code>.</li>
 language reads <code>$D620-$D623</code>, or SID <code>$D419</code> and
 <code>$D41A</code> as on the C64.</li>
 <li><strong>Mice.</strong> Set the mouse type in the configuration
-utility; MOUSE ON, RMOUSE and MOUSE OFF provide a complete driver.</li>
+utility; MOUSE ON, RMOUSE and MOUSE OFF provide a complete driver.
+<code>$D61B</code> controls the core's Amiga mouse translation, and
+<code>POKE $D61B, 0</code> turns it off if it upsets a joystick.</li>
 <li><strong>Light pens.</strong> LPEN and <code>$D013</code>/<code>$D014</code>,
 though the current core latches only touch input.</li>
 <li><strong>Keyboard.</strong> The typing queue at <code>$D610</code>,

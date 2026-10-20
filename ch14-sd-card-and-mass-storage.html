@@ -30,7 +30,7 @@ Storage</title>
 <h1
 id="programming-the-mega65--chapter-14-the-sd-card-and-mass-storage">Programming
 the MEGA65 — Chapter 14: The SD Card and Mass Storage</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>In West's book this chapter covered the C64's cassette tape. The
 MEGA65 has no cassette port. Its everyday mass storage is the SD card,
@@ -127,6 +127,56 @@ that are hard to trace back to the update.</p>
 Commodore 1581 disks. A mounted image behaves exactly like a real disk
 in a drive, so every disk command in Chapter 15 works on it. The MEGA65
 also mounts D64 images of 1541 disks.</p>
+<h3 id="disk-image-formats">Disk image formats</h3>
+<p>A disk image is a copy, block for block, of every sector of a
+floppy disk, held in one file. Each 256-byte sector of the disk is one
+block in the directory's counts:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Image</th>
+<th>Copy of</th>
+<th>File size</th>
+<th>Blocks</th>
+<th>Free when empty</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>D81</td>
+<td>1581 3.5" disk: 80 tracks of 40 sectors</td>
+<td>819,200 bytes</td>
+<td>3,200</td>
+<td>3,160</td>
+</tr>
+<tr class="even">
+<td>D64</td>
+<td>1541 5.25" disk: 35 tracks of 17 to 21 sectors</td>
+<td>174,848 bytes</td>
+<td>683</td>
+<td>664</td>
+</tr>
+</tbody>
+</table>
+<p>In both, one track holds the directory and the BAM, the map of used
+blocks, which is why fewer blocks are free than the disk holds: track 40
+of a D81 and track 18 of a D64 (MEGA65 ROM source, dos.src). The
+Hypervisor tells the two apart by their size when it mounts them
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core,
+src/hyppo/dos.asm</a>).</p>
+<p>D81 is the MEGA65's own format and the one to use for new work. It
+holds almost five times as much as a D64, and can be formatted on the
+MEGA65 with HEADER, or created in the Freezer.</p>
+<p>D64 support is for running and reading existing 1541 software. The
+ROM gained it in 920403, after a first attempt in 920381 was withdrawn,
+and later ROMs fixed several problems with it (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>). The DOS formats only 1581 disks and D81 images, so
+new D64 images have to be made on a PC (MEGA65 ROM source,
+dos.src).</p>
+<p>The Hypervisor also recognises the sizes of D71 images (1571 disks)
+and D65 images, but the DOS in the ROM handles only D81 and D64 (MEGA65
+ROM source, dos.src).</p>
 <h3 id="managed-drives-and-unit-numbers">Managed drives and unit
 numbers</h3>
 <p>The MEGA65 provides two managed drives alongside anything on the IEC
@@ -164,6 +214,44 @@ MOUNT &quot;GAMES.D81&quot;, U9</code></pre>
 <p>The Freezer can also create a new, formatted D81 image: choose the
 first managed drive and select NEW D81 DD IMAGE at the top of the file
 list (MEGA65 Book, pp. 6-5, 6-6).</p>
+<h3 id="changing-disks-from-a-program">Changing disks from a
+program</h3>
+<p>MOUNT works in a program as well as in direct mode, so software that
+fills more than one image can change disks itself, without sending the
+user to the Freezer (MEGA65 Book, p. B-171):</p>
+<pre><code>500 MOUNT &quot;PART2.D81&quot;        : REM PUT THE SECOND IMAGE IN UNIT 8
+510 DOPEN#2, &quot;MAP&quot;
+520 IF DS THEN PRINT DS$ : STOP</code></pre>
+<p>MOUNT's U argument names the managed drive, always as U8 or U9, even
+when SET DISK or the Freezer has given the drive another unit number.
+Several more commands help a program manage its drives:</p>
+<ul>
+<li><strong>MOUNT OFF</strong> (ROM 920414) empties both managed
+drives, like the Freezer's "no disk" setting, while MOUNT with no file
+name gives unit 8 back to the internal drive. From ROM 920415 both take
+a U argument to act on one drive only, as in <code>MOUNT OFF
+U9</code>.</li>
+<li><strong>Remembered mounts.</strong> MOUNT remembers the images it
+mounted and mounts them again after the reset button is pressed. From
+ROM 920414, MOUNT with no file name, or MOUNT OFF, makes it forget them,
+so the configured default image is mounted after the next reset. Images
+mounted from the Freezer are not remembered in this way (MEGA65 Book,
+p. B-171).</li>
+<li><strong>SET DISK old TO new</strong> changes a drive's unit number
+until the next reset, as the Freezer's 8 and 9 keys do. It arrived in
+ROM 920380.</li>
+<li><strong>RDISK(1)</strong> returns the unit number of the most recent
+disk operation (ROM 920414). At the start of a program, that is the
+unit the program was loaded from, so the program can load its data
+files from the same drive, whichever one the user chose:</li>
+</ul>
+<pre><code>10 DU = RDISK(1)                 : REM THE UNIT THIS PROGRAM CAME FROM
+20 DOPEN#2, &quot;SETTINGS&quot;, U(DU)</code></pre>
+<p>The ROM versions are from the <a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>. ROM 920413, in release 0.97, has SET DISK but not
+MOUNT OFF or RDISK; Chapter 11 shows how a program can check the version it is
+running on.</p>
 <h3 id="the-sd-card-as-unit-12">The SD card as unit 12</h3>
 <p>A few BASIC commands can reach files on the card directly, outside
 any disk image, by using unit 12 (MEGA65 Book, pp. 6-10, 6-11):</p>
@@ -299,7 +387,11 @@ MEGA65's SD Card Utility, which creates a hidden configuration partition
 and a FAT32 partition.</li>
 <li><strong>Disk images.</strong> D81 and D64 images are mounted from
 the Freezer or with MOUNT to two managed drives, units 8 or 10 and 9 or
-11. The Freezer can create new images.</li>
+11. The Freezer can create new images. D81 holds 3,160 free blocks,
+D64 664; the DOS cannot format D64 images.</li>
+<li><strong>Changing disks.</strong> Programs can call MOUNT and MOUNT
+OFF, renumber drives with SET DISK, and find their own unit with
+RDISK(1).</li>
 <li><strong>Unit 12.</strong> DIR, DLOAD, LOAD, TYPE and CHDIR can reach
 files on the card directly; DSAVE cannot save to it.</li>
 <li><strong>Machine language.</strong> Hypervisor services load, read

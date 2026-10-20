@@ -30,7 +30,7 @@ Guide</title>
 <h1
 id="programming-the-mega65--chapter-3-basic-65-reference-guide">Programming
 the MEGA65 — Chapter 3: BASIC 65 Reference Guide</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every keyword in BASIC 65: commands,
 functions, reserved variables and secondary keywords. It is meant to be
@@ -686,9 +686,24 @@ source, CLR). This replaces the C64's <code>OPEN 15,8,15 : INPUT#15,
 E, E$</code>:</p>
 <pre><code>100 DOPEN#1, &quot;DATA&quot;
 110 IF DS &lt;&gt; 0 THEN PRINT &quot;COULD NOT OPEN FILE DATA&quot; : STOP</code></pre>
+<p>Not every disk command clears the kept message. OPEN, DOPEN, MERGE
+and <code>@</code> do, but in a running program HEADER, SCRATCH, LOCK,
+UNLOCK, RENAME, COPY, CONCAT, BACKUP, COLLECT, DCLEAR, RECORD and MKDIR
+send their command without reading the drive or clearing the message.
+If DS was read before one of these commands, DS and <code>DS$</code>
+still give the old message afterwards. In direct mode these commands
+read the drive themselves, so the message is always current (MEGA65 ROM
+source, trans). A program that checks the result of one of them should
+use <code>CLR DS</code> first:</p>
+<pre><code>100 CLR DS : SCRATCH &quot;OLDFILE&quot;
+110 IF DS &gt;= 20 THEN PRINT DS$ : STOP</code></pre>
+<p>Chapter 15 has more on <a
+href="ch15-using-the-disk-drive.html#the-command-channel">the command
+channel</a>.</p>
 <p>DS is not 0 for every message that matters. Some status codes below
 20 report success with information, such as <code>01, FILES
-SCRATCHED</code> after SCRATCH, so <code>IF DS THEN</code> treats them as
+SCRATCHED</code> after SCRATCH (read after <code>CLR DS</code>, as
+above), so <code>IF DS THEN</code> treats them as
 errors. Test <code>DS &gt;= 20</code> when the information codes should
 pass.</p>
 <p>ST gives the status of the last input or output operation on a
@@ -1513,6 +1528,90 @@ marks a digit position and <code>.</code> the decimal point, so columns
 of figures line up.</p>
 <p>Format: <code>PRINT[# channel,] USING format; argument</code></p>
 <pre><code>10 PRINT USING &quot;####.##&quot;; 3.14159</code></pre>
+<p>Each format applies to one argument. More can follow in the same
+statement, as in <code>PRINT USING "##.##"; A, USING "%4X"; B</code>.
+The format string can hold these characters (MEGA65 Book, p. B-200;
+MEGA65 ROM source, PRINT USING):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Pattern</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>#</code></td>
+<td>One character position. A positive number needs no position for
+its sign, a negative one does.</td>
+</tr>
+<tr class="even">
+<td><code>.</code></td>
+<td>The decimal point. The value is rounded to the number of
+<code>#</code> after it.</td>
+</tr>
+<tr class="odd">
+<td><code>=</code> or <code>&gt;</code> first</td>
+<td>For a string: centre it, or right-justify it, in the
+<code>#</code> positions. Otherwise a string is left-justified and cut
+to fit.</td>
+</tr>
+<tr class="even">
+<td><code>%wD</code></td>
+<td>A whole number in w positions, rounded.</td>
+</tr>
+<tr class="odd">
+<td><code>%w.pF</code></td>
+<td>A number with p decimal places: w − p positions before the point,
+then the point, then p digits.</td>
+</tr>
+<tr class="even">
+<td><code>%wX</code></td>
+<td>The whole number as w hexadecimal digits, padded with zeros.</td>
+</tr>
+<tr class="odd">
+<td><code>%0w…</code></td>
+<td>A 0 before the width pads <code>D</code> and <code>F</code> with
+zeros instead of spaces, unless the value is negative.</td>
+</tr>
+<tr class="even">
+<td>anything else</td>
+<td>Printed as it is, such as a comma, a <code>$</code> or a
+word.</td>
+</tr>
+</tbody>
+</table>
+<p>A number too large for its <code>#</code> positions prints as
+asterisks. The <code>%</code> patterns look like C's
+<code>printf</code>, but the width w does not count the decimal point:
+<code>%7.2F</code> takes eight characters, not seven, and the MEGA65
+Book's own <code>%6.4F</code> example prints
+<code> 1.4142</code> with a leading space. The width must be one or two
+digits and larger than the number of decimal places; a pattern such as
+<code>%123D</code> is printed as text, and <code>%2.2F</code> prints
+garbage. A
+<code>%wX</code> value too large for w digits is not replaced by
+asterisks: only its last w digits are printed. Negative numbers print as
+32-bit two's complement, so <code>%8X</code> of -1 is
+<code>FFFFFFFF</code>.</p>
+<pre><code>10 PRINT USING &quot;%7.2F&quot;; 3.14159
+20 PRINT USING &quot;%05D&quot;; 42.7
+30 PRINT USING &quot;ADDRESS $%4X&quot;; 49152
+40 PRINT USING &quot;###,###.#&quot;; 1234
+50 PRINT USING &quot;&gt;######&quot;; &quot;ABC&quot;</code></pre>
+<pre><code>    3.14
+00043
+ADDRESS $C000
+  1,234.0
+   ABC</code></pre>
+<p>The <code>%</code> patterns arrived in ROMs 920142 and 920143 in
+March 2021, before the first release package (<a
+href="https://www.m-e-g-a.org/mega65-rom-history/">MEGA65 ROM
+history</a>). Zero padding with <code>%0w</code> needs ROM 920404 or
+later, and before ROM 920409 USING could not follow a semicolon or
+comma in a PRINT statement (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>).</p>
 <h4 id="spc-tab">SPC, TAB</h4>
 <p>Tokens <code>$A6</code>, <code>$A3</code> · Book pp. B-244, B-260</p>
 <p>Used inside PRINT: SPC moves the cursor right by a number of columns,
@@ -1676,6 +1775,30 @@ Multiply and use INT for whole numbers in a range.</p>
 <p>Format: <code>RND(type)</code></p>
 <pre><code>10 DEF FN DI(X) = INT(RND(0) * 6) + 1 : REM DIE ROLL
 20 FOR I = 1 TO 10 : PRINT FN DI(0); : NEXT</code></pre>
+<p>The type selects how the number is made (MEGA65 Book, p. B-218).
+<code>RND(1)</code>, or any positive type, gives the next number in the
+sequence. A negative type starts a new sequence from that value, so
+the same seed always gives the same numbers. <code>RND(0)</code> makes a
+new seed from the CIA clock, the current raster line and the
+time-of-day seconds; BASIC does the same at start-up, so the sequence
+differs every time the machine is switched on (MEGA65 ROM source,
+RND).</p>
+<p>RND is calculated in software and does not use the MEGA65's
+hardware random number generator. That generator is read at
+<code>$D7EF</code>, which returns a random byte from 0 to 255 made from
+the jitter of ring oscillators inside the FPGA, not from a formula, so
+it cannot be seeded or repeated. Reading <code>$D7EF</code> starts the
+next byte, which takes a few hundred clock cycles; until it is ready,
+bit 7 of <code>$D7FE</code> is 1 and <code>$D7EF</code> returns the
+previous byte again. BASIC is too slow to notice, but a machine code
+loop should test that bit. The generator first appeared in release
+0.96 cores (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>), so on older cores <code>$D7EF</code> does not
+return random values. To roll a die from it without favouring any
+face, take three bits and try again when they are 6 or 7:</p>
+<pre><code>10 FOR I = 1 TO 10
+20 DO : R = PEEK($D7EF) AND 7 : LOOP UNTIL R &lt; 6
+30 PRINT R + 1; : NEXT</code></pre>
 <h4 id="and-or-xor-not">AND, OR, XOR, NOT</h4>
 <p>Tokens <code>$AF</code>, <code>$B0</code>, <code>$E9</code>,
 <code>$A8</code> · Book pp. B-19, B-183, B-286, B-179</p>
@@ -2029,8 +2152,9 @@ off.</p>
 <p>DS and <code>DS$</code> give the status of the last disk operation as
 a number and as text; ST gives the status of the last I/O operation, and
 is non-zero at the end of a file. DS and <code>DS$</code> keep their
-values until the next disk operation, and <code>CLR DS</code> clears
-them; <a href="#disk-and-device-errors">Disk and device errors</a>, above, has the details.</p>
+values until a disk command clears them, and <code>CLR DS</code> clears
+them too. In a program, use <code>CLR DS</code> before SCRATCH, RENAME,
+COPY and the other housekeeping commands, which don't; <a href="#disk-and-device-errors">Disk and device errors</a>, above, has the details.</p>
 <p>Format: <code>DS</code>, <code>DS$</code>, <code>ST</code></p>
 <pre><code>10 DOPEN#1, &quot;DATA&quot;
 20 IF DS &lt;&gt; 0 THEN PRINT DS$ : STOP</code></pre>
@@ -2291,7 +2415,10 @@ B-221</p>
 <h4 id="tempo">TEMPO</h4>
 <p>Token <code>$FE $05</code> · Book p. B-262</p>
 <p>Sets the speed of PLAY; a whole note lasts 24 divided by the tempo,
-in seconds.</p>
+in seconds. The speed is 1 to 255, and the default is 12. A quarter
+note lasts 6 divided by the speed, so the speed times 10 is the number
+of quarter notes a minute: the default plays at 120. Chapter 13 has a
+table.</p>
 <p>Format: <code>TEMPO speed</code></p>
 <pre><code>TEMPO 24 : REM WHOLE NOTE = 1 SECOND</code></pre>
 <h4 id="envelope">ENVELOPE</h4>

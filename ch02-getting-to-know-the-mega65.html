@@ -30,7 +30,7 @@ MEGA65</title>
 <h1
 id="programming-the-mega65--chapter-2-getting-to-know-the-mega65">Programming
 the MEGA65 — Chapter 2: Getting to Know the MEGA65</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Before programming any computer, it pays to know its everyday tools
 well. On the MEGA65 those tools are richer than on a C64: the keyboard
@@ -140,7 +140,8 @@ a second, opens the Freezer</td>
 </tr>
 <tr class="even">
 <td>NO SCROLL</td>
-<td>Pauses a listing until another key is pressed</td>
+<td>Pauses a listing until another key is pressed; held at power-on,
+opens the flash and core menu</td>
 </tr>
 <tr class="odd">
 <td>HELP</td>
@@ -203,18 +204,6 @@ program runs</td>
 <td>Hold RESTORE for a second</td>
 <td>Open the Freezer</td>
 </tr>
-<tr class="odd">
-<td>Hold RUN/STOP, press reset</td>
-<td>Start in the machine-language monitor</td>
-</tr>
-<tr class="even">
-<td>Hold MEGA, press reset or switch on</td>
-<td>Start in C64 mode</td>
-</tr>
-<tr class="odd">
-<td>Hold ALT, switch on</td>
-<td>Open the utility menu</td>
-</tr>
 </tbody>
 </table>
 <p>Some programs take over RUN/STOP and RESTORE, so these combinations
@@ -222,6 +211,76 @@ do not always work. The Freezer is started by the Hypervisor, which
 keeps it reachable even then (MEGA65 Book, Hypervisor services
 appendix, freeze services). The complete list of control and
 MEGA codes is in the Book (MEGA65 Book, p. E-3).</p>
+<h3 id="keys-held-at-start-up">Keys held at start-up</h3>
+<p>A key held down while the machine starts changes what it starts
+into. The Hypervisor checks some keys before the ROM is loaded, and the
+ROM checks others:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Hold</th>
+<th>When</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NO SCROLL</td>
+<td>Switching on</td>
+<td>Open the flash and core menu, to start or install a core</td>
+</tr>
+<tr class="even">
+<td>NO SCROLL and a digit</td>
+<td>Switching on</td>
+<td>Start the core in that flash slot straight away</td>
+</tr>
+<tr class="odd">
+<td>ALT, or both SHIFT keys</td>
+<td>Switching on</td>
+<td>Open the utility menu: configuration, SD card formatting and the
+keyboard test</td>
+</tr>
+<tr class="even">
+<td>CTRL</td>
+<td>Switching on or reset</td>
+<td>Pause on the Hypervisor's start-up screen until CTRL is
+released</td>
+</tr>
+<tr class="odd">
+<td>A digit, 0-9</td>
+<td>Switching on or reset</td>
+<td>Load MEGA65<em>n</em>.ROM from the SD card instead of MEGA65.ROM</td>
+</tr>
+<tr class="even">
+<td>RUN/STOP</td>
+<td>Switching on or reset</td>
+<td>Start in the machine-language monitor; leaving it with X skips
+AUTOBOOT.C65</td>
+</tr>
+<tr class="odd">
+<td>MEGA</td>
+<td>Switching on or reset</td>
+<td>Start in C64 mode</td>
+</tr>
+</tbody>
+</table>
+<p>The flash and utility menus appear only when the machine is switched
+on, not after a reset: from the second start onwards, the Hypervisor's
+screen says "POWER OFF/ON FOR FLASH OR UTIL MENU" (MEGA65 Book, pp. 3-6,
+5-7, 5-8, I-6, I-8; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo <code>main.asm</code>). Holding
+NO SCROLL and a digit works because the Hypervisor sees only NO SCROLL
+and starts the flash menu, which then reads the digit as if it had been
+typed in the menu (<a href="https://files.mega65.org/html/main.php?ar=0bfae729-22ca-4d17-9e95-d32346b94400">MEGA65 Filehost, "Quick Core Slot Boot"</a>; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, flash menu <code>megaflash.c</code>).
+Release NO SCROLL once the core starts. A program can switch cores too,
+as Chapter 11 explains (see <a
+href="ch11-mega65-rom-guide.html#starting-another-core">Starting another
+core</a>).</p>
+<p>RUN/STOP and MEGA are checked by the ROM. Leaving the monitor with X
+skips AUTOBOOT.C65 from ROM 920288 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).
+The ROM ignores both keys when a MEGA65 cartridge is plugged in, and
+starts the cartridge instead (MEGA65 ROM source, reset routine). The
+digit keys make it easy to keep a second ROM version on the SD card,
+such as a beta ROM, and pick it at start-up.</p>
 <h2 id="the-screen-editor">The Screen Editor</h2>
 <p>The screen editor is the part of the ROM that handles typing. Like
 the C64's, it is a full-screen editor: move the

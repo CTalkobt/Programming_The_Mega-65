@@ -8,4 +8,7 @@ table{border-collapse:collapse;display:block;overflow-x:auto;margin:1rem 0}
 th,td{border:1px solid #ccc;padding:.3rem .6rem;vertical-align:top;text-align:left}
 nav.chapnav{font-family:Helvetica,Arial,sans-serif;font-size:.9rem;display:flex;justify-content:space-between;margin:1rem 0;border-top:1px solid #ccc;padding-top:.5rem}
 ol.appendices{list-style:none;padding-left:1.5rem}
+ul.bookindex{list-style:none;padding-left:0;columns:2 20rem;column-gap:2rem}
+ul.bookindex li{break-inside:avoid;margin-bottom:.15rem}
 p.version{font-family:Helvetica,Arial,sans-serif;font-size:.85rem;color:#666;border-top:1px solid #ccc;padding-top:.5rem;margin-top:2rem}
+@media print{@page{margin:2cm 1.8cm}body{max-width:none;margin:0;padding:0;font-size:11pt;color:#000!important;background:#fff!important}a{color:#000!important;text-decoration:none}nav.chapnav,p.version,script{display:none}h1,h2,h3,h4{break-after:avoid;page-break-after:avoid}h1{font-size:20pt}pre{white-space:pre-wrap;overflow:visible;background:none!important;border:1px solid #999;break-inside:avoid;page-break-inside:avoid}code{background:none!important}table{display:table;overflow:visible;width:100%}thead{display:table-header-group}tr,img{break-inside:avoid;page-break-inside:avoid}th,td{border-color:#999!important}p,li{orphans:3;widows:3}}

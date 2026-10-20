@@ -30,7 +30,7 @@ BASIC 65</title>
 <h1
 id="programming-the-mega65--chapter-4-effective-programming-in-basic-65">Programming
 the MEGA65 — Chapter 4: Effective Programming in BASIC 65</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 3 described each keyword. This chapter is about putting them
 together: how to write BASIC 65 programs that are easy to read, easy to
@@ -262,7 +262,12 @@ outside the range, and offers another game:</p>
 <p>RND(0) seeds from the system clock, so each game has a different
 number (MEGA65 Book, p. B-218). To test with the same number every time,
 seed with a negative number first, such as <code>X = RND(-1)</code>, and
-use <code>RND(1)</code> afterwards.</p>
+use <code>RND(1)</code> afterwards. For numbers that no seed can repeat,
+release 0.96 and later cores also have a hardware random number
+generator: <code>PEEK($D7EF)</code> returns a random byte from 0 to 255
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). Chapter 3's RND entry shows how to roll a die
+with it.</p>
 <h3 id="structured-programming">Structured programming</h3>
 <p>BASIC 65 has the statements that make a program's structure visible
 in its listing. Using them consistently is most of what program design
@@ -715,9 +720,13 @@ and prices line up in columns:</p>
 CAKE           12.26
 TEA          1234.50</code></pre>
 <p>PRINT USING also takes C-style patterns, such as
-<code>"%7.2F"</code> for a number seven characters wide with two
-decimal places, and <code>"%4X"</code> for hexadecimal. A value too
-large for its pattern is printed as asterisks.</p>
+<code>"%5D"</code> for a whole number five characters wide and
+<code>"%4X"</code> for four hexadecimal digits. Unlike C, the width of
+<code>"%7.2F"</code> does not count the decimal point: it gives five
+positions before the point and two after, eight characters in all, the
+same as <code>"#####.##"</code>. A value too large for its pattern is
+printed as asterisks, except in a <code>%X</code> pattern, which keeps
+only the last digits. Chapter 3 lists all the patterns.</p>
 <h3 id="calculations">Calculations</h3>
 <p>To round a number to two decimal places for later use, rather than
 just for printing, multiply, add a half, take INT and divide:</p>
