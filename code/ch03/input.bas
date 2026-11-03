@@ -1,0 +1,1 @@
+10 INPUT "NAME, AGE"; NA$, AG%

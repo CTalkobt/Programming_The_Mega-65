@@ -23,12 +23,14 @@
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-11-mega65-rom-guide">Programming
 the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch11/ch11.d81">ch11.d81</a> holds this chapter's 2 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
 DOS, the monitor, the character sets, and a complete set of C64 ROMs for
@@ -263,7 +265,7 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 is the quickest way to match a core against the builds listed on the
 Filehost. The registers at <code>$D62A</code>-<code>$D62F</code> give the
 same information for the keyboard's firmware.</p>
-<pre><code>10 BANK 128
+<pre data-download="code/ch11/identifying-the-model-and-core.bas code/ch11/identifying-the-model-and-core.prg"><code>10 BANK 128
 20 PRINT &quot;MODEL ID: &quot;;HEX$(PEEK($D629))
 30 D=WPEEK($D630):Y=2020+INT((D-1)/366):N=D-(Y-2020)*366
 40 PRINT &quot;CORE BUILT ON DAY&quot;;N;&quot;OF&quot;;Y
@@ -286,7 +288,7 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>mf_utility.c</code>). Slot 1, for example, is at
 <code>$801000</code>, written as <code>$10</code>, <code>$80</code>,
 <code>$00</code>, <code>$00</code>:</p>
-<pre><code>10 S=1 : REM SLOT NUMBER
+<pre data-download="code/ch11/starting-another-core.bas code/ch11/starting-another-core.prg"><code>10 S=1 : REM SLOT NUMBER
 20 BANK 128
 30 POKE $D6C8,$10,(S AND 1)*128,INT(S/2),0
 40 POKE $D6CF,$42

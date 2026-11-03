@@ -24,6 +24,7 @@ Drive</title>
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch14-sd-card-and-mass-storage.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch16-control-ports.html">Next &rarr;</a></span></nav>
@@ -31,6 +32,7 @@ Drive</title>
 id="programming-the-mega65--chapter-15-using-the-disk-drive">Programming
 the MEGA65 — Chapter 15: Using the Disk Drive</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch15/ch15.d81">ch15.d81</a> holds this chapter's 9 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Most of this chapter applies equally to a disk image on the SD card,
 the MEGA65's internal 3.5" drive and a Commodore drive on the IEC port.
@@ -124,7 +126,7 @@ drives)</td>
 <p>A sequential file is written with PRINT# and read back with INPUT# or
 LINE INPUT#, in the same order. Separate fields with commas, or write
 each on its own line, so INPUT# can tell where one ends:</p>
-<pre><code>10 DOPEN#2, &quot;SCORES&quot;, W
+<pre data-download="code/ch15/sequential-files.bas code/ch15/sequential-files.prg"><code>10 DOPEN#2, &quot;SCORES&quot;, W
 20 IF DS THEN PRINT DS$ : STOP
 30 FOR I = 1 TO 3 : READ N$, S : PRINT#2, N$ &quot;,&quot; S : NEXT
 40 DCLOSE#2
@@ -157,7 +159,7 @@ FOUND</code> the first time, before the file exists, so the program
 then creates it with DOPEN and W. A failed APPEND# or DOPEN still leaves
 its channel number in use, so DCLOSE it before opening it again, or the
 second open stops with <code>?FILE OPEN ERROR</code>:</p>
-<pre><code>10 LINE INPUT &quot;NOTE: &quot;; N$
+<pre data-download="code/ch15/example-a-notes-file.bas code/ch15/example-a-notes-file.prg"><code>10 LINE INPUT &quot;NOTE: &quot;; N$
 20 APPEND#2, &quot;NOTES&quot;
 30 IF DS = 62 THEN DCLOSE#2 : DOPEN#2, &quot;NOTES&quot;, W
 40 IF DS THEN PRINT DS$ : DCLOSE#2 : END
@@ -178,7 +180,7 @@ the program keeps the empty table it has just made. Saving uses
 <code>@</code> to replace the old file in one step, so it is meant for
 the internal drive and disk images; on an IEC drive, scratch the old
 file first:</p>
-<pre><code>10 DIM N$(9), S(9)
+<pre data-download="code/ch15/example-a-high-score-table.bas code/ch15/example-a-high-score-table.prg"><code>10 DIM N$(9), S(9)
 20 FOR I = 0 TO 9 : N$(I) = &quot;NOBODY&quot; : S(I) = 0 : NEXT
 30 DOPEN#2, &quot;HISCORES&quot;
 40 IF DS = 0 THEN FOR I = 0 TO 9 : INPUT#2, N$(I), S(I) : NEXT
@@ -220,7 +222,7 @@ listing, and so that a pattern can pick them out: <code>DIR
 <code>,U</code> to the name to create a USR file. With OPEN, the type
 letter goes before the mode letter, as in <code>,S,W</code> for a
 sequential file (MEGA65 Book, DOPEN):</p>
-<pre><code>10 DOPEN#2, &quot;LEVELS,U&quot;, W
+<pre data-download="code/ch15/usr-files.bas code/ch15/usr-files.prg"><code>10 DOPEN#2, &quot;LEVELS,U&quot;, W
 20 PRINT#2, &quot;LEVEL ONE&quot; : DCLOSE#2
 30 APPEND#2, &quot;LEVELS,U&quot;
 40 PRINT#2, &quot;LEVEL TWO&quot; : DCLOSE#2
@@ -234,7 +236,7 @@ sequential file (MEGA65 Book, DOPEN):</p>
 L when the file is first created. RECORD moves to any record directly,
 which suits indexes, high-score tables and small databases where a
 sequential file would have to be read from the start:</p>
-<pre><code>10 DOPEN#3, &quot;PLAYERS&quot;, L20
+<pre data-download="code/ch15/relative-files.bas code/ch15/relative-files.prg"><code>10 DOPEN#3, &quot;PLAYERS&quot;, L20
 20 RECORD#3, 5 : PRINT#3, &quot;PLAYER FIVE&quot;
 30 RECORD#3, 2 : PRINT#3, &quot;PLAYER TWO&quot;
 40 RECORD#3, 5 : INPUT#3, A$ : PRINT A$
@@ -249,7 +251,7 @@ quantity. Each record holds a name and a number separated by a comma,
 so INPUT# can read them back as two fields. A length of 24 leaves room
 for a name of up to 16 characters, the comma, a quantity of up to six
 characters and the carriage return:</p>
-<pre><code>10 DOPEN#3, &quot;STOCK&quot;, L24
+<pre data-download="code/ch15/example-a-stock-list.bas code/ch15/example-a-stock-list.prg"><code>10 DOPEN#3, &quot;STOCK&quot;, L24
 20 IF DS THEN PRINT DS$ : STOP
 30 FOR R = 1 TO 4 : READ N$, Q
 40 RECORD#3, R : PRINT#3, N$ &quot;,&quot; Q
@@ -285,7 +287,7 @@ line starts with a two-byte link and a two-byte line number, which holds
 the file's size in blocks, then the text of the line and a zero byte.
 The first line is the disk name and ID, and the last is BLOCKS FREE
 (MEGA65 ROM source, dos.src). This program reads it into arrays:</p>
-<pre><code>10 DIM N$(143), T$(143), B(143) : C = -1
+<pre data-download="code/ch15/reading-the-directory-from-a-program.bas code/ch15/reading-the-directory-from-a-program.prg"><code>10 DIM N$(143), T$(143), B(143) : C = -1
 20 OPEN 1, 8, 0, &quot;$&quot;
 30 GET#1, A$, A$                    : REM SKIP THE LOAD ADDRESS
 40 DO
@@ -576,7 +578,7 @@ BASIC 65's DISK command sends a string, as in <code>DISK "V0"</code>,
 and DS and <code>DS$</code> read the status (MEGA65 Book, p. B-73). The
 C64 way also works, and is the way to send a command to a drive that
 has no BASIC 65 keyword for it:</p>
-<pre><code>10 OPEN 15, 8, 15
+<pre data-download="code/ch15/the-command-channel.bas code/ch15/the-command-channel.prg"><code>10 OPEN 15, 8, 15
 20 PRINT#15, &quot;R0:SCORES.OLD=0:SCORES&quot;
 30 INPUT#15, E, E$, T, S
 40 PRINT E; E$; T; S
@@ -589,7 +591,7 @@ status message it read, and the housekeeping commands do not clear it
 when they run in a program (MEGA65 ROM source, trans), so DS can still
 show the result of an earlier command. Give <code>CLR DS</code> just
 before the command, and the next use of DS reads the drive afresh:</p>
-<pre><code>10 CLR DS : SCRATCH &quot;TEMP*&quot;
+<pre data-download="code/ch15/the-command-channel-2.bas code/ch15/the-command-channel-2.prg"><code>10 CLR DS : SCRATCH &quot;TEMP*&quot;
 20 PRINT DS$</code></pre>
 <h2 id="booting-disks">Booting Disks</h2>
 <p>There are three ways to start software from a disk (MEGA65 Book, pp.

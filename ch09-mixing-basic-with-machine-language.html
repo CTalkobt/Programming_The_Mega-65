@@ -24,6 +24,7 @@ Language</title>
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch08-ml-methods-specific-to-the-mega65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch10-vocabulary-of-the-45gs02.html">Next &rarr;</a></span></nav>
@@ -31,6 +32,7 @@ Language</title>
 id="programming-the-mega65--chapter-9-mixing-basic-with-machine-language">Programming
 the MEGA65 — Chapter 9: Mixing BASIC with Machine Language</h1>
 <p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch09/ch09.d81">ch09.d81</a> holds this chapter's 5 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>A MEGA65 program does not have to be written entirely in one
 language. BASIC 65 is excellent at the parts of a program that change
@@ -331,7 +333,7 @@ them in memory before calling them. There are three common methods.</p>
 <p>BLOAD loads a file into memory without disturbing the BASIC program
 in memory. With B and P it loads to a given bank and address; without P
 it uses the load address stored in the file:</p>
-<pre><code>10 BLOAD &quot;SPRITES.BIN&quot;, B4, P8192   : REM TO $42000
+<pre data-download="code/ch09/bload.bas code/ch09/bload.prg"><code>10 BLOAD &quot;SPRITES.BIN&quot;, B4, P8192   : REM TO $42000
 20 BLOAD &quot;HELPERS&quot;                  : REM TO ITS OWN ADDRESS</code></pre>
 <p>Because BLOAD does not restart the program, it can be called from
 inside a running program, which is the usual way to load overlays or
@@ -356,7 +358,7 @@ and a B bank cannot.</p>
 <p>For a short routine in a printed listing, DATA statements remain the
 most portable method: the whole program is one listing that can be typed
 in.</p>
-<pre><code>10 FOR I=0 TO 8
+<pre data-download="code/ch09/data-loaders.bas code/ch09/data-loaders.prg"><code>10 FOR I=0 TO 8
 20 READ B : POKE $1600+I, B : C=C+B
 30 NEXT
 40 IF C&lt;&gt;1396 THEN PRINT &quot;DATA ERROR&quot; : STOP
@@ -577,7 +579,7 @@ bytes at <code>$02F8</code>, low byte first, read in the system bank;
 the Book's POKE entry sets it to a routine at <code>$1800</code> (MEGA65
 Book, p. B-194), which is safe only in a program that uses no graphics
 commands:</p>
-<pre><code>10 BANK 128
+<pre data-download="code/ch09/the-usr-function.bas code/ch09/the-usr-function.prg"><code>10 BANK 128
 20 POKE $02F8, 0, 24                   : REM USR VECTOR = $1800</code></pre>
 <p>POKE writes successive bytes from a list, so one statement sets both
 halves of the vector; WPOKE <code>$02F8,$1800</code> does the same.</p>
@@ -642,7 +644,7 @@ guess which zero-page locations BASIC 65 leaves free, the routine points
 B at a page of its own, uses it freely, and sets B back to zero before
 returning.</p>
 <h3 id="the-machine-language-routine">The machine-language routine</h3>
-<pre><code>        * = $1600
+<pre data-download="code/ch09/sumbytes.asm code/ch09/sumbytes.prg"><code>        * = $1600
 count   .word 0         ; set by BASIC
 result  .byte 0, 0, 0   ; returned to BASIC
 
@@ -692,7 +694,7 @@ of normal size; a routine meant for very large arrays would advance all
 four bytes, for instance with LDQ, INQ and STQ, saving Z around them
 since it is part of Q.</p>
 <h3 id="the-basic-program">The BASIC program</h3>
-<pre><code>10 BANK 0
+<pre data-download="code/ch09/the-basic-program.bas code/ch09/the-basic-program.prg"><code>10 BANK 0
 20 BLOAD &quot;SUMBYTES&quot;, B0, P5632       : REM LOAD TO $1600
 30 DIM D&amp;(999)
 40 FOR I=0 TO 999 : D&amp;(I)=INT(RND(1)*256) : NEXT

@@ -1,0 +1,4 @@
+10 I = 0
+20 DO WHILE I < 3 : PRINT I; : I = I + 1 : LOOP
+30 DO : I = I - 1 : IF I = 0 THEN EXIT
+40 LOOP : PRINT "DONE"

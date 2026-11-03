@@ -24,6 +24,7 @@ Storage</title>
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch13-sound.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch15-using-the-disk-drive.html">Next &rarr;</a></span></nav>
@@ -31,6 +32,7 @@ Storage</title>
 id="programming-the-mega65--chapter-14-the-sd-card-and-mass-storage">Programming
 the MEGA65 — Chapter 14: The SD Card and Mass Storage</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch14/ch14.d81">ch14.d81</a> holds this chapter's 2 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>In West's book this chapter covered the C64's cassette tape. The
 MEGA65 has no cassette port. Its everyday mass storage is the SD card,
@@ -245,7 +247,7 @@ disk operation (ROM 920414). At the start of a program, that is the
 unit the program was loaded from, so the program can load its data
 files from the same drive, whichever one the user chose:</li>
 </ul>
-<pre><code>10 DU = RDISK(1)                 : REM THE UNIT THIS PROGRAM CAME FROM
+<pre data-download="code/ch14/changing-disks-from-a-program.bas code/ch14/changing-disks-from-a-program.prg"><code>10 DU = RDISK(1)                 : REM THE UNIT THIS PROGRAM CAME FROM
 20 DOPEN#2, &quot;SETTINGS&quot;, U(DU)</code></pre>
 <p>The ROM versions are from the <a
 href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
@@ -255,7 +257,7 @@ running on.</p>
 <h3 id="the-sd-card-as-unit-12">The SD card as unit 12</h3>
 <p>A few BASIC commands can reach files on the card directly, outside
 any disk image, by using unit 12 (MEGA65 Book, pp. 6-10, 6-11):</p>
-<pre><code>10 DIR U12, P                  : REM LIST THE CARD, A PAGE AT A TIME
+<pre data-download="code/ch14/the-sd-card-as-unit-12.bas code/ch14/the-sd-card-as-unit-12.prg"><code>10 DIR U12, P                  : REM LIST THE CARD, A PAGE AT A TIME
 20 DLOAD &quot;MYPROGRAM.PRG&quot;, U12  : REM NOTE THE .PRG SUFFIX
 30 CHDIR &quot;DEMOS&quot;, U12          : REM CHANGE THE CURRENT DIRECTORY
 40 CHDIR &quot;..&quot;, U12             : REM BACK TO THE PARENT</code></pre>

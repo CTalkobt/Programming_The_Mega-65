@@ -1,0 +1,7 @@
+10 PLAY "O4T0IC E G O5C O4G E L"
+20 POKE $1600, $EE, $20, $D0, $60     : REM INC $D020 : RTS
+30 FOR I=1 TO 50
+40 SYS TO $1600, I(1)                 : REM MUSIC KEEPS PLAYING
+50 SLEEP 0.1
+60 NEXT
+70 PLAY                               : REM STOP THE MUSIC

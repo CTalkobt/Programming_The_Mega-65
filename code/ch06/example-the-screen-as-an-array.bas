@@ -1,0 +1,4 @@
+10 FOR X=0 TO 79
+20 T@&(X,12)=160                      : REM SCREEN CODE 160: SOLID BLOCK
+30 C@&(X,12)=X AND 15                 : REM COLOURS 0-15 IN TURN
+40 NEXT

@@ -1,0 +1,2 @@
+10 CURSOR ON, 20, 10 : PRINT "[HERE]";
+20 RCURSOR X, Y : PRINT " COL:"; X; " ROW:"; Y

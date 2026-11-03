@@ -1,0 +1,2 @@
+10 IF V < 0 THEN END
+20 PRINT V

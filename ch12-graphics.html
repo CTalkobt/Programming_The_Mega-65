@@ -23,12 +23,14 @@
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-12-graphics">Programming the
 MEGA65 — Chapter 12: Graphics</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 3, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch12/ch12.d81">ch12.d81</a> holds this chapter's 11 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The VIC-IV is three video chips in one. It behaves as a VIC-II for
 C64 software, adds the C65's VIC-III features of 80 columns, bitplanes
@@ -54,6 +56,8 @@ calls SEAM</li>
 <li>Sprites</li>
 <li>Bitplane graphics</li>
 <li>Raster techniques specific to the VIC-IV</li>
+<li>Software sprites built on the Raster Rewrite Buffer, and scaling
+their images</li>
 </ul>
 <p>The VIC-II registers at <code>$D000-$D02E</code> work as on the C64,
 and the techniques in any C64 graphics reference still apply. This
@@ -109,7 +113,7 @@ it</td>
 </table>
 <p>A short program shows the pattern. It opens a 320 by 200 screen,
 draws, waits for a key, and returns to text:</p>
-<pre><code>10 SCREEN 320,200,4
+<pre data-download="code/ch12/graphics-from-basic-65.bas code/ch12/graphics-from-basic-65.prg"><code>10 SCREEN 320,200,4
 20 PEN 1
 30 LINE 0,0,319,199
 40 CIRCLE 160,100,50
@@ -422,7 +426,7 @@ colours at offset <code>$2000</code> in colour RAM, waits for a key and
 puts everything back. It is for PAL only: an NTSC display has 480
 visible lines instead of 576, which leaves too little room above and
 below the standard text area.</p>
-<pre><code>10 REM 88 X 30 TEXT SCREEN (PAL ONLY)
+<pre data-download="code/ch12/custom-screen-sizes.bas code/ch12/custom-screen-sizes.prg"><code>10 REM 88 X 30 TEXT SCREEN (PAL ONLY)
 20 SA=$50000 : CO=$2000 : W=88 : H=30
 30 DIM R(22) : FOR I=0 TO 7 : R(I)=PEEK($D048+I) : R(I+8)=PEEK($D058+I)
 40 NEXT : FOR I=0 TO 5 : R(I+16)=PEEK($D060+I) : NEXT : R(22)=PEEK($D07B)
@@ -477,7 +481,7 @@ described below: text, the VIC-II-style bitmap modes, and GOTOX
 positions with them. Bitplanes and sprites are drawn separately and do
 not change. The hot registers do not reset CHRXSCL, so a program must
 put it back itself:</p>
-<pre><code>10 POKE $D05A,60 : REM DOUBLE-WIDTH TEXT PIXELS
+<pre data-download="code/ch12/scaling-characters.bas code/ch12/scaling-characters.prg"><code>10 POKE $D05A,60 : REM DOUBLE-WIDTH TEXT PIXELS
 20 GETKEY K$
 30 POKE $D05A,120 : REM NORMAL WIDTH</code></pre>
 <p>Characters 40 to 79 of each row are now drawn beyond the right
@@ -691,7 +695,7 @@ href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
 Sanderson</a>). A red value of <code>$A5</code> is therefore written as
 <code>$5A</code>. Converting at the point of storage keeps source data
 readable:</p>
-<pre><code>10 C=1 : R=255 : G=128 : B=0          : REM ENTRY 1 = ORANGE
+<pre data-download="code/ch12/palette-registers.bas code/ch12/palette-registers.prg"><code>10 C=1 : R=255 : G=128 : B=0          : REM ENTRY 1 = ORANGE
 20 POKE $D100+C, ((R AND 15)&lt;&lt;4) OR (R&gt;&gt;4)
 30 POKE $D200+C, ((G AND 15)&lt;&lt;4) OR (G&gt;&gt;4)
 40 POKE $D300+C, ((B AND 15)&lt;&lt;4) OR (B&gt;&gt;4)</code></pre>
@@ -712,7 +716,7 @@ href="https://files.mega65.org/html/main.php?ar=cfbfe86e-bd9e-46dc-8b69-fe0c5936
 Filehost, "How to switch to the C64-like colors"</a>). Its DATA values
 already have their nybbles swapped, so they go straight into the
 registers:</p>
-<pre><code>10 FOR C=0 TO 15 : READ V : POKE $D100+C, V : NEXT C
+<pre data-download="code/ch12/palette-registers-2.bas code/ch12/palette-registers-2.prg"><code>10 FOR C=0 TO 15 : READ V : POKE $D100+C, V : NEXT C
 20 FOR C=0 TO 15 : READ V : POKE $D200+C, V : NEXT C
 30 FOR C=0 TO 15 : READ V : POKE $D300+C, V : NEXT C
 100 DATA 0,255,186,102,187,85,209,174,155,135,221,181,184,11,170,139
@@ -814,7 +818,8 @@ blog</a>)</td>
 64-pixel-wide option enabled, a 16-colour sprite is 16 pixels across,
 each pixel any of 15 colours or transparent. Combined with variable
 height and an eight-sprite multiplexer driven by raster interrupts, it
-gives arcade-quality moving objects.</p>
+gives arcade-quality moving objects. For more objects than that, or
+bigger ones, see <a href="#rrb-objects">RRB Objects</a>.</p>
 <p>The MEGA65 Book lists the enable registers for 16-colour mode, height
 and high-resolution positioning.</p>
 <h3 id="sprites-from-basic">Sprites from BASIC</h3>
@@ -1143,7 +1148,7 @@ Every row has 44 entries: 40 pattern characters, a GOTOX with
 transparency, the ball (or a space), a GOTOX to 320, the right edge in
 40-column mode, and one more character after it. So CHRCOUNT is 44 and
 LINESTEP 88.</p>
-<pre><code>10 REM RRB DEMO: BALLS OVER A PATTERN
+<pre data-download="code/ch12/an-rrb-demo-in-basic.bas code/ch12/an-rrb-demo-in-basic.prg"><code>10 REM RRB DEMO: BALLS OVER A PATTERN
 20 SA=$50000 : CA=$FF82000 : W=88
 30 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
 40 TX=WPEEK($D04C) : HR=PEEK($D05D)
@@ -1189,6 +1194,603 @@ at the edge is filled (<a
 href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).
 Parallax layers combine scrolling with the RRB: each layer is a section
 of the row whose GOTOX position is offset by a different amount.</p>
+<h2 id="rrb-objects">RRB Objects</h2>
+<p>The ball demo above is a software sprite in miniature: a shape drawn
+into the Raster Rewrite Buffer at any X position, over a background that
+is never disturbed. This section turns that idea into a small object
+library, first in BASIC and then in machine language, which moves
+multi-character full-colour objects freely in both directions. It ends
+with ways to scale an object's image.</p>
+<p>The programs in this section are on the chapter's disk image, <a
+href="code/ch12/ch12.d81">ch12.d81</a>, as RRB OBJECTS, RRB OBJECTS ML,
+RRB ZOOM and RRB SCALE, alongside the machine-language routine RRBOBJ,
+so the BLOAD in RRB OBJECTS ML finds it. The downloads for the listings
+that only add or change lines are the complete, merged programs. The
+BASIC text files suit reading and Xemu's <code>-importbas</code>
+option; the PRG files and the disk image run on a MEGA65 as they
+are.</p>
+<h3 id="hardware-sprites-or-rrb-objects">Hardware sprites or RRB
+objects</h3>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>Hardware sprites</th>
+<th>RRB objects</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Number</td>
+<td>Eight, or more with a raster-interrupt multiplexer</td>
+<td>As many as each row's cycle budget allows</td>
+</tr>
+<tr class="even">
+<td>Colours</td>
+<td>Up to 15 plus transparent, from a 16-entry palette group</td>
+<td>Up to 255 plus transparent in FCM, from the whole palette</td>
+</tr>
+<tr class="odd">
+<td>Size</td>
+<td>Up to 64 pixels wide, depending on mode</td>
+<td>Any number of characters</td>
+</tr>
+<tr class="even">
+<td>Image data</td>
+<td>Sprite pointers</td>
+<td>Glyph numbers in screen memory, so animation is a change of
+number</td>
+</tr>
+<tr class="odd">
+<td>Moving one</td>
+<td>Write its position registers</td>
+<td>Rewrite a few screen words on the rows it covers</td>
+</tr>
+<tr class="even">
+<td>Drawn over</td>
+<td>Everything, or behind the text layer</td>
+<td>Whatever came earlier in the row</td>
+</tr>
+</tbody>
+</table>
+<p>The two mix freely: hardware sprites are drawn after the RRB has
+built the line, so a player sprite can still move over a screen full of
+RRB objects.</p>
+<h3 id="planning-the-library">Planning the library</h3>
+<p>The library uses the "background plus draw list" arrangement from
+<a href="#organising-layers">Organising layers</a>, simplified so
+that each object owns a fixed slot in every row. A row of the 40-column
+SEAM screen has 54 entries:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Entries</th>
+<th>Byte offset</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0-39</td>
+<td>0-79</td>
+<td>Background characters</td>
+</tr>
+<tr class="even">
+<td>40-42</td>
+<td>80-85</td>
+<td>Object 0: a GOTOX with transparency, then its left and right
+glyphs</td>
+</tr>
+<tr class="odd">
+<td>43-51</td>
+<td>86-103</td>
+<td>Objects 1 to 3, the same way</td>
+</tr>
+<tr class="even">
+<td>52-53</td>
+<td>104-107</td>
+<td>GOTOX 320 and one character, to end the row</td>
+</tr>
+</tbody>
+</table>
+<p>CHRCOUNT is therefore 54. The 108 bytes of a row are spaced 128
+apart, so LINESTEP is 128, which makes a row address a simple shift in
+machine language. On rows an object does not touch, its two glyphs are
+a blank, so the slot draws nothing. Later slots are drawn over earlier
+ones, so the slot order is the priority order.</p>
+<p>Every slot costs time on every row, used or not. By the estimates in
+<a href="#the-cycle-budget">The cycle budget</a>, a slot of one GOTOX
+and two FCM characters is about 38 cycles, and the 40 monochrome
+background characters about 440. Four objects bring a row to about 600
+cycles of the 2,550 available, so slots for about fifty objects of this
+size would fit before sprites need their share. Beyond a handful of
+objects, games build a short list for each row instead, holding only
+the objects that touch it.</p>
+<h3 id="storing-the-images">Storing the images</h3>
+<p>An object is 16 by 16 pixels: two strips, each one FCM character
+wide and two characters tall. The glyphs of a strip are stored one after
+the other, with a blank glyph before and after, so one image takes seven
+glyphs:</p>
+<pre><code>glyph   +0     +1      +2      +3     +4      +5      +6
+        blank  left    left    blank  right   right   blank
+               top     bottom         top     bottom</code></pre>
+<p>Because FCM glyphs are 64 bytes and each pixel row is 8 bytes,
+consecutive glyphs form one continuous strip 8 pixels wide: pixel
+(<em>x</em>, <em>y</em>) of a strip is at its first glyph's address +
+8<em>y</em> + <em>x</em>, across the boundary between glyphs. The
+blanks are what the vertical positioning below reads when it runs off
+either end of a strip. The library keeps two blank glyphs at
+<code>$40000</code> and <code>$40040</code> (glyph numbers
+<code>$1000</code> and <code>$1001</code>), uses <code>$1001</code> to
+switch a slot off, and puts the first image at glyph
+<code>$1002</code>, address <code>$40080</code>. FCLRHI is on, so the
+background's screen codes below 256 still come from the normal
+character set.</p>
+<h3 id="vertical-positioning">Vertical positioning</h3>
+<p>The Y offset in a GOTOX entry, screen byte 1 bits 7-5, moves the
+following characters up to 7 pixels; setting bit 4 as well moves them
+down instead (<a href="#gotox">GOTOX</a>). It works by changing which
+bytes of glyph data the VIC-IV fetches: it adds the offset to, or
+subtracts it from, the glyph's pixel-row address, so the rows it
+needs from beyond the glyph come from the glyph before or after it in
+memory. That is why the offset applies only to FCM and NCM characters,
+whose data is found by glyph number, and why the strips have blanks at
+each end (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, October 2026).</p>
+<p>To put an object at pixel row <em>Y</em>, take character row
+<em>R</em> = INT(<em>Y</em>/8) and <em>D</em> = <em>Y</em> − 8<em>R</em>.
+The object covers rows <em>R</em>, <em>R</em>+1 and <em>R</em>+2. In
+row <em>R</em>+<em>J</em> its slot holds a GOTOX to the object's X
+position with a downward offset of <em>D</em>, then glyph
+<em>J</em> of each strip:</p>
+<ul>
+<li>Row <em>R</em> shows the blank on its first <em>D</em> pixel rows
+and the top <em>8 − D</em> rows of the top glyphs below that.</li>
+<li>Row <em>R</em>+1 shows the bottom <em>D</em> rows of the top glyphs,
+then the top of the bottom glyphs.</li>
+<li>Row <em>R</em>+2 shows the bottom of the bottom glyphs, then the
+blank.</li>
+</ul>
+<p>When <em>D</em> is 0 the third row is all blank, but writing it
+anyway keeps the code simple. The downward offset needs core 0.97 or
+later. On earlier cores, when <em>D</em> is not 0, the same result
+comes from the upward offset, 8 − <em>D</em>, with each row using the
+glyph before.</p>
+<p>The screen word of the GOTOX is then
+<em>X</em> + <code>$1000</code> + <em>D</em> × <code>$2000</code>: X
+in bits 9-0, the downward flag in bit 12 and the offset in bits 15-13.
+Its colour word stays <code>$0090</code>, GOTOX plus transparency.</p>
+<h3 id="objects-from-basic">Objects from BASIC</h3>
+<p>This program builds the screen, draws a ball into the image, and
+bounces four copies of it around over a checked background. The
+subroutine at line 1000 is the library: it blanks an object's slot in
+the rows it used last time and writes it into the rows it covers
+now.</p>
+<pre data-download="code/ch12/rrb-objects.bas code/ch12/rrb-objects.prg"><code>10 REM RRB OBJECTS: FOUR 16X16 FCM BALLS
+20 SA=$50000 : CA=$FF82000 : LS=128 : BL=$1001 : IM=$1002 : GA=IM*64
+30 DIM R(13),X(3),Y(3),DX(3),DY(3),OW(3),IG(3)
+40 FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
+50 TX=WPEEK($D04C) : HR=PEEK($D05D)
+60 EDMA 3,576,0,$40000 : REM CLEAR TWO BLANKS AND THE IMAGE
+70 FOR PY=0 TO 15 : FOR PX=0 TO 15 : C=0
+80 IF (PX-7.5)^2+(PY-7.5)^2&lt;56 THEN C=2 : IF (PX-5)^2+(PY-5)^2&lt;5 THEN C=1
+90 POKE GA+(1+INT(PX/8)*3)*64+PY*8+MOD(PX,8),C : NEXT : NEXT
+100 FOR Y=0 TO 24 : A=Y*LS
+110 FOR E=0 TO 39 : WPOKE SA+A+E*2,102 : WPOKE CA+A+E*2,$0B00 : NEXT
+120 FOR N=0 TO 3 : P=A+80+N*6
+130 WPOKE SA+P,0 : WPOKE CA+P,$0090 : REM GOTOX 0, TRANSPARENT
+140 WPOKE SA+P+2,BL : WPOKE SA+P+4,BL : WPOKE CA+P+2,0 : WPOKE CA+P+4,0 : NEXT
+150 WPOKE SA+A+104,320 : WPOKE CA+A+104,$0010 : REM GOTOX 320
+160 WPOKE SA+A+106,32 : WPOKE CA+A+106,$0100 : NEXT
+170 CLRBIT $D05D,7 : CLRBIT $D031,7 : WPOKE $D04C,80
+180 SETBIT $D054,0 : SETBIT $D054,2 : WPOKE $D058,LS : POKE $D05E,54
+190 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
+200 FOR N=0 TO 3 : X(N)=30+N*80 : Y(N)=10+N*40 : DX(N)=N+1 : DY(N)=4-N
+210 OW(N)=99 : IG(N)=IM : NEXT
+220 FOR T=1 TO 600
+230 FOR N=0 TO 3 : X(N)=X(N)+DX(N) : Y(N)=Y(N)+DY(N)
+240 IF X(N)&lt;0 OR X(N)&gt;304 THEN DX(N)=-DX(N) : X(N)=X(N)+2*DX(N)
+250 IF Y(N)&lt;0 OR Y(N)&gt;184 THEN DY(N)=-DY(N) : Y(N)=Y(N)+2*DY(N)
+260 GOSUB 1000 : NEXT
+270 SLEEP 0.02 : NEXT
+280 SETBIT $D031,7 : CLRBIT $D054,0 : CLRBIT $D054,2
+290 FOR I=0 TO 13 : POKE $D058+I,R(I) : NEXT
+300 WPOKE $D04C,TX : POKE $D05D,HR : END
+1000 REM DRAW OBJECT N AT X(N),Y(N)
+1010 P=80+N*6 : IF OW(N)=99 THEN 1040
+1020 FOR J=0 TO 2 : RW=OW(N)+J : IF RW&gt;=0 AND RW&lt;25 THEN A=SA+RW*LS+P : WPOKE A+2,BL : WPOKE A+4,BL
+1030 NEXT
+1040 RW=INT(Y(N)/8) : D=Y(N)-RW*8 : OW(N)=RW : XP=X(N) : IF XP&lt;0 THEN XP=XP+1024
+1050 G=XP+$1000+D*$2000 : REM GOTOX XP, CHARACTERS D PIXELS LOWER
+1060 FOR J=0 TO 2 : RW=OW(N)+J : IF RW&gt;=0 AND RW&lt;25 THEN A=SA+RW*LS+P : WPOKE A,G : WPOKE A+2,IG(N)+1+J : WPOKE A+4,IG(N)+4+J
+1070 NEXT : RETURN</code></pre>
+<p>Lines 70 to 90 draw the ball pixel by pixel into the two strips, in
+red (2) with a white (1) highlight; pixel value 0 is transparent. Lines
+100 to 160 build each row as in the table above. The glyph entries have
+a colour word of 0, since FCM pixels choose their own colours. Lines 170
+to 190 set up the screen as in the earlier demo, with FCLRHI added and
+54 entries per row. Lines 280 to 300 put everything back.</p>
+<p>The subroutine needs only X(N), Y(N) and IG(N), the image's first
+glyph. The array OW remembers the row each object was drawn at last,
+with 99 meaning never. Because each object has its own image number,
+animation is a matter of pointing IG(N) at another seven-glyph image
+before the next call.</p>
+<h3 id="clipping-at-the-edges">Clipping at the edges</h3>
+<p>The subroutine accepts X from −15 to 319 and Y from −15 to 199, and
+the hardware clips the rest. On the right, anything past pixel 319 is
+drawn under the border. On the left, a negative X becomes a GOTOX to
+1024 + <em>X</em>, which wraps round to the left edge (<a
+href="#running-out-of-time">Running out of time</a>); NORRBWRAP must be
+clear. At the top and bottom, rows outside 0-24 are simply not written,
+and the offset arithmetic still puts the visible part in the right
+place, because INT rounds a negative Y down.</p>
+<p>A character can also be made narrower. In an ordinary SEAM character
+entry, not a GOTOX, screen byte 1 bits 7-5 trim 0 to 7 pixels from its
+right-hand side, and for 16-pixel NCM characters bit 2 of colour byte 0
+supplies a fourth bit, for up to 15. An object whose width is not a
+multiple of 8 can end with a trimmed glyph, and the characters after it
+start where it ends (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, October 2026).</p>
+<h3 id="the-update-in-machine-language">The update in machine
+language</h3>
+<p>The BASIC subroutine is clear but slow, and an object can be drawn
+half-moved if the raster passes while it runs. This routine does the
+same work for all four objects in a tiny fraction of a frame, using the same
+screen. It lives in the area BASIC leaves free at <code>$1600</code>
+(<a href="ch09-mixing-basic-with-machine-language.html">Chapter
+9</a>), with a table of object positions at the start, and uses the top
+of a private base page at <code>$1700</code> for its pointers.</p>
+<pre data-download="code/ch12/rrbobj.asm code/ch12/rrbobj.prg"><code>; RRB object update: four 16x16 FCM objects on the screen
+; at $50000 built by the BASIC program, 128 bytes per row
+        * = $1600
+objx    .word 0, 0, 0, 0        ; $1600: X, 0-319 or 1009-1023
+objimg  .word 0, 0, 0, 0        ; $1608: first glyph of each image
+objy    .byte 0, 0, 0, 0        ; $1610: Y, 0-199
+oldrow  .byte $ff, $ff, $ff, $ff ; $1614: row last drawn, $FF = none
+slot    .byte 80, 86, 92, 98    ; $1618: slot offset within a row
+
+ptr     = $f0           ; four-byte flat pointer, base page $17
+crow    = $f4
+count   = $f5
+gxlo    = $f6           ; GOTOX screen word
+gxhi    = $f7
+glo     = $f8           ; glyph of the left strip
+ghi     = $f9
+blank   = $1001         ; empty glyph, with another before it
+
+        * = $1620
+update  lda #$17
+        tab             ; private base page at $1700
+        ldx #3
+uloop   jsr clear       ; take object X off its old rows
+        jsr draw        ; and put it on its new ones
+        dex
+        bpl uloop
+        lda #$00
+        tab             ; base page 0 again for BASIC
+        ldz #$00
+        rts
+
+rowptr  sta crow        ; A = character row, X = object
+        lsr a
+        sta ptr+1       ; row * 128, high byte
+        lda #$00
+        ror a           ; row * 128, low byte: $00 or $80
+        ora slot,x      ; slot offsets are below 128: no carry
+        sta ptr
+        lda #$05
+        sta ptr+2       ; bank 5
+        lda #$00
+        sta ptr+3
+        lda #3
+        sta count       ; an object covers three rows
+        rts
+
+nextrow lda ptr         ; add 128 to the pointer
+        eor #$80
+        sta ptr
+        bmi samepg      ; bit 7 now set: no carry
+        inc ptr+1
+samepg  inc crow
+        rts
+
+clear   lda oldrow,x
+        cmp #$ff
+        beq cdone       ; never drawn
+        jsr rowptr
+cloop   lda crow
+        cmp #25
+        bcs cdone       ; below the last row
+        lda #&lt;blank
+        ldz #2
+        sta [ptr],z     ; left glyph, low byte
+        ldz #4
+        sta [ptr],z     ; right glyph, low byte
+        lda #&gt;blank
+        ldz #3
+        sta [ptr],z
+        ldz #5
+        sta [ptr],z
+        jsr nextrow
+        dec count
+        bne cloop
+cdone   rts
+
+draw    lda objy,x
+        lsr a
+        lsr a
+        lsr a           ; character row = Y / 8
+        sta oldrow,x
+        jsr rowptr
+        lda objy,x
+        asl a
+        asl a
+        asl a
+        asl a
+        asl a           ; Y AND 7 into bits 7-5
+        ora #$10        ; bit 4: move the characters down
+        sta gxhi
+        txa
+        asl a
+        tay             ; Y register = 2 * object, for word tables
+        lda objx+1,y
+        and #$03
+        ora gxhi        ; X bits 9-8 into bits 1-0
+        sta gxhi
+        lda objx,y
+        sta gxlo
+        lda objimg,y
+        sta glo
+        lda objimg+1,y
+        sta ghi
+        inw glo         ; skip the blank: left strip, top glyph
+dloop   lda crow
+        cmp #25
+        bcs ddone
+        ldz #0
+        lda gxlo
+        sta [ptr],z     ; GOTOX
+        inz
+        lda gxhi
+        sta [ptr],z
+        inz
+        lda glo
+        sta [ptr],z     ; left strip glyph
+        inz
+        lda ghi
+        sta [ptr],z
+        inz
+        clc
+        lda glo
+        adc #3
+        sta [ptr],z     ; right strip glyph, three glyphs on
+        inz
+        lda ghi
+        adc #0
+        sta [ptr],z
+        inw glo         ; next glyph down the strip
+        jsr nextrow
+        dec count
+        bne dloop
+ddone   rts</code></pre>
+<p>ROWPTR works out the flat address of an object's slot. With 128 bytes
+per row, the row number shifted right once is the high byte and the bit
+shifted out becomes bit 7 of the low byte, so no multiplication is
+needed. NEXTROW adds 128 the same way. DRAW builds the GOTOX word from
+the low three bits of Y and the ten bits of X, then writes the GOTOX and
+both glyph numbers for each of the three rows. Only screen memory
+changes; the colour words set up by BASIC never do. INW is used for the
+glyph number because it carries into the high byte.</p>
+<h3 id="calling-it-from-basic">Calling it from BASIC</h3>
+<p>Assemble the routine to a file called RRBOBJ (with 64tass, for
+example, <code>64tass --m45gs02 -a rrbobj.asm -o rrbobj.prg</code>),
+or use the ready-assembled <code>rrbobj.prg</code> download, and make three changes
+to the BASIC program. Line 15 loads the routine, line 215 fills in each
+object's image and marks it as never drawn, and lines 260 and 270
+replace the call to the BASIC subroutine with POKEs into the table and
+one SYS per frame:</p>
+<pre data-download="code/ch12/rrb-objects-ml.bas code/ch12/rrb-objects-ml.prg"><code>15 BLOAD &quot;RRBOBJ&quot;,B0,P5632
+215 FOR N=0 TO 3 : WPOKE $1608+N*2,IG(N) : POKE $1614+N,255 : NEXT
+260 WPOKE $1600+N*2,X(N) : POKE $1610+N,Y(N) : NEXT
+270 SYS $1620 : SLEEP 0.02 : NEXT</code></pre>
+<p>The machine-language version takes Y from 0 to 199 only; above that
+it would need the negative-row handling of the BASIC subroutine. For X,
+values from 1009 to 1023 put the object partly off the left edge. A
+game written entirely in machine language would call UPDATE from a
+raster interrupt below the last text row, so the screen never shows an
+object half-moved.</p>
+<h3 id="texture-scaling">Texture scaling</h3>
+<p>The VIC-IV has no scale setting for individual characters. In SEAM,
+the screen and colour bytes of a character select its glyph, flips,
+width trim, NCM and attributes, but nothing that changes its size (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, October 2026). There are two ways round
+this: scale the whole display, or scale the image data.</p>
+<h4 id="scaling-the-whole-display">Scaling the whole display</h4>
+<p>CHRXSCL and CHRYSCL, described in <a
+href="#scaling-characters">Scaling characters</a>, stretch everything
+the RRB draws. GOTOX positions are pixels of the buffer, so they scale
+with it, and objects stay in place over the background as the scene
+zooms. Adding one line to the object program makes the whole scene
+grow to double width, from the left edge, every 60 frames:</p>
+<pre data-download="code/ch12/rrb-zoom.bas code/ch12/rrb-zoom.prg"><code>265 POKE $D05A,120-MOD(T,60)</code></pre>
+<p>Line 290 already restores CHRXSCL, because it is one of the
+registers saved from <code>$D058</code>. The VIC-IV applies CHRXSCL as
+it sends each line to the screen, so a raster interrupt can change it
+partway down to give different bands different widths, as in a
+perspective road or floor (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>). Check the result on a real MEGA65, for the
+reason given in <a href="#scaling-characters">Scaling
+characters</a>.</p>
+<h4 id="scaling-an-object-with-dma">Scaling an object with DMA</h4>
+<p>To change the size of one object, redraw its glyphs at the new size.
+DMAgic does this with fractional steps (<a
+href="ch08-ml-methods-specific-to-the-mega65.html#transparency-and-line-drawing">Chapter
+8</a>). Options <code>$82</code> and <code>$83</code> set the source
+step in 256ths of a byte and whole bytes, and DMAgic keeps the
+fraction as it goes, so a step of 2.0 reads every second byte and 0.5
+reads each byte twice. Options <code>$84</code> and <code>$85</code> do
+the same for the destination. Every option goes back to its default
+when the last job of a list finishes (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>, October 2026).</p>
+<p>The strip layout makes this simple. A pixel column of a strip is a
+run of bytes 8 apart, so one DMA job with a destination step of 8 writes
+a whole column. If the source texture is stored column by column, each
+column a run of consecutive bytes, the source step is texture height ÷
+new height: one job scales one column vertically. Choosing which
+texture column feeds each new column scales it horizontally. This is
+how a raycasting game draws its walls. It works for FCM, where each
+byte is a pixel; NCM packs two pixels into a byte and would need a
+different layout.</p>
+<p>These lines add a 32 × 32 texture to the object program and
+redraw object 0 every frame at a size from 1 to 16 pixels, centred in
+its 16 × 16 image. Object 0 gets an image of its own at glyph
+<code>$1009</code>, straight after the ball's seven glyphs, so the
+other three balls are unchanged:</p>
+<pre data-download="code/ch12/rrb-scale.bas code/ch12/rrb-scale.prg"><code>212 IG(0)=IM+7 : GB=IG(0)*64 : S=16 : SS=-1 : GOSUB 400 : GOSUB 500
+266 S=S+SS : IF S&lt;2 OR S&gt;15 THEN SS=-SS
+267 GOSUB 500
+400 REM TEXTURE AND DMA LIST, ONCE
+410 FOR PX=0 TO 31 : FOR PY=0 TO 31 : C=0
+420 IF (PX-15.5)^2+(PY-15.5)^2&lt;240 THEN C=5+8*MOD(INT(PX/4)+INT(PY/4),2)
+430 POKE $42000+PX*32+PY,C : NEXT : NEXT
+440 FOR I=0 TO 18 : READ B : POKE $5F000+I,B : NEXT
+450 DATA 10,130,0,131,0,133,8,0,0,0,0,0,32,4,0,0,4,0,0
+460 RETURN
+500 REM SCALE THE TEXTURE INTO IMAGE IG(0) AT S X S PIXELS
+510 EDMA 3,448,0,GB : O=INT((16-S)/2) : V=INT(8192/S)
+520 POKE $5F002,MOD(V,256) : POKE $5F004,INT(V/256) : WPOKE $5F009,S
+530 FOR PX=0 TO S-1 : Q=PX+O
+540 WPOKE $5F00B,$2000+INT(PX*32/S)*32
+550 WPOKE $5F00E,GB-$40000+(1+INT(Q/8)*3)*64+O*8+MOD(Q,8)
+560 POKE $D702,5 : POKE $D704,0 : POKE $D701,$F0 : POKE $D705,0 : NEXT
+570 RETURN</code></pre>
+<p>Lines 410 to 430 draw a green chequered disc into the texture at
+<code>$42000</code>, one 32-byte column at a time. Lines 440 and 450
+place a DMA list in bank 5, at <code>$5F000</code>:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Offset</th>
+<th>Bytes</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td><code>$0A</code></td>
+<td>F018A list format</td>
+</tr>
+<tr class="even">
+<td>1-4</td>
+<td><code>$82</code> <em>lo</em> <code>$83</code> <em>hi</em></td>
+<td>Source step, set by line 520</td>
+</tr>
+<tr class="odd">
+<td>5-6</td>
+<td><code>$85</code> <code>$08</code></td>
+<td>Destination step: 8 bytes, one pixel row</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td><code>$00</code></td>
+<td>End of options</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td><code>$00</code></td>
+<td>Command: copy</td>
+</tr>
+<tr class="even">
+<td>9-10</td>
+<td>count</td>
+<td>New height, set by line 520</td>
+</tr>
+<tr class="odd">
+<td>11-13</td>
+<td>source</td>
+<td>Texture column, bank 4, set by line 540</td>
+</tr>
+<tr class="even">
+<td>14-16</td>
+<td>destination</td>
+<td>Image column, bank 4, set by line 550</td>
+</tr>
+<tr class="odd">
+<td>17-18</td>
+<td>modulo</td>
+<td>Unused</td>
+</tr>
+</tbody>
+</table>
+<p>Line 510 clears the image and works out the margin O and the source
+step V, which is 32 ÷ S in 256ths: 8192 ÷ S. Rounding V down keeps the
+last row read inside the column. Each pass of the loop picks a texture
+column, points the job at it and at one column of the image, and starts
+the job. Line 560 writes the list's bank before its megabyte and the
+low byte last, which starts it, as in <a
+href="ch08-ml-methods-specific-to-the-mega65.html#advanced-dma">Chapter
+8</a>.</p>
+<p>Shrinking needs no extra code, but enlarging does: an image bigger
+than the texture shows each texture pixel two or more times, and the
+object must have strips enough to hold it. Because the image is
+rewritten while it is on screen, object 0 may flicker. A program that
+minds keeps two images for the object, scales into the one not being
+shown, and then switches IG(0).</p>
+<h4 id="scaling-from-machine-language">Scaling from machine
+language</h4>
+<p>In machine language the list is the same, written with labels. This
+is one column scaled from 32 to 16 pixels, with a source step of exactly
+2:</p>
+<pre><code>column  .byte $0a       ; F018A format
+        .byte $82, $00  ; source step: 0/256 ...
+        .byte $83, $02  ; ... plus 2 whole bytes
+        .byte $85, $08  ; destination step: one pixel row
+        .byte $00       ; end of options
+        .byte $00       ; command: copy
+        .word 16        ; new height
+        .word $2000     ; texture column 0 at $42000
+        .byte $04
+        .word $00c0     ; left strip: image at $40080, + 64
+        .byte $04
+        .word $0000     ; modulo, unused
+
+        lda #$00
+        sta $d702       ; list in bank 0
+        sta $d704       ; megabyte 0, written after $D702
+        lda #&gt;column
+        sta $d701
+        lda #&lt;column
+        sta $d705       ; start the enhanced job</code></pre>
+<p>A routine that scales a whole object patches the count, source and
+destination for each column, or builds one chained job per column and
+starts them all with one trigger. In a chain, each job still begins
+with its own option list, even if that is only the <code>$00</code> that
+ends it, and the steps set by the first job carry over until the chain
+ends.</p>
+<h3 id="going-further">Going further</h3>
+<ul>
+<li><strong>More objects.</strong> Replace the fixed slots with a list
+per row, rebuilt each frame from the objects that touch that row, so
+rows without objects cost nothing extra.</li>
+<li><strong>Bigger objects.</strong> Add strips, and a row for each
+extra glyph of height. The arithmetic is unchanged: strip <em>s</em>,
+glyph <em>j</em> of an image whose strips are <em>h</em> glyphs tall is
+glyph 1 + <em>s</em>(<em>h</em> + 1) + <em>j</em>.</li>
+<li><strong>NCM objects.</strong> NCM glyphs are 16 pixels wide and use
+half the memory per pixel of FCM, and the Y offset works on them too.
+They cost more cycles per glyph (<a href="#the-cycle-budget">The cycle
+budget</a>).</li>
+<li><strong>Frame timing.</strong> Run the update from a raster
+interrupt, as in <a
+href="ch08-ml-methods-specific-to-the-mega65.html#raster-interrupts">Chapter
+8</a>, so that objects move once per frame and never tear.</li>
+</ul>
 <h2 id="plotting-pixels-and-drawing-lines">Plotting Pixels and Drawing
 Lines</h2>
 <p>On bitplane screens opened by BASIC 65, DOT plots a pixel and LINE
@@ -1721,6 +2323,12 @@ place characters at any X position and layer them with transparency, for
 many-object and parallax graphics. It has about 2,590 cycles of an
 81 MHz clock per PAL line, one per pixel drawn plus fetching, so the
 busiest row sets the limit; DBLRR doubles it.</li>
+<li><strong>RRB objects</strong> are software sprites: a slot of GOTOX
+and glyph entries per object per row, images stored as strips of
+consecutive FCM glyphs with blanks at each end, and the GOTOX Y offset
+for pixel-exact vertical placement. The VIC-IV cannot scale single
+characters; CHRXSCL and CHRYSCL scale the whole display, and DMA
+fractional steps resample an object's image.</li>
 </ul>
 <p>Chapter 13 turns to sound.</p>
 <nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>

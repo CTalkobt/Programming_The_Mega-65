@@ -1,0 +1,4 @@
+10 FOR D = 0 TO 360 STEP 30
+20 R = D * π / 180
+30 PRINT D; R; SIN(R)
+40 NEXT D

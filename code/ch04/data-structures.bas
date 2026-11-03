@@ -1,0 +1,13 @@
+10 READ N : DIM N$(N), S(N)
+20 FOR I = 1 TO N : READ N$(I), S(I) : NEXT
+30 B = 1 : FOR I = 2 TO N : IF S(I) > S(B) THEN B = I
+40 NEXT : PRINT "BEST: "; N$(B); S(B)
+50 DATA 4, "ANN", 320, "BOB", 450, "CAL", 120, "DEE", 410
+100 DIM B$(2, 2) : REM A 3 BY 3 BOARD
+110 B$(1, 1) = "X" : B$(0, 2) = "O"
+120 FOR R = 0 TO 2 : FOR C = 0 TO 2
+130 IF B$(R, C) = "" THEN PRINT "."; : ELSE PRINT B$(R, C);
+140 NEXT : PRINT : NEXT
+200 DIM ST(20) : SP = 0 : REM A STACK
+210 FOR I = 1 TO 3 : SP = SP + 1 : ST(SP) = I * 10 : NEXT
+220 DO WHILE SP > 0 : PRINT ST(SP); : SP = SP - 1 : LOOP : PRINT

@@ -1,0 +1,6 @@
+10 GET A$
+20 IF A$ >= "A" AND A$ <= "Z" THEN BEGIN
+30 PW$ = PW$ + A$
+40 PRINT A$;
+50 BEND
+60 IF LEN(PW$) < 8 THEN 10

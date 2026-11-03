@@ -24,6 +24,7 @@ Guide</title>
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch02-getting-to-know-the-mega65.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch04-effective-programming-in-basic65.html">Next &rarr;</a></span></nav>
@@ -31,6 +32,7 @@ Guide</title>
 id="programming-the-mega65--chapter-3-basic-65-reference-guide">Programming
 the MEGA65 — Chapter 3: BASIC 65 Reference Guide</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch03/ch03.d81">ch03.d81</a> holds this chapter's 84 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every keyword in BASIC 65: commands,
 functions, reserved variables and secondary keywords. It is meant to be
@@ -258,7 +260,7 @@ or element, is picked out by an index in parentheses: <code>A(7)</code>,
 <code>NA$(I)</code>, <code>BO$(1, 2)</code>. Indexes start at 0 and can
 be any numeric expression, which lets a loop work through every element
 in turn (MEGA65 Book, p. B-7):</p>
-<pre><code>10 DIM NA$(2)
+<pre data-download="code/ch03/arrays.bas code/ch03/arrays.prg"><code>10 DIM NA$(2)
 20 NA$(0) = &quot;DEFT&quot; : NA$(1) = &quot;GARDNERS&quot; : NA$(2) = &quot;LYDON&quot;
 30 FOR I = 0 TO 2 : PRINT &quot;HELLO, &quot;; NA$(I); &quot;!&quot; : NEXT I</code></pre>
 <p>DIM sets the highest index in each dimension before the array is
@@ -650,7 +652,7 @@ handler has fixed the cause.</li>
 it.</li>
 <li><code>RESUME line</code> carries on at that line.</li>
 </ul>
-<pre><code> 10 TRAP 100
+<pre data-download="code/ch03/catching-errors-in-a-program.bas code/ch03/catching-errors-in-a-program.prg"><code> 10 TRAP 100
  20 FOR I = 1 TO 100
  30 PRINT EXP(I)
  40 NEXT
@@ -1162,10 +1164,10 @@ tested after each pass; without one, the loop runs until EXIT leaves
 it.</p>
 <p>Format:
 <code>DO [&lt;UNTIL / WHILE&gt; condition] ... [EXIT] ... LOOP [&lt;UNTIL / WHILE&gt; condition]</code></p>
-<pre><code>10 PW$ = &quot;&quot; : DO
+<pre data-download="code/ch03/do-loop-while-until-exit.bas code/ch03/do-loop-while-until-exit.prg"><code>10 PW$ = &quot;&quot; : DO
 20 GET A$ : PW$ = PW$ + A$
 30 LOOP UNTIL LEN(PW$) &gt; 7 OR A$ = CHR$(13)</code></pre>
-<pre><code>10 I = 0
+<pre data-download="code/ch03/do-loop-while-until-exit-2.bas code/ch03/do-loop-while-until-exit-2.prg"><code>10 I = 0
 20 DO WHILE I &lt; 3 : PRINT I; : I = I + 1 : LOOP
 30 DO : I = I - 1 : IF I = 0 THEN EXIT
 40 LOOP : PRINT &quot;DONE&quot;</code></pre>
@@ -1180,7 +1182,7 @@ STEP is omitted. TO is also used by many other commands, such as COPY
 and RENAME.</p>
 <p>Format:
 <code>FOR index = start TO end [STEP step] ... NEXT [index]</code></p>
-<pre><code>10 FOR D = 0 TO 360 STEP 30
+<pre data-download="code/ch03/for-to-step-next.bas code/ch03/for-to-step-next.prg"><code>10 FOR D = 0 TO 360 STEP 30
 20 R = D * π / 180
 30 PRINT D; R; SIN(R)
 40 NEXT D</code></pre>
@@ -1193,7 +1195,7 @@ number after THEN acts as a GOTO.</p>
 <p>Format:
 <code>IF expression THEN statements [: ELSE statements]</code>. A colon
 must come before ELSE.</p>
-<pre><code>10 INPUT &quot;ENTER A NUMBER&quot;; V
+<pre data-download="code/ch03/if-then-else.bas code/ch03/if-then-else.prg"><code>10 INPUT &quot;ENTER A NUMBER&quot;; V
 20 IF V &lt; 0 THEN PRINT &quot;NEGATIVE&quot; : ELSE PRINT &quot;NOT NEGATIVE&quot;</code></pre>
 <h4 id="begin-bend">BEGIN, BEND</h4>
 <p>Tokens <code>$FE $18</code>, <code>$FE $19</code> · Book pp. B-27,
@@ -1203,7 +1205,7 @@ needed, that runs as the THEN or ELSE part of an IF. They lift the old
 limit of one line per condition.</p>
 <p>Format:
 <code>IF condition THEN BEGIN ... BEND [ELSE BEGIN ... BEND]</code></p>
-<pre><code>10 GET A$
+<pre data-download="code/ch03/begin-bend.bas code/ch03/begin-bend.prg"><code>10 GET A$
 20 IF A$ &gt;= &quot;A&quot; AND A$ &lt;= &quot;Z&quot; THEN BEGIN
 30 PW$ = PW$ + A$
 40 PRINT A$;
@@ -1214,13 +1216,13 @@ limit of one line per condition.</p>
 B-127</p>
 <p>Continues the program at the given line number.</p>
 <p>Format: <code>GOTO line</code> or <code>GO TO line</code></p>
-<pre><code>10 PRINT &quot;HELLO &quot;; : GOTO 10</code></pre>
+<pre data-download="code/ch03/goto.bas code/ch03/goto.prg"><code>10 PRINT &quot;HELLO &quot;; : GOTO 10</code></pre>
 <h4 id="gosub-return">GOSUB, RETURN</h4>
 <p>Tokens <code>$8D</code>, <code>$8E</code> · Book pp. B-126, B-214</p>
 <p>GOSUB calls a subroutine at a line number; RETURN goes back to the
 statement after the GOSUB. RETURN also ends a COLLISION handler.</p>
 <p>Format: <code>GOSUB line</code> ... <code>RETURN</code></p>
-<pre><code>10 FOR I = 1 TO 3 : GOSUB 100 : NEXT
+<pre data-download="code/ch03/gosub-return.bas code/ch03/gosub-return.prg"><code>10 FOR I = 1 TO 3 : GOSUB 100 : NEXT
 20 END
 100 PRINT &quot;CALL NUMBER&quot;; I : RETURN</code></pre>
 <h4 id="fgoto-fgosub">FGOTO, FGOSUB</h4>
@@ -1230,9 +1232,9 @@ B-107</p>
 expression when the statement runs.</p>
 <p>Format: <code>FGOTO expression</code> /
 <code>FGOSUB expression</code></p>
-<pre><code>10 INPUT &quot;WHICH SUBROUTINE: 100, 200 OR 300&quot;; LI
+<pre data-download="code/ch03/fgoto-fgosub.bas code/ch03/fgoto-fgosub.prg"><code>10 INPUT &quot;WHICH SUBROUTINE: 100, 200 OR 300&quot;; LI
 20 FGOSUB LI</code></pre>
-<pre><code> 10 INPUT &quot;WHICH LINE: 100, 200 OR 300&quot;; LI
+<pre data-download="code/ch03/fgoto-fgosub-2.bas code/ch03/fgoto-fgosub-2.prg"><code> 10 INPUT &quot;WHICH LINE: 100, 200 OR 300&quot;; LI
  20 FGOTO LI
 100 PRINT &quot;AT LINE 100&quot; : END
 200 PRINT &quot;AT LINE 200&quot; : END
@@ -1249,14 +1251,14 @@ also the secondary keyword in KEY ON and MOUSE ON.</p>
 <p>Token <code>$80</code> · Book p. B-98</p>
 <p>Ends the program and returns to the READY prompt.</p>
 <p>Format: <code>END</code></p>
-<pre><code>10 IF V &lt; 0 THEN END
+<pre data-download="code/ch03/end.bas code/ch03/end.prg"><code>10 IF V &lt; 0 THEN END
 20 PRINT V</code></pre>
 <h4 id="stop">STOP</h4>
 <p>Token <code>$90</code> · Book p. B-253</p>
 <p>Stops the program with a BREAK message naming the line, so it can be
 resumed with CONT.</p>
 <p>Format: <code>STOP</code></p>
-<pre><code>10 IF V &lt; 0 THEN STOP
+<pre data-download="code/ch03/stop.bas code/ch03/stop.prg"><code>10 IF V &lt; 0 THEN STOP
 20 PRINT SQR(V)</code></pre>
 <h4 id="cont">CONT</h4>
 <p>Token <code>$9A</code> · Book p. B-58</p>
@@ -1275,7 +1277,7 @@ the program has not been edited in between.</p>
 read is XORed with the optional third value, then ANDed with the mask,
 and the wait ends when the result is not zero.</p>
 <p>Format: <code>WAIT address, andmask [, xormask]</code></p>
-<pre><code>10 BANK 128
+<pre data-download="code/ch03/wait.bas code/ch03/wait.prg"><code>10 BANK 128
 20 WAIT $D611, 1 : REM WAIT FOR THE LEFT SHIFT KEY</code></pre>
 <h4 id="vsync">VSYNC</h4>
 <p>Token <code>$FE $54</code> · Book p. B-280</p>
@@ -1283,7 +1285,7 @@ and the wait ends when the result is not zero.</p>
 0-261 on NTSC. Useful for changing colours or graphics at a fixed point
 in the frame.</p>
 <p>Format: <code>VSYNC raster line</code></p>
-<pre><code>10 BORDER 3 : VSYNC 100
+<pre data-download="code/ch03/vsync.bas code/ch03/vsync.prg"><code>10 BORDER 3 : VSYNC 100
 20 BORDER 7 : VSYNC 260
 30 GOTO 10</code></pre>
 <h3 id="error-handling-and-debugging">Error Handling and Debugging</h3>
@@ -1292,7 +1294,7 @@ in the frame.</p>
 <p>Sends any BASIC error to a handler at the given line instead of
 stopping the program. TRAP with no line turns the handler off.</p>
 <p>Format: <code>TRAP [line]</code></p>
-<pre><code>10 TRAP 100
+<pre data-download="code/ch03/trap.bas code/ch03/trap.prg"><code>10 TRAP 100
 20 FOR I = 1 TO 100 : PRINT EXP(I) : NEXT
 30 END
 100 PRINT ERR$(ER) : RESUME 30</code></pre>
@@ -1327,7 +1329,7 @@ with the failing statement highlighted.</p>
 <p>TRON turns on trace mode, in which each line number is printed as it
 runs; TROFF turns it off.</p>
 <p>Format: <code>TRON</code> / <code>TROFF</code></p>
-<pre><code>10 TRON
+<pre data-download="code/ch03/tron-troff.bas code/ch03/tron-troff.prg"><code>10 TRON
 20 FOR I = 80 TO 88 : PRINT I; EXP(I) : NEXT
 30 TROFF</code></pre>
 <h3 id="program-editing">Program Editing</h3>
@@ -1440,13 +1442,13 @@ makes the line longer and slower.</p>
 so <code>DIM A%(8)</code> has nine elements. Arrays used without DIM
 default to 11 elements.</p>
 <p>Format: <code>DIM name(limits) [, name(limits) ...]</code></p>
-<pre><code>10 DIM A%(8), XX(2, 3)</code></pre>
+<pre data-download="code/ch03/dim.bas code/ch03/dim.prg"><code>10 DIM A%(8), XX(2, 3)</code></pre>
 <h4 id="clr">CLR</h4>
 <p>Token <code>$9C</code> · Book p. B-51</p>
 <p>Clears all variables and arrays; <code>CLR variable</code> resets
 just one, and <code>CLR TI</code> restarts the timer.</p>
 <p>Format: <code>CLR</code> or <code>CLR variable</code></p>
-<pre><code>10 A = 5 : CLR : PRINT A : REM PRINTS 0</code></pre>
+<pre data-download="code/ch03/clr.bas code/ch03/clr.prg"><code>10 A = 5 : CLR : PRINT A : REM PRINTS 0</code></pre>
 <h4 id="data-read-restore">DATA, READ, RESTORE</h4>
 <p>Tokens <code>$83</code>, <code>$87</code>, <code>$8C</code> · Book
 pp. B-63, B-205, B-212</p>
@@ -1456,7 +1458,7 @@ a given line.</p>
 <p>Format: <code>DATA constant [, constant ...]</code> /
 <code>READ variable [, variable ...]</code> /
 <code>RESTORE [line]</code></p>
-<pre><code>10 DATA 3, 1, 4, 1, 5, &quot;MEGA65&quot;
+<pre data-download="code/ch03/data-read-restore.bas code/ch03/data-read-restore.prg"><code>10 DATA 3, 1, 4, 1, 5, &quot;MEGA65&quot;
 20 FOR I = 1 TO 5 : READ P : PRINT P : NEXT
 30 READ N$ : PRINT N$
 40 RESTORE</code></pre>
@@ -1467,7 +1469,7 @@ B-112</p>
 it.</p>
 <p>Format: <code>DEF FN name(variable) = expression</code> /
 <code>FN name(expression)</code></p>
-<pre><code>10 DEF FN SD(X) = SIN(X * π / 180) : REM SINE IN DEGREES
+<pre data-download="code/ch03/def-fn-fn.bas code/ch03/def-fn-fn.prg"><code>10 DEF FN SD(X) = SIN(X * π / 180) : REM SINE IN DEGREES
 20 PRINT FN SD(30)</code></pre>
 <h4 id="pointer">POINTER</h4>
 <p>Token <code>$CE $0A</code> · Book p. B-193</p>
@@ -1475,7 +1477,7 @@ it.</p>
 For a string, it is the address of its descriptor. Chapter 6 shows how
 to use it.</p>
 <p>Format: <code>POINTER(variable)</code></p>
-<pre><code>10 BANK 0
+<pre data-download="code/ch03/pointer.bas code/ch03/pointer.prg"><code>10 BANK 0
 20 H$ = &quot;HELLO&quot; : P = POINTER(H$)
 30 PRINT &quot;DESCRIPTOR AT $&quot;; HEX$(P)</code></pre>
 <h4 id="rem">REM</h4>
@@ -1491,25 +1493,25 @@ ends with a semicolon (a comma leaves it out), then waits for the user
 to type values for one or more variables and press RETURN.</p>
 <p>Format:
 <code>INPUT [prompt &lt;, / ;&gt;] variable [, variable ...]</code></p>
-<pre><code>10 INPUT &quot;NAME, AGE&quot;; NA$, AG%</code></pre>
+<pre data-download="code/ch03/input.bas code/ch03/input.prg"><code>10 INPUT &quot;NAME, AGE&quot;; NA$, AG%</code></pre>
 <h4 id="line-input">LINE INPUT</h4>
 <p>Token <code>$E5 $85</code> · Book p. B-151</p>
 <p>Reads a whole line of typing into a string variable, including commas
 and quotation marks that INPUT would treat as separators.</p>
 <p>Format:
 <code>LINE INPUT [prompt &lt;, / ;&gt;] stringvar [, stringvar ...]</code></p>
-<pre><code>10 LINE INPUT &quot;ENTER A PHRASE: &quot;, PH$</code></pre>
+<pre data-download="code/ch03/line-input.bas code/ch03/line-input.prg"><code>10 LINE INPUT &quot;ENTER A PHRASE: &quot;, PH$</code></pre>
 <h4 id="get">GET</h4>
 <p>Token <code>$A1</code> · Book p. B-122</p>
 <p>Takes the next key from the keyboard queue without waiting; a string
 variable receives an empty string if no key is waiting.</p>
 <p>Format: <code>GET variable</code></p>
-<pre><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
+<pre data-download="code/ch03/get.bas code/ch03/get.prg"><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
 <h4 id="getkey">GETKEY</h4>
 <p>Token <code>$A1 $F9</code> · Book p. B-124</p>
 <p>Like GET, but waits until a key is pressed.</p>
 <p>Format: <code>GETKEY variable</code></p>
-<pre><code>10 GETKEY A$
+<pre data-download="code/ch03/getkey.bas code/ch03/getkey.prg"><code>10 GETKEY A$
 20 IF A$ = &quot;W&quot; THEN PRINT &quot;NORTH&quot;</code></pre>
 <h3 id="text-output">Text Output</h3>
 <h4 id="print">PRINT</h4>
@@ -1519,7 +1521,7 @@ semicolon joins items directly, a comma moves to the next tab column,
 and a trailing semicolon suppresses the new line. <code>?</code> is an
 abbreviation.</p>
 <p>Format: <code>PRINT arguments</code></p>
-<pre><code>10 FOR I = 1 TO 10 : PRINT I, I * I, SQR(I) : NEXT</code></pre>
+<pre data-download="code/ch03/print.bas code/ch03/print.prg"><code>10 FOR I = 1 TO 10 : PRINT I, I * I, SQR(I) : NEXT</code></pre>
 <h4 id="print-using-using">PRINT USING, USING</h4>
 <p>Tokens <code>$99 $FB</code> (or <code>$98 $FB</code> with
 <code>#</code>), <code>$FB</code> · Book pp. B-200, B-273</p>
@@ -1527,7 +1529,7 @@ abbreviation.</p>
 marks a digit position and <code>.</code> the decimal point, so columns
 of figures line up.</p>
 <p>Format: <code>PRINT[# channel,] USING format; argument</code></p>
-<pre><code>10 PRINT USING &quot;####.##&quot;; 3.14159</code></pre>
+<pre data-download="code/ch03/print-using-using.bas code/ch03/print-using-using.prg"><code>10 PRINT USING &quot;####.##&quot;; 3.14159</code></pre>
 <p>Each format applies to one argument. More can follow in the same
 statement, as in <code>PRINT USING "##.##"; A, USING "%4X"; B</code>.
 The format string can hold these characters (MEGA65 Book, p. B-200;
@@ -1594,7 +1596,7 @@ garbage. A
 asterisks: only its last w digits are printed. Negative numbers print as
 32-bit two's complement, so <code>%8X</code> of -1 is
 <code>FFFFFFFF</code>.</p>
-<pre><code>10 PRINT USING &quot;%7.2F&quot;; 3.14159
+<pre data-download="code/ch03/print-using-using-2.bas code/ch03/print-using-using-2.prg"><code>10 PRINT USING &quot;%7.2F&quot;; 3.14159
 20 PRINT USING &quot;%05D&quot;; 42.7
 30 PRINT USING &quot;ADDRESS $%4X&quot;; 49152
 40 PRINT USING &quot;###,###.#&quot;; 1234
@@ -1617,14 +1619,14 @@ ROM change log</a>).</p>
 <p>Used inside PRINT: SPC moves the cursor right by a number of columns,
 and TAB moves it to a given column if it is not already past it.</p>
 <p>Format: <code>SPC(columns)</code> / <code>TAB(column)</code></p>
-<pre><code>10 PRINT &quot;NAME&quot;; TAB(20); &quot;SCORE&quot;
+<pre data-download="code/ch03/spc-tab.bas code/ch03/spc-tab.prg"><code>10 PRINT &quot;NAME&quot;; TAB(20); &quot;SCORE&quot;
 20 PRINT SPC(5); &quot;INDENTED&quot;</code></pre>
 <h4 id="pos">POS</h4>
 <p>Token <code>$B9</code> · Book p. B-196</p>
 <p>Returns the cursor's column within the current window. The argument
 is ignored.</p>
 <p>Format: <code>POS(dummy)</code></p>
-<pre><code>10 IF POS(0) &gt; 72 THEN PRINT</code></pre>
+<pre data-download="code/ch03/pos.bas code/ch03/pos.prg"><code>10 IF POS(0) &gt; 72 THEN PRINT</code></pre>
 <h4 id="cmd">CMD</h4>
 <p>Token <code>$9D</code> · Book p. B-53</p>
 <p>Redirects all screen output, including LIST, to an open channel such
@@ -1639,7 +1641,7 @@ B-203</p>
 RCURSOR reads its position into two variables.</p>
 <p>Format: <code>CURSOR [&lt;ON / OFF&gt;,] column, row [, style]</code>
 / <code>RCURSOR colvar, rowvar</code></p>
-<pre><code>10 CURSOR ON, 20, 10 : PRINT &quot;[HERE]&quot;;
+<pre data-download="code/ch03/cursor-rcursor.bas code/ch03/cursor-rcursor.prg"><code>10 CURSOR ON, 20, 10 : PRINT &quot;[HERE]&quot;;
 20 RCURSOR X, Y : PRINT &quot; COL:&quot;; X; &quot; ROW:&quot;; Y</code></pre>
 <h4 id="window-rwindow">WINDOW, RWINDOW</h4>
 <p>Tokens <code>$FE $1A</code>, <code>$CE $09</code> · Book pp. B-283,
@@ -1649,7 +1651,7 @@ clearing it. RWINDOW reads a property of the current window or screen,
 such as its width.</p>
 <p>Format: <code>WINDOW left, top, right, bottom [, clear]</code> /
 <code>RWINDOW(n)</code></p>
-<pre><code>10 WINDOW 0, 12, 79, 24, 1 : REM LOWER HALF, CLEARED
+<pre data-download="code/ch03/window-rwindow.bas code/ch03/window-rwindow.prg"><code>10 WINDOW 0, 12, 79, 24, 1 : REM LOWER HALF, CLEARED
 20 PRINT RWINDOW(2) : REM SCREEN WIDTH</code></pre>
 <h4 id="scnclr">SCNCLR</h4>
 <p>Token <code>$E8</code> · Book p. B-233</p>
@@ -1679,7 +1681,7 @@ eight bytes, one per row.</p>
 <code>CHR$</code> is the usual way to put quotation marks and control
 codes in strings.</p>
 <p>Format: <code>ASC(string)</code> / <code>CHR$(code)</code></p>
-<pre><code>10 PRINT ASC(&quot;MEGA&quot;) : REM 77
+<pre data-download="code/ch03/asc-chr.bas code/ch03/asc-chr.prg"><code>10 PRINT ASC(&quot;MEGA&quot;) : REM 77
 20 PRINT CHR$(34); &quot;MEGA65&quot;; CHR$(34) : REM &quot;MEGA65&quot; IN QUOTES</code></pre>
 <h4 id="left-mid-right"><code>LEFT$</code>, <code>MID$</code>,
 <code>RIGHT$</code></h4>
@@ -1690,7 +1692,7 @@ last n characters of a string. <code>MID$</code> can also appear on the
 left of an equals sign to replace part of a string variable.</p>
 <p>Format: <code>LEFT$(string, n)</code> /
 <code>MID$(string, index, n)</code> / <code>RIGHT$(string, n)</code></p>
-<pre><code>10 A$ = &quot;MEGA65&quot;
+<pre data-download="code/ch03/left-mid-right.bas code/ch03/left-mid-right.prg"><code>10 A$ = &quot;MEGA65&quot;
 20 PRINT LEFT$(A$, 4); &quot; &quot;; MID$(A$, 3, 2); &quot; &quot;; RIGHT$(A$, 2)
 30 MID$(A$, 4, 1) = &quot;@&quot; : PRINT A$ : REM MEG@65</code></pre>
 <h4 id="len">LEN</h4>
@@ -1710,7 +1712,7 @@ from.</p>
 <p><code>STR$</code> converts a number to a string as PRINT would show
 it; VAL converts a string of digits back to a number.</p>
 <p>Format: <code>STR$(number)</code> / <code>VAL(string)</code></p>
-<pre><code>10 A$ = &quot;PI IS&quot; + STR$(π)
+<pre data-download="code/ch03/str-val.bas code/ch03/str-val.prg"><code>10 A$ = &quot;PI IS&quot; + STR$(π)
 20 PRINT VAL(&quot;78E2&quot;) : REM 7800</code></pre>
 <h4 id="rpt"><code>RPT$</code></h4>
 <p>Token <code>$CE $14</code> · Book p. B-222</p>
@@ -1722,7 +1724,7 @@ it; VAL converts a string of digits back to a number.</p>
 <p><code>HEX$</code> converts a number to four or eight hexadecimal
 digits; DEC converts a hexadecimal string to a number.</p>
 <p>Format: <code>HEX$(number)</code> / <code>DEC(string)</code></p>
-<pre><code>10 PRINT HEX$(1000) : REM 03E8
+<pre data-download="code/ch03/hex-dec.bas code/ch03/hex-dec.prg"><code>10 PRINT HEX$(1000) : REM 03E8
 20 PRINT DEC(&quot;D000&quot;) : REM 53248</code></pre>
 <h4 id="strbin-decbin"><code>STRBIN$</code>, DECBIN</h4>
 <p>Tokens <code>$CE $12</code>, <code>$CE $11</code> · Book pp. B-255,
@@ -1731,7 +1733,7 @@ B-67</p>
 DECBIN converts such a string back to a number.</p>
 <p>Format: <code>STRBIN$(number)</code> /
 <code>DECBIN(string)</code></p>
-<pre><code>10 PRINT STRBIN$(245)
+<pre data-download="code/ch03/strbin-decbin.bas code/ch03/strbin-decbin.prg"><code>10 PRINT STRBIN$(245)
 20 PRINT DECBIN(&quot;11110101&quot;) : REM 245</code></pre>
 <h3 id="numbers">Numbers</h3>
 <h4 id="abs-sgn-int">ABS, SGN, INT</h4>
@@ -1773,7 +1775,7 @@ PRINT SIND(30); COSD(60); TAND(45)
 <p>Returns a pseudo-random number from 0 up to, but not including, 1.
 Multiply and use INT for whole numbers in a range.</p>
 <p>Format: <code>RND(type)</code></p>
-<pre><code>10 DEF FN DI(X) = INT(RND(0) * 6) + 1 : REM DIE ROLL
+<pre data-download="code/ch03/rnd.bas code/ch03/rnd.prg"><code>10 DEF FN DI(X) = INT(RND(0) * 6) + 1 : REM DIE ROLL
 20 FOR I = 1 TO 10 : PRINT FN DI(0); : NEXT</code></pre>
 <p>The type selects how the number is made (MEGA65 Book, p. B-218).
 <code>RND(1)</code>, or any positive type, gives the next number in the
@@ -1796,7 +1798,7 @@ loop should test that bit. The generator first appeared in release
 <code>gs4510.vhdl</code>), so on older cores <code>$D7EF</code> does not
 return random values. To roll a die from it without favouring any
 face, take three bits and try again when they are 6 or 7:</p>
-<pre><code>10 FOR I = 1 TO 10
+<pre data-download="code/ch03/rnd-2.bas code/ch03/rnd-2.prg"><code>10 FOR I = 1 TO 10
 20 DO : R = PEEK($D7EF) AND 7 : LOOP UNTIL R &lt; 6
 30 PRINT R + 1; : NEXT</code></pre>
 <h4 id="and-or-xor-not">AND, OR, XOR, NOT</h4>
@@ -1816,7 +1818,7 @@ addresses. Addresses up to <code>$FFFF</code> are interpreted through
 BANK; larger ones are flat 28-bit addresses.</p>
 <p>Format: <code>PEEK(address)</code> /
 <code>POKE address, value [, value ...]</code></p>
-<pre><code>10 BANK 128
+<pre data-download="code/ch03/peek-poke.bas code/ch03/peek-poke.prg"><code>10 BANK 128
 20 POKE $D020, 0 : PRINT PEEK($D020) AND 15</code></pre>
 <h4 id="wpeek-wpoke">WPEEK, WPOKE</h4>
 <p>Tokens <code>$CE $10</code>, <code>$FE $1D</code> · Book pp. B-284,
@@ -1825,7 +1827,7 @@ B-285</p>
 and pointers.</p>
 <p>Format: <code>WPEEK(address)</code> /
 <code>WPOKE address, word [, word ...]</code></p>
-<pre><code>10 BANK 128
+<pre data-download="code/ch03/wpeek-wpoke.bas code/ch03/wpeek-wpoke.prg"><code>10 BANK 128
 20 WPOKE $02F8, $1600 : PRINT HEX$(WPEEK($02F8))</code></pre>
 <h4 id="setbit-clrbit-hasbit">SETBIT, CLRBIT, HASBIT</h4>
 <p>Tokens <code>$FE $2D $FE $4E</code>, <code>$9C $FE $4E</code>,
@@ -1834,7 +1836,7 @@ and pointers.</p>
 disturbing the others. HASBIT returns -1 or 0.</p>
 <p>Format: <code>SETBIT address, bit</code> /
 <code>CLRBIT address, bit</code> / <code>HASBIT(address, bit)</code></p>
-<pre><code>10 BANK 128
+<pre data-download="code/ch03/setbit-clrbit-hasbit.bas code/ch03/setbit-clrbit-hasbit.prg"><code>10 BANK 128
 20 SETBIT $D031, 6 : PRINT HASBIT($D031, 6)
 30 CLRBIT $D011, 4 : REM BLANK THE DISPLAY</code></pre>
 <h4 id="bank">BANK</h4>
@@ -1857,7 +1859,7 @@ them alone. Each argument is a bit mask, one bit per block.</p>
 memory very fast, anywhere in the 28-bit address space; adding 32 to the
 command copies backwards.</p>
 <p>Format: <code>EDMA command, length, source, target</code></p>
-<pre><code>10 EDMA 0, 80*25, 2048, $8000800 : REM COPY SCREEN TO ATTIC RAM
+<pre data-download="code/ch03/edma.bas code/ch03/edma.prg"><code>10 EDMA 0, 80*25, 2048, $8000800 : REM COPY SCREEN TO ATTIC RAM
 20 EDMA 3, 80*25, 32, 2048 : REM FILL SCREEN WITH SPACES</code></pre>
 <h4 id="dma">DMA</h4>
 <p>Token <code>$FE $1F</code> · Book p. B-76</p>
@@ -1874,7 +1876,7 @@ registers and adds a MAP offset (O) or keeps BASIC's interrupts running
 (I).</p>
 <p>Format: <code>SYS address [{, a, x, y, z, s}]</code> /
 <code>SYS TO address [{,A a, X x, Y y, Z z, S s, I mode, O offset}]</code></p>
-<pre><code>10 POKE $1600, $18, $8A, $65, $06, $60 : REM CLC : TXA : ADC $06 : RTS
+<pre data-download="code/ch03/sys.bas code/ch03/sys.prg"><code>10 POKE $1600, $18, $8A, $65, $06, $60 : REM CLC : TXA : ADC $06 : RTS
 20 SYS $1600, 77, 11</code></pre>
 <h4 id="rreg">RREG</h4>
 <p>Token <code>$FE $09</code> · Book p. B-223</p>
@@ -1887,7 +1889,7 @@ registers and adds a MAP offset (O) or keeps BASIC's interrupts running
 <code>$02F8</code>. The argument and result pass through BASIC's
 floating-point accumulator.</p>
 <p>Format: <code>USR(expression)</code></p>
-<pre><code>10 BANK 128 : WPOKE $2F8, $7F33 : REM ROM NEGATE ROUTINE, AS IN THE BOOK
+<pre data-download="code/ch03/usr.bas code/ch03/usr.prg"><code>10 BANK 128 : WPOKE $2F8, $7F33 : REM ROM NEGATE ROUTINE, AS IN THE BOOK
 20 PRINT USR(-5)</code></pre>
 <h4 id="fre">FRE</h4>
 <p>Token <code>$B8</code> · Book p. B-117</p>
@@ -1911,7 +1913,7 @@ reads or writes raw data with no load address.</p>
 <code>BSAVE filename, P start TO P end [,B bank] [,R] [,D drive] [,U unit]</code>
 /
 <code>BVERIFY filename [,P address] [,B bank] [,D drive] [,U unit]</code></p>
-<pre><code>10 BLOAD &quot;SPRITES&quot;, P($40000), R
+<pre data-download="code/ch03/bload-bsave-bverify.bas code/ch03/bload-bsave-bverify.prg"><code>10 BLOAD &quot;SPRITES&quot;, P($40000), R
 20 BSAVE &quot;ML ROUTINES&quot;, B1, P($9000) TO P($A000)
 30 BVERIFY &quot;ML ROUTINES&quot;, B1, P($9000)</code></pre>
 <h4 id="boot">BOOT</h4>
@@ -1952,7 +1954,7 @@ An <code>@</code> before the name in DSAVE replaces an existing
 file.</p>
 <p>Format: <code>DLOAD filename [,D drive] [,U unit]</code>, likewise
 DSAVE and DVERIFY</p>
-<pre><code>10 DSAVE &quot;@MYPROG&quot;
+<pre data-download="code/ch03/dload-dsave-dverify.bas code/ch03/dload-dsave-dverify.prg"><code>10 DSAVE &quot;@MYPROG&quot;
 20 DVERIFY &quot;MYPROG&quot;
 30 DLOAD &quot;MYPROG&quot;, U9</code></pre>
 <h4 id="load-save-verify">LOAD, SAVE, VERIFY</h4>
@@ -1980,7 +1982,7 @@ secondary address and file name; CLOSE disconnects it. Always close disk
 files, or they are left as unclosed "splat" files.</p>
 <p>Format: <code>OPEN channel, device [, secondary [, filename]]</code>
 / <code>CLOSE channel</code></p>
-<pre><code>10 OPEN 2, 8, 2, &quot;TEST,S,W&quot;
+<pre data-download="code/ch03/open-close.bas code/ch03/open-close.prg"><code>10 OPEN 2, 8, 2, &quot;TEST,S,W&quot;
 20 PRINT#2, &quot;TESTSTRING&quot;
 30 CLOSE 2</code></pre>
 <h4 id="dopen-dclose-append">DOPEN, DCLOSE, APPEND</h4>
@@ -1994,7 +1996,7 @@ DCLOSE closes one channel, or every file on a unit.</p>
 <code>DOPEN# channel, filename [,L reclen] [,W] [,D drive] [,U unit]</code>
 / <code>APPEND# channel, filename [,D drive] [,U unit]</code> /
 <code>DCLOSE# channel</code> or <code>DCLOSE [U unit]</code></p>
-<pre><code>10 DOPEN#2, &quot;SCORES&quot;, W
+<pre data-download="code/ch03/dopen-dclose-append.bas code/ch03/dopen-dclose-append.prg"><code>10 DOPEN#2, &quot;SCORES&quot;, W
 20 PRINT#2, &quot;ALICE&quot; &quot;,&quot; 1200
 30 DCLOSE#2
 40 APPEND#2, &quot;SCORES&quot; : PRINT#2, &quot;BOB&quot; &quot;,&quot; 900 : DCLOSE#2</code></pre>
@@ -2011,10 +2013,10 @@ open channel.</p>
 <code>INPUT# channel, variables</code> /
 <code>LINE INPUT# channel, stringvars</code> /
 <code>GET# channel, variables</code></p>
-<pre><code>10 DOPEN#2, &quot;SCORES&quot;
+<pre data-download="code/ch03/print-input-line-input-get.bas code/ch03/print-input-line-input-get.prg"><code>10 DOPEN#2, &quot;SCORES&quot;
 20 DO : INPUT#2, N$, S : PRINT N$, S : LOOP UNTIL ST
 30 DCLOSE#2</code></pre>
-<pre><code>10 DOPEN#2, &quot;NOTES&quot;, W
+<pre data-download="code/ch03/print-input-line-input-get-2.bas code/ch03/print-input-line-input-get-2.prg"><code>10 DOPEN#2, &quot;NOTES&quot;, W
 20 PRINT#2, &quot;FIRST LINE&quot; : PRINT#2, &quot;SECOND LINE&quot;
 30 DCLOSE#2
 40 DOPEN#2, &quot;NOTES&quot;
@@ -2028,7 +2030,7 @@ the whole first line with LINE INPUT# and one character of the second,
 <p>Moves to a record, and optionally a byte within it, in a relative
 file opened with DOPEN and L.</p>
 <p>Format: <code>RECORD# channel, record [, byte]</code></p>
-<pre><code>10 DOPEN#3, &quot;INDEX&quot;, L40
+<pre data-download="code/ch03/record.bas code/ch03/record.prg"><code>10 DOPEN#3, &quot;INDEX&quot;, L40
 20 RECORD#3, 25 : PRINT#3, &quot;ENTRY 25&quot;
 30 DCLOSE#3</code></pre>
 <h4 id="fread-fwrite">FREAD#, FWRITE#</h4>
@@ -2038,7 +2040,7 @@ B-120</p>
 32-bit address, typically from POINTER.</p>
 <p>Format: <code>FREAD# channel, pointer, size</code> /
 <code>FWRITE# channel, pointer, size</code></p>
-<pre><code>10 DIM B&amp;(23) : DOPEN#2, &quot;TEXT&quot;
+<pre data-download="code/ch03/fread-fwrite.bas code/ch03/fread-fwrite.prg"><code>10 DIM B&amp;(23) : DOPEN#2, &quot;TEXT&quot;
 20 FREAD#2, POINTER(B&amp;(0)), 24
 30 DCLOSE#2
 40 DOPEN#2, &quot;COPY&quot;, W
@@ -2052,7 +2054,7 @@ unit. CONCAT appends one file to the end of another.</p>
 <p>Format:
 <code>COPY source [,D drive] [,U unit] TO [target] [,D drive] [,U unit]</code>
 / <code>CONCAT file [,D drive] TO target [,D drive] [,U unit]</code></p>
-<pre><code>10 COPY &quot;CODES&quot; TO &quot;BACKUP&quot;
+<pre data-download="code/ch03/copy-concat.bas code/ch03/copy-concat.prg"><code>10 COPY &quot;CODES&quot; TO &quot;BACKUP&quot;
 20 CONCAT &quot;NEW DATA&quot; TO &quot;ARCHIVE&quot;, U9</code></pre>
 <h4 id="rename">RENAME</h4>
 <p>Token <code>$F5</code> · Book p. B-209</p>
@@ -2121,7 +2123,7 @@ current directory: <code>"/"</code> returns to the root of a disk, and
 <code>".."</code> goes up a level only on the SD card (U12).</p>
 <p>Format: <code>MKDIR dirname, L size [,U unit]</code> /
 <code>CHDIR dirname [,U unit]</code></p>
-<pre><code>10 MKDIR &quot;SUBDIR&quot;, L5   : REM CREATE IT AND MOVE INTO IT
+<pre data-download="code/ch03/mkdir-chdir.bas code/ch03/mkdir-chdir.prg"><code>10 MKDIR &quot;SUBDIR&quot;, L5   : REM CREATE IT AND MOVE INTO IT
 20 CHDIR &quot;/&quot;              : REM BACK TO THE ROOT</code></pre>
 <h4 id="mount">MOUNT</h4>
 <p>Token <code>$FE $49</code> · Book p. B-171</p>
@@ -2156,14 +2158,14 @@ values until a disk command clears them, and <code>CLR DS</code> clears
 them too. In a program, use <code>CLR DS</code> before SCRATCH, RENAME,
 COPY and the other housekeeping commands, which don't; <a href="#disk-and-device-errors">Disk and device errors</a>, above, has the details.</p>
 <p>Format: <code>DS</code>, <code>DS$</code>, <code>ST</code></p>
-<pre><code>10 DOPEN#1, &quot;DATA&quot;
+<pre data-download="code/ch03/ds-ds-st.bas code/ch03/ds-ds-st.prg"><code>10 DOPEN#1, &quot;DATA&quot;
 20 IF DS &lt;&gt; 0 THEN PRINT DS$ : STOP</code></pre>
 <h4 id="rdisk">RDISK</h4>
 <p>Token <code>$CE $15</code> · Book p. B-204</p>
 <p>Returns properties of the most recent disk action, such as the unit a
 program was loaded from.</p>
 <p>Format: <code>RDISK(property)</code></p>
-<pre><code>10 DU = RDISK(1)
+<pre data-download="code/ch03/rdisk.bas code/ch03/rdisk.prg"><code>10 DU = RDISK(1)
 20 BLOAD &quot;MYRESOURCE&quot;, U(DU) : REM LOAD FROM THE SAME UNIT</code></pre>
 <h3 id="colour">Colour</h3>
 <p>Colours are palette entry numbers: 0 to 31 for COLOR and FOREGROUND,
@@ -2198,9 +2200,9 @@ RPALETTE reads one component back: 0 red, 1 green, 2 blue.</p>
 <p>Format: <code>PALETTE screen, colour, red, green, blue</code> /
 <code>PALETTE COLOR colour, red, green, blue</code> /
 <code>RPALETTE(screen, index, rgb)</code></p>
-<pre><code>10 PALETTE COLOR 9, 0, 0, 7 : REM ENTRY 9 BECOMES DARK BLUE
+<pre data-download="code/ch03/palette-rpalette.bas code/ch03/palette-rpalette.prg"><code>10 PALETTE COLOR 9, 0, 0, 7 : REM ENTRY 9 BECOMES DARK BLUE
 20 PALETTE RESTORE</code></pre>
-<pre><code>10 SCREEN 320, 200, 4
+<pre data-download="code/ch03/palette-rpalette-2.bas code/ch03/palette-rpalette-2.prg"><code>10 SCREEN 320, 200, 4
 20 R = RPALETTE(0, 3, 0) : G = RPALETTE(0, 3, 1) : B = RPALETTE(0, 3, 2)
 30 SCREEN CLOSE : PRINT R; G; B : REM PRINTS 0 15 15</code></pre>
 <h4 id="rcolor">RCOLOR</h4>
@@ -2208,7 +2210,7 @@ RPALETTE reads one component back: 0 red, 1 green, 2 blue.</p>
 <p>Returns the current colour of a source such as the background, text
 or border.</p>
 <p>Format: <code>RCOLOR(source)</code></p>
-<pre><code>10 C = RCOLOR(3) : REM CURRENT BORDER COLOUR</code></pre>
+<pre data-download="code/ch03/rcolor.bas code/ch03/rcolor.prg"><code>10 C = RCOLOR(3) : REM CURRENT BORDER COLOUR</code></pre>
 <p>HIGHLIGHT, which sets the editor's highlighting colours, is under
 Program Editing.</p>
 <h3 id="bitmap-graphics">Bitmap Graphics</h3>
@@ -2223,7 +2225,7 @@ bitplanes, and SCREEN CLOSE returns to text. GRAPHIC CLR resets the
 whole graphics system.</p>
 <p>Format: <code>SCREEN [screen,] width, height, depth</code> /
 <code>SCREEN CLOSE</code> / <code>GRAPHIC CLR</code></p>
-<pre><code> 5 GRAPHIC CLR : REM START FROM THE DEFAULTS
+<pre data-download="code/ch03/screen-graphic.bas code/ch03/screen-graphic.prg"><code> 5 GRAPHIC CLR : REM START FROM THE DEFAULTS
 10 SCREEN 320, 200, 4 : REM 16 COLOURS
 20 GETKEY A$ : SCREEN CLOSE</code></pre>
 <h4 id="pen-rpen">PEN, RPEN</h4>
@@ -2232,7 +2234,7 @@ B-220</p>
 <p>PEN chooses the colour the drawing commands use; RPEN reads a pen's
 colour.</p>
 <p>Format: <code>PEN colour</code> / <code>RPEN(n)</code></p>
-<pre><code>10 SCREEN 320, 200, 2 : PEN 1 : C = RPEN(0)
+<pre data-download="code/ch03/pen-rpen.bas code/ch03/pen-rpen.prg"><code>10 SCREEN 320, 200, 2 : PEN 1 : C = RPEN(0)
 20 SCREEN CLOSE : PRINT &quot;DRAW PEN COLOUR =&quot;; C</code></pre>
 <h4 id="dmode-dpat">DMODE, DPAT</h4>
 <p>Tokens <code>$FE $35</code>, <code>$FE $36</code> · Book pp. B-77,
@@ -2244,11 +2246,11 @@ solid or complemented, and whether lines use the DPAT pattern (style
 when DMODE's style is 1.</p>
 <p>Format: <code>DMODE jam, complement, stencil, style, thick</code> /
 <code>DPAT type [, number, pattern ...]</code></p>
-<pre><code>10 SCREEN 320, 200, 5 : PEN 2 : BOX 50, 50, 100, 100, 1
+<pre data-download="code/ch03/dmode-dpat.bas code/ch03/dmode-dpat.prg"><code>10 SCREEN 320, 200, 5 : PEN 2 : BOX 50, 50, 100, 100, 1
 20 PEN 6 : DMODE 0, 1, 0, 0, 0 : REM COMPLEMENT WHAT IS THERE
 30 BOX 40, 90, 170, 94, 1
 40 GETKEY A$ : SCREEN CLOSE</code></pre>
-<pre><code>10 DPAT 0, 4, %00110011, %00111100, %00001111, %11110000</code></pre>
+<pre data-download="code/ch03/dmode-dpat-2.bas code/ch03/dmode-dpat-2.prg"><code>10 DPAT 0, 4, %00110011, %00111100, %00001111, %11110000</code></pre>
 <h4 id="dot-pixel">DOT, PIXEL</h4>
 <p>Tokens <code>$FE $4C</code>, <code>$CE $0C</code> · Book pp. B-81,
 B-189</p>
@@ -2256,7 +2258,7 @@ B-189</p>
 returns the colour of a pixel.</p>
 <p>Format: <code>DOT x, y [, colour]</code> /
 <code>PIXEL(x, y)</code></p>
-<pre><code>10 SCREEN 320, 200, 4
+<pre data-download="code/ch03/dot-pixel.bas code/ch03/dot-pixel.prg"><code>10 SCREEN 320, 200, 4
 20 FOR I = 1 TO 1000 : DOT RND(1) * 320, RND(1) * 200, RND(1) * 16 : NEXT
 30 PRINT PIXEL(160, 100)</code></pre>
 <h4 id="line">LINE</h4>
@@ -2264,7 +2266,7 @@ returns the colour of a pixel.</p>
 <p>Draws a line, or a connected series of lines through several
 points.</p>
 <p>Format: <code>LINE x1, y1 [, x2, y2 ...]</code></p>
-<pre><code>10 SCREEN 320, 200, 2 : PEN 1
+<pre data-download="code/ch03/line.bas code/ch03/line.prg"><code>10 SCREEN 320, 200, 2 : PEN 1
 20 LINE 25, 25, 295, 175, 295, 25, 25, 175</code></pre>
 <h4 id="box-circle-ellipse-polygon">BOX, CIRCLE, ELLIPSE, POLYGON</h4>
 <p>Tokens <code>$E1</code>, <code>$E2</code>, <code>$FE $30</code>,
@@ -2277,7 +2279,7 @@ sides.</p>
 <code>CIRCLE xc, yc, radius [, flags, start, stop]</code> /
 <code>ELLIPSE xc, yc, xr, yr [, flags, start, stop]</code> /
 <code>POLYGON x, y, xrad, yrad, sides [...]</code></p>
-<pre><code>10 SCREEN 320, 200, 2 : PEN 1
+<pre data-download="code/ch03/box-circle-ellipse-polygon.bas code/ch03/box-circle-ellipse-polygon.prg"><code>10 SCREEN 320, 200, 2 : PEN 1
 20 BOX 10, 10, 100, 60, 1
 30 CIRCLE 160, 100, 50
 40 ELLIPSE 250, 100, 40, 20
@@ -2294,7 +2296,7 @@ colour.</p>
 a row given in pixels, scaled by height and width.</p>
 <p>Format:
 <code>CHAR column, row, height, width, direction, string [, charset address]</code></p>
-<pre><code>10 SCREEN 640, 400, 2
+<pre data-download="code/ch03/char.bas code/ch03/char.prg"><code>10 SCREEN 640, 400, 2
 20 CHAR 28, 180, 4, 4, 2, &quot;MEGA65&quot;, $29000</code></pre>
 <h4 id="cut-gcopy-paste">CUT, GCOPY, PASTE</h4>
 <p>Tokens <code>$E4</code>, <code>$FE $32</code>, <code>$E3</code> ·
@@ -2303,7 +2305,7 @@ Book pp. B-62, B-121, B-186</p>
 without clearing; PASTE draws the buffer at a new position.</p>
 <p>Format: <code>CUT x, y, width, height</code> /
 <code>GCOPY x, y, width, height</code> / <code>PASTE x, y</code></p>
-<pre><code>10 SCREEN 320, 200, 2 : BOX 60, 60, 300, 180, 1
+<pre data-download="code/ch03/cut-gcopy-paste.bas code/ch03/cut-gcopy-paste.prg"><code>10 SCREEN 320, 200, 2 : BOX 60, 60, 300, 180, 1
 20 GCOPY 140, 80, 40, 40
 30 PASTE 10, 10
 40 CUT 140, 80, 40, 40 : PASTE 200, 10
@@ -2314,13 +2316,13 @@ without clearing; PASTE draws the buffer at a new position.</p>
 fills it with the pen colour.</p>
 <p>Format: <code>VIEWPORT DEF x, y, width, height</code> /
 <code>VIEWPORT CLR</code></p>
-<pre><code>10 VIEWPORT DEF 20, 30, 100, 120 : PEN 1 : VIEWPORT CLR</code></pre>
+<pre data-download="code/ch03/viewport.bas code/ch03/viewport.prg"><code>10 VIEWPORT DEF 20, 30, 100, 120 : PEN 1 : VIEWPORT CLR</code></pre>
 <h4 id="rgraphic">RGRAPHIC</h4>
 <p>Token <code>$CC</code> · Book p. B-215</p>
 <p>Returns a property of a graphics screen, such as whether it is open,
 or its width.</p>
 <p>Format: <code>RGRAPHIC(screen, parameter)</code></p>
-<pre><code>10 PRINT RGRAPHIC(0, 0) : REM 1 IF SCREEN 0 IS OPEN</code></pre>
+<pre data-download="code/ch03/rgraphic.bas code/ch03/rgraphic.prg"><code>10 PRINT RGRAPHIC(0, 0) : REM 1 IF SCREEN 0 IS OPEN</code></pre>
 <h4 id="loadiff-saveiff">LOADIFF, SAVEIFF</h4>
 <p>Tokens <code>$FE $43</code>, <code>$FE $44</code> · Book pp. B-156,
 B-232</p>
@@ -2328,7 +2330,7 @@ B-232</p>
 current screen as an IFF file.</p>
 <p>Format: <code>LOADIFF filename [,D drive] [,U unit]</code> /
 <code>SAVEIFF filename [,D drive] [,U unit]</code></p>
-<pre><code>10 SAVEIFF &quot;PICTURE&quot;
+<pre data-download="code/ch03/loadiff-saveiff.bas code/ch03/loadiff-saveiff.prg"><code>10 SAVEIFF &quot;PICTURE&quot;
 20 LOADIFF &quot;PICTURE&quot;</code></pre>
 <p>SAVEIFF saves a screen of any depth. Before ROM 920417 it failed on
 a 256-colour screen with 8 bitplanes (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>); in Xemu with ROM
@@ -2344,7 +2346,7 @@ load and save sprite data.</p>
 <code>SPRITE num [{, switch, colour, prio, expx, expy, mode}]</code> /
 <code>SPRITE CLR</code> / <code>SPRITE LOAD filename</code> /
 <code>SPRITE SAVE filename</code></p>
-<pre><code>10 SPRITE LOAD &quot;SPRITEDATA&quot;
+<pre data-download="code/ch03/sprite.bas code/ch03/sprite.prg"><code>10 SPRITE LOAD &quot;SPRITEDATA&quot;
 20 SPRITE 1, 1, 2 : REM SPRITE 1 ON, RED</code></pre>
 <h4 id="movspr">MOVSPR</h4>
 <p>Token <code>$FE $06</code> · Book p. B-175</p>
@@ -2352,7 +2354,7 @@ load and save sprite data.</p>
 angle and speed, written <code>angle#speed</code>. BASIC's interrupt
 keeps it moving while the program does other work.</p>
 <p>Format: <code>MOVSPR number, position</code></p>
-<pre><code>10 SPRITE 1, 1 : MOVSPR 1, 120, 0
+<pre data-download="code/ch03/movspr.bas code/ch03/movspr.prg"><code>10 SPRITE 1, 1 : MOVSPR 1, 120, 0
 20 MOVSPR 1, 0#5 : REM MOVE AT ANGLE 0, SPEED 5</code></pre>
 <h4 id="sprcolor-rspcolor">SPRCOLOR, RSPCOLOR</h4>
 <p>Tokens <code>$FE $08</code>, <code>$CE $07</code> · Book pp. B-246,
@@ -2361,7 +2363,7 @@ B-224</p>
 RSPCOLOR reads one back.</p>
 <p>Format: <code>SPRCOLOR [{mc1, mc2}]</code> /
 <code>RSPCOLOR(n)</code></p>
-<pre><code>10 SPRCOLOR 4, 5
+<pre data-download="code/ch03/sprcolor-rspcolor.bas code/ch03/sprcolor-rspcolor.prg"><code>10 SPRCOLOR 4, 5
 20 PRINT RSPCOLOR(1)</code></pre>
 <h4 id="sprsav">SPRSAV</h4>
 <p>Token <code>$FE $16</code> · Book p. B-249</p>
@@ -2388,7 +2390,7 @@ and type 2 for sprite-to-background.</p>
 position or speed, and RSPRSYS a system-wide sprite setting.</p>
 <p>Format: <code>RSPRITE(sprite, n)</code> /
 <code>RSPPOS(sprite, n)</code> / <code>RSPRSYS(n)</code></p>
-<pre><code>10 XP = RSPPOS(1, 0) : YP = RSPPOS(1, 1)
+<pre data-download="code/ch03/rsprite-rsppos-rsprsys.bas code/ch03/rsprite-rsppos-rsprsys.prg"><code>10 XP = RSPPOS(1, 0) : YP = RSPPOS(1, 1)
 20 PRINT &quot;SPRITE 1 AT&quot;; XP; YP
 30 SPRITE 1, 1 : PRINT RSPRITE(1, 0) : REM 1, AS SPRITE 1 IS ON
 40 PRINT RSPRSYS(0) : REM 1 IF HIGH-RESOLUTION SPRITES ARE ON</code></pre>
@@ -2410,7 +2412,7 @@ B-221</p>
 1 and 3. RPLAY tests whether a voice is still playing.</p>
 <p>Format: <code>PLAY [{string1, ... string6}]</code> /
 <code>RPLAY(voice)</code></p>
-<pre><code>10 PLAY &quot;O4ICDEFGABO5CR&quot;, &quot;O2QCGEGCO1GCR&quot;
+<pre data-download="code/ch03/play-rplay.bas code/ch03/play-rplay.prg"><code>10 PLAY &quot;O4ICDEFGABO5CR&quot;, &quot;O2QCGEGCO1GCR&quot;
 20 IF RPLAY(1) OR RPLAY(2) THEN 20 : REM WAIT FOR THE END</code></pre>
 <h4 id="tempo">TEMPO</h4>
 <p>Token <code>$FE $05</code> · Book p. B-262</p>
@@ -2444,14 +2446,14 @@ high-pass switches and resonance.</p>
 <p>Reads a joystick: the low four bits give the direction, 1 for up
 through 8 for up-left clockwise, and bit 7 is the fire button.</p>
 <p>Format: <code>JOY(port)</code></p>
-<pre><code>10 N = JOY(1)
+<pre data-download="code/ch03/joy.bas code/ch03/joy.prg"><code>10 N = JOY(1)
 20 IF N AND 128 THEN PRINT &quot;FIRE!&quot;</code></pre>
 <h4 id="pot">POT</h4>
 <p>Token <code>$CE $02</code> · Book p. B-197</p>
 <p>Reads a paddle, 1 to 4. The low byte is the position, and values
 above 255 mean the button is pressed.</p>
 <p>Format: <code>POT(paddle)</code></p>
-<pre><code>10 X = POT(1) : B = X &gt; 255 : V = X AND 255</code></pre>
+<pre data-download="code/ch03/pot.bas code/ch03/pot.prg"><code>10 X = POT(1) : B = X &gt; 255 : V = X AND 255</code></pre>
 <h4 id="lpen">LPEN</h4>
 <p>Token <code>$CE $04</code> · Book p. B-163</p>
 <p>Reads the latched light pen X (0) or Y (1) position. The Book
@@ -2468,7 +2470,7 @@ RMOUSE reads the position and buttons, giving -1 if the mouse driver is
 off.</p>
 <p>Format: <code>MOUSE ON [{, port, sprite, hotspot, pos}]</code> /
 <code>MOUSE OFF</code> / <code>RMOUSE x, y, buttons</code></p>
-<pre><code>10 MOUSE ON, 1, 1
+<pre data-download="code/ch03/mouse-rmouse.bas code/ch03/mouse-rmouse.prg"><code>10 MOUSE ON, 1, 1
 20 RMOUSE XP, YP, BU : PRINT XP; YP; BU</code></pre>
 <h3 id="system">System</h3>
 <h4 id="speed-fast-rspeed">SPEED, FAST, RSPEED</h4>
@@ -2479,7 +2481,7 @@ RSPEED reports the speed as 1, 3 or 40. Neither works after
 <code>POKE 0,65</code> has forced full speed.</p>
 <p>Format: <code>SPEED [speed]</code> / <code>FAST [speed]</code> /
 <code>RSPEED(n)</code></p>
-<pre><code>10 SPEED 1 : PRINT RSPEED(0)
+<pre data-download="code/ch03/speed-fast-rspeed.bas code/ch03/speed-fast-rspeed.prg"><code>10 SPEED 1 : PRINT RSPEED(0)
 20 SPEED : PRINT RSPEED(0)
 30 FAST 3.5 : PRINT RSPEED(0) : REM PRINTS 3</code></pre>
 <h4 id="go64">GO64</h4>
@@ -2505,7 +2507,7 @@ and memory use.</p>
 <code>TI$</code> and <code>DT$</code> give the time and date from the
 real-time clock.</p>
 <p>Format: <code>TI</code>, <code>TI$</code>, <code>DT$</code></p>
-<pre><code>10 CLR TI
+<pre data-download="code/ch03/ti-ti-dt.bas code/ch03/ti-ti-dt.prg"><code>10 CLR TI
 20 FOR I% = 1 TO 10000 : NEXT
 30 PRINT &quot;TOOK&quot;; TI; &quot;SECONDS AT &quot;; TI$; &quot; ON &quot;; DT$</code></pre>
 <h4 id="t-c">T@&amp;, C@&amp;</h4>
@@ -2515,7 +2517,7 @@ and row of the text screen, as described under <a
 href="#screen-arrays">Screen arrays</a>.</p>
 <p>Format: <code>T@&amp;(column, row)</code> /
 <code>C@&amp;(column, row)</code></p>
-<pre><code>10 FOR C = 0 TO 63 : T@&amp;(C, 0) = C : C@&amp;(C, 0) = C AND 15 : NEXT</code></pre>
+<pre data-download="code/ch03/t-c.bas code/ch03/t-c.prg"><code>10 FOR C = 0 TO 63 : T@&amp;(C, 0) = C : C@&amp;(C, 0) = C AND 15 : NEXT</code></pre>
 <h4 id="off">OFF</h4>
 <p>Token <code>$FE $24</code> · Book p. B-180</p>
 <p>Secondary keyword that turns a feature off, as in KEY OFF, MOUSE OFF

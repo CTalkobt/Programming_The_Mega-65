@@ -24,6 +24,7 @@ BASIC 65</title>
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch03-basic65-reference-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch05-mega65-architecture.html">Next &rarr;</a></span></nav>
@@ -31,6 +32,7 @@ BASIC 65</title>
 id="programming-the-mega65--chapter-4-effective-programming-in-basic-65">Programming
 the MEGA65 — Chapter 4: Effective Programming in BASIC 65</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch04/ch04.d81">ch04.d81</a> holds this chapter's 14 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 3 described each keyword. This chapter is about putting them
 together: how to write BASIC 65 programs that are easy to read, easy to
@@ -226,7 +228,7 @@ turns into BASIC 65 almost line for line. A larger program is written
 and tested a part at a time, each part as a subroutine.</li>
 <li><strong>Test it and improve it.</strong></li>
 </ol>
-<pre><code>10 SCNCLR : PRINT &quot;GUESS MY NUMBER (1-99)&quot;
+<pre data-download="code/ch04/designing-a-program.bas code/ch04/designing-a-program.prg"><code>10 SCNCLR : PRINT &quot;GUESS MY NUMBER (1-99)&quot;
 20 X = INT(RND(0) * 99) + 1 : N = 0
 30 DO
 40 INPUT &quot;YOUR GUESS&quot;; G : N = N + 1
@@ -244,7 +246,7 @@ GOT IT IN 3 TRIES</code></pre>
 <p>Testing shows what to improve. A guess of 150 or 2.5 is counted as a
 guess, and the game ends after one round. This version rejects guesses
 outside the range, and offers another game:</p>
-<pre><code>10 DO
+<pre data-download="code/ch04/designing-a-program-2.bas code/ch04/designing-a-program-2.prg"><code>10 DO
 20 SCNCLR : PRINT &quot;GUESS MY NUMBER (1-99)&quot;
 30 X = INT(RND(0) * 99) + 1 : N = 0
 40 DO
@@ -274,11 +276,11 @@ in its listing. Using them consistently is most of what program design
 means in practice.</p>
 <h4 id="loops-without-goto">Loops without GOTO</h4>
 <p>A C64 program that waits for a key typically reads like this:</p>
-<pre><code>10 GET A$ : IF A$ = &quot;&quot; THEN 10</code></pre>
+<pre data-download="code/ch04/loops-without-goto.bas code/ch04/loops-without-goto.prg"><code>10 GET A$ : IF A$ = &quot;&quot; THEN 10</code></pre>
 <p>It works, but every such line adds a jump to follow when reading the
 program. BASIC 65's DO ... LOOP says what it means and needs no line
 number:</p>
-<pre><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
+<pre data-download="code/ch04/loops-without-goto-2.bas code/ch04/loops-without-goto-2.prg"><code>10 DO : GET A$ : LOOP UNTIL A$ &lt;&gt; &quot;&quot;</code></pre>
 <p>The condition can go at either end. With WHILE or UNTIL after DO, it
 is tested before each pass, so the body may never run; after LOOP, it is
 tested after each pass, so the body always runs at least once. A DO ...
@@ -325,7 +327,7 @@ chains of IF statements:</p>
 <h4 id="functions">Functions</h4>
 <p>DEF FN defines a one-line numeric function, which keeps a repeated
 formula in one place:</p>
-<pre><code>10 DEF FN RN(X) = INT(RND(0) * X) + 1 : REM RANDOM 1 TO X
+<pre data-download="code/ch04/functions.bas code/ch04/functions.prg"><code>10 DEF FN RN(X) = INT(RND(0) * X) + 1 : REM RANDOM 1 TO X
 20 PRINT FN RN(6), FN RN(100)</code></pre>
 <h4 id="data-in-data-statements">Data in DATA statements</h4>
 <p>Tables of fixed values belong in DATA statements rather than in long
@@ -529,7 +531,7 @@ The old ten-digit ISBN is an example: multiply the first nine digits by
 1 to 9, add the results, and the remainder after dividing by 11 is the
 tenth digit, with X standing for 10. A single wrong digit, or two
 neighbouring digits swapped, gives a different check digit:</p>
-<pre><code>10 I$ = &quot;030640615&quot; : S = 0
+<pre data-download="code/ch04/validation.bas code/ch04/validation.prg"><code>10 I$ = &quot;030640615&quot; : S = 0
 20 FOR J = 1 TO 9 : S = S + J * VAL(MID$(I$, J, 1)) : NEXT
 30 C = MOD(S, 11) : C$ = MID$(&quot;0123456789X&quot;, C + 1, 1)
 40 PRINT I$ + C$</code></pre>
@@ -689,7 +691,7 @@ extend.</p>
 the characters listed in OK$. DEL removes the last character, and
 RETURN ends the input. Any other key is ignored, so the user cannot
 move the cursor about the screen or type a letter into a number:</p>
-<pre><code>10 OK$ = &quot;0123456789&quot; : ML = 5
+<pre data-download="code/ch04/input.bas code/ch04/input.prg"><code>10 OK$ = &quot;0123456789&quot; : ML = 5
 20 GOSUB 1000 : PRINT : PRINT &quot;YOU TYPED&quot;; VAL(IN$)
 30 END
 1000 REM READ UP TO ML CHARACTERS FROM OK$ INTO IN$
@@ -712,7 +714,7 @@ character position, and a full stop in a numeric pattern places the
 decimal point, rounding the value to fit (MEGA65 Book, p. B-200). A
 string printed with a pattern is cut or padded to its width, so names
 and prices line up in columns:</p>
-<pre><code>10 FOR I = 1 TO 3 : READ D$, P
+<pre data-download="code/ch04/output.bas code/ch04/output.prg"><code>10 FOR I = 1 TO 3 : READ D$, P
 20 PRINT USING &quot;############&quot;; D$;
 30 PRINT USING &quot;#####.##&quot;; P : NEXT
 40 DATA &quot;COFFEE&quot;, 3.5, &quot;CAKE&quot;, 12.257, &quot;TEA&quot;, 1234.5</code></pre>
@@ -730,7 +732,7 @@ only the last digits. Chapter 3 lists all the patterns.</p>
 <h3 id="calculations">Calculations</h3>
 <p>To round a number to two decimal places for later use, rather than
 just for printing, multiply, add a half, take INT and divide:</p>
-<pre><code>10 X = 2.675 : PRINT INT(X * 100 + .5) / 100</code></pre>
+<pre data-download="code/ch04/calculations.bas code/ch04/calculations.prg"><code>10 X = 2.675 : PRINT INT(X * 100 + .5) / 100</code></pre>
 <pre><code> 2.68</code></pre>
 <p>MOD gives the remainder of a division (MEGA65 Book, p. B-169). It is
 the way to wrap a value around, such as a position on a circular track
@@ -745,7 +747,7 @@ it. INSTR takes an optional starting position, so a loop can find each
 space in turn (MEGA65 Book, p. B-141). MID$ used as a statement
 replaces characters in a string variable without changing its length
 (MEGA65 Book, p. B-167):</p>
-<pre><code>10 A$ = &quot;PROGRAMMING THE MEGA65&quot;
+<pre data-download="code/ch04/string-handling.bas code/ch04/string-handling.prg"><code>10 A$ = &quot;PROGRAMMING THE MEGA65&quot;
 20 R$ = &quot;&quot; : FOR I = LEN(A$) TO 1 STEP -1 : R$ = R$ + MID$(A$, I, 1) : NEXT : PRINT R$
 30 W = 0 : P = 1
 40 DO : P = INSTR(A$, &quot; &quot;, P) : IF P = 0 THEN EXIT
@@ -768,7 +770,7 @@ quick for a few hundred items, and quickest of all when the data is
 already nearly in order. The search is a binary search, which halves
 the part of a sorted array still to be searched at each step, so it
 needs at most seven steps for a hundred items:</p>
-<pre><code>10 N = 10 : DIM A(N) : X = RND(-7)
+<pre data-download="code/ch04/sorting-searching-and-shuffling.bas code/ch04/sorting-searching-and-shuffling.prg"><code>10 N = 10 : DIM A(N) : X = RND(-7)
 20 FOR I = 1 TO N : A(I) = I : NEXT
 30 FOR I = N TO 2 STEP -1
 40 J = INT(RND(1) * I) + 1
@@ -805,7 +807,7 @@ grid, such as a game board. A <em>stack</em> is an array with a
 variable, SP, that points to its top item: adding an item increases SP,
 and taking one decreases it, so items come off in the reverse of the
 order they went on:</p>
-<pre><code>10 READ N : DIM N$(N), S(N)
+<pre data-download="code/ch04/data-structures.bas code/ch04/data-structures.prg"><code>10 READ N : DIM N$(N), S(N)
 20 FOR I = 1 TO N : READ N$(I), S(I) : NEXT
 30 B = 1 : FOR I = 2 TO N : IF S(I) &gt; S(B) THEN B = I
 40 NEXT : PRINT &quot;BEST: &quot;; N$(B); S(B)
@@ -833,7 +835,7 @@ gives the rules for array sizes.</p>
 <code>DD-MMM-YYYY</code>, such as <code>15-OCT-2026</code> (MEGA65
 Book, p. B-87). This program splits such a date into numbers, finds the
 day of the week and counts the days to Christmas:</p>
-<pre><code>10 D$ = &quot;15-OCT-2026&quot; : REM OR D$ = DT$
+<pre data-download="code/ch04/processing-dates.bas code/ch04/processing-dates.prg"><code>10 D$ = &quot;15-OCT-2026&quot; : REM OR D$ = DT$
 20 D = VAL(LEFT$(D$, 2))
 30 M = (INSTR(&quot;JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC&quot;, MID$(D$, 4, 3)) + 2) / 3
 40 Y = VAL(RIGHT$(D$, 4))
@@ -869,7 +871,7 @@ order of effect.</p>
 <p>TI is a timer with microsecond resolution, restarted by CLR TI. Time
 the part of the program in question before and after a change, rather
 than guessing:</p>
-<pre><code>10 CLR TI
+<pre data-download="code/ch04/measure-first.bas code/ch04/measure-first.prg"><code>10 CLR TI
 20 FOR I = 1 TO 10000 : X = X + 1 : NEXT
 30 PRINT TI; &quot;SECONDS&quot;</code></pre>
 <p>The table shows how long some loops of 2,000 passes took in Xemu with

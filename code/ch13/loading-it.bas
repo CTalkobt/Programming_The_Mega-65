@@ -1,0 +1,2 @@
+10 MEM 0,3                       : REM RESERVE $50000-$53FFF
+20 BLOAD "BOOM.RAW",R,P($50000)

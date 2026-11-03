@@ -1,0 +1,1 @@
+10 IF POS(0) > 72 THEN PRINT

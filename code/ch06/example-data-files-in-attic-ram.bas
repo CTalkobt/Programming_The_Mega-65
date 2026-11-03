@@ -1,0 +1,3 @@
+10 BLOAD "LEVELS", P($8000000), R                    : REM INTO ATTIC RAM
+20 EDMA 0, 8192, $8000000, $40000                     : REM LEVEL 1 TO BANK 4
+30 BSAVE "BANK4", P($40000) TO P($42000), R           : REM SAVE IT BACK RAW

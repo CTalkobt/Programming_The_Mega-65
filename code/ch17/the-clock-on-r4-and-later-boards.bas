@@ -1,0 +1,5 @@
+10 FOR I = 0 TO 3
+20 READ V : POKE $FFD7150 + I, V
+30 SLEEP 0.05                     : REM LET THE CORE SEND IT
+40 NEXT
+50 DATA 1, 2, 3, 4

@@ -1,0 +1,5 @@
+10 DIM A%(3,2)
+20 B=POINTER(A%(0,0))
+30 FOR Y=0 TO 2 : FOR X=0 TO 3
+40 PRINT "(";X;",";Y;")";POINTER(A%(X,Y))-B
+50 NEXT X : NEXT Y

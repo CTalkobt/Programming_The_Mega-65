@@ -23,12 +23,14 @@
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch12-graphics.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch14-sd-card-and-mass-storage.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-13-sound">Programming the MEGA65
 — Chapter 13: Sound</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch13/ch13.d81">ch13.d81</a> holds this chapter's 3 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The C64 had one SID. The MEGA65 has four, giving twelve voices, plus
 four channels of digitised sound played by DMA. Everything passes
@@ -130,7 +132,7 @@ wave's width, 0 to 4095 (MEGA65 Book, p. B-243).</p>
 <p>Because jiffies depend on the video standard, a program that wants a
 sound of fixed length should check it first. Bit 7 of <code>$D06F</code>
 is set in NTSC mode:</p>
-<pre><code>10 IF PEEK($D06F) AND $80 THEN J=60 : ELSE J=50
+<pre data-download="code/ch13/sound.bas code/ch13/sound.prg"><code>10 IF PEEK($D06F) AND $80 THEN J=60 : ELSE J=50
 20 SOUND 1, 7382, J                      : REM SQUARE WAVE FOR ONE SECOND
 30 SOUND 3, 4000, 120, 2, 2000, 400, 1   : REM SWEEPING SAWTOOTH
 40 SLEEP 3                               : REM LET THEM PLAY
@@ -223,7 +225,7 @@ B-190, B-191).</p>
 between each other. In current ROMs the check that would do this is
 disabled, so each note still ends normally (MEGA65 ROM source, PLAY).
 Turn portamento off with <code>P0</code>.</p>
-<pre><code>10 ENVELOPE 9, 10, 5, 10, 5, 0, 300
+<pre data-download="code/ch13/play.bas code/ch13/play.prg"><code>10 ENVELOPE 9, 10, 5, 10, 5, 0, 300
 20 VOL 8, 8
 30 TEMPO 30
 40 PLAY &quot;O5T9HCIDCDEHCG IGAGFEFDEWCL&quot;, &quot;O2T0QCGEGCGEG DBGB CGEGL&quot;</code></pre>
@@ -1133,7 +1135,7 @@ the program.</p>
 <h3 id="loading-it">Loading it</h3>
 <p>From BASIC, reserve memory in bank 5 with MEM, as Chapter 6
 described, then BLOAD the file to <code>$50000</code>:</p>
-<pre><code>10 MEM 0,3                       : REM RESERVE $50000-$53FFF
+<pre data-download="code/ch13/loading-it.bas code/ch13/loading-it.prg"><code>10 MEM 0,3                       : REM RESERVE $50000-$53FFF
 20 BLOAD &quot;BOOM.RAW&quot;,R,P($50000)</code></pre>
 <p><code>MEM 0,3</code> reserves the first two 8KB blocks of bank 5,
 16KB in all, enough for the 12,000-byte sample used below: one and a

@@ -1,0 +1,2 @@
+10 A$ = "PI IS" + STR$(π)
+20 PRINT VAL("78E2") : REM 7800

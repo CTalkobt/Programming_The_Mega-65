@@ -24,6 +24,7 @@ MEGA65</title>
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch01-introduction.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch03-basic65-reference-guide.html">Next &rarr;</a></span></nav>
@@ -31,6 +32,7 @@ MEGA65</title>
 id="programming-the-mega65--chapter-2-getting-to-know-the-mega65">Programming
 the MEGA65 — Chapter 2: Getting to Know the MEGA65</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch02/ch02.d81">ch02.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Before programming any computer, it pays to know its everyday tools
 well. On the MEGA65 those tools are richer than on a C64: the keyboard
@@ -403,7 +405,7 @@ program can fill the last column without moving the rest of the screen.
 To print in the bottom-right corner, scrolling must be stopped as well,
 with ESC M, or the screen scrolls up (MEGA65 ROM source, escape table;
 <a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>):</p>
-<pre><code>10 PRINT CHR$(27);"R";CHR$(27);"M";   : REM NO LINE PUSHING OR SCROLLING
+<pre data-download="code/ch02/escape-sequences.bas code/ch02/escape-sequences.prg"><code>10 PRINT CHR$(27);"R";CHR$(27);"M";   : REM NO LINE PUSHING OR SCROLLING
 20 CURSOR 79,24 : PRINT "*";          : REM BOTTOM-RIGHT CORNER
 30 PRINT CHR$(27);"N";CHR$(27);"L";   : REM BACK TO NORMAL</code></pre>
 <p>Some programs expect to start in 80 × 25 mode and may not work

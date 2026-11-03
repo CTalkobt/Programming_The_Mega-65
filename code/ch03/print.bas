@@ -1,0 +1,1 @@
+10 FOR I = 1 TO 10 : PRINT I, I * I, SQR(I) : NEXT

@@ -1,0 +1,1 @@
+10 A = 5 : CLR : PRINT A : REM PRINTS 0

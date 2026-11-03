@@ -1,0 +1,22 @@
+10 N = 10 : DIM A(N) : X = RND(-7)
+20 FOR I = 1 TO N : A(I) = I : NEXT
+30 FOR I = N TO 2 STEP -1
+40 J = INT(RND(1) * I) + 1
+50 T = A(I) : A(I) = A(J) : A(J) = T
+60 NEXT
+70 FOR I = 1 TO N : PRINT A(I); : NEXT : PRINT
+100 FOR I = 2 TO N
+110 T = A(I) : J = I - 1
+120 DO WHILE J > 0
+130 IF A(J) <= T THEN EXIT
+140 A(J + 1) = A(J) : J = J - 1
+150 LOOP
+160 A(J + 1) = T
+170 NEXT
+180 FOR I = 1 TO N : PRINT A(I); : NEXT : PRINT
+200 K = 7 : LO = 1 : HI = N : F = 0
+210 DO WHILE LO <= HI AND F = 0
+220 M = INT((LO + HI) / 2)
+230 IF A(M) = K THEN F = M : ELSE IF A(M) < K THEN LO = M + 1 : ELSE HI = M - 1
+240 LOOP
+250 PRINT K; "FOUND AT"; F

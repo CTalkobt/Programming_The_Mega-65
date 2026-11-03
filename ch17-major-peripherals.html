@@ -24,6 +24,7 @@ Peripherals</title>
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch16-control-ports.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="appendices.html">Next &rarr;</a></span></nav>
@@ -31,6 +32,7 @@ Peripherals</title>
 id="programming-the-mega65--chapter-17-major-peripherals">Programming
 the MEGA65 — Chapter 17: Major Peripherals</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch17/ch17.d81">ch17.d81</a> holds this chapter's 7 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter covers the MEGA65's remaining connections to the outside
 world: the IEC serial bus for printers, the cartridge port, Ethernet,
@@ -43,7 +45,7 @@ equivalent.</p>
 Commodore printers and plotters connect to it exactly as before, usually
 as device 4 or 5. Output is sent by opening a channel to the printer and
 printing to it, or by redirecting all screen output with CMD:</p>
-<pre><code>10 OPEN 4, 4          : REM PRINTER ON DEVICE 4
+<pre data-download="code/ch17/printers-and-the-iec-bus.bas code/ch17/printers-and-the-iec-bus.prg"><code>10 OPEN 4, 4          : REM PRINTER ON DEVICE 4
 20 PRINT#4, &quot;MEGA65 PRINTER TEST&quot;
 30 CMD 4 : LIST       : REM SEND A LISTING TO THE PRINTER
 40 PRINT#4 : CLOSE 4  : REM RESTORE SCREEN OUTPUT AND CLOSE</code></pre>
@@ -97,7 +99,7 @@ printers in the C64's documentation (<a href="https://archive.org/details/c64-pr
 </tr>
 </tbody>
 </table>
-<pre><code>10 OPEN 4, 4, 7                       : REM UPPER AND LOWER CASE
+<pre data-download="code/ch17/secondary-addresses-and-control-codes.bas code/ch17/secondary-addresses-and-control-codes.prg"><code>10 OPEN 4, 4, 7                       : REM UPPER AND LOWER CASE
 20 PRINT#4, CHR$(14); &quot;REPORT&quot;; CHR$(15) : REM DOUBLE-WIDTH TITLE
 30 PRINT#4, CHR$(18); &quot;TOTAL&quot;; CHR$(146); 1234
 40 CLOSE 4</code></pre>
@@ -317,7 +319,7 @@ that is all zeros (MEGA65 Book, p. 4-7). The Hypervisor copies it into
 <code>$D6E9-$D6EE</code> at start-up (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hypervisor
 <code>syspart.asm</code>), and a program can read it from there while
 bit 1 of <code>$D6E5</code> is clear:</p>
-<pre><code>10 FOR I = 0 TO 5
+<pre data-download="code/ch17/ethernet.bas code/ch17/ethernet.prg"><code>10 FOR I = 0 TO 5
 20 PRINT RIGHT$(HEX$(PEEK($D6E9 + I)), 2); : IF I &lt; 5 THEN PRINT &quot;:&quot;;
 30 NEXT : PRINT</code></pre>
 <h3 id="receiving-a-frame">Receiving a frame</h3>
@@ -409,7 +411,7 @@ CRC itself (MEGA65 Book, Ethernet appendix; <a href="https://github.com/MEGA65/m
 and source MAC addresses and a two-byte type, as every Ethernet frame
 does. This BASIC program broadcasts a minimum-size frame with type
 <code>$88B5</code>, which is reserved for local experiments:</p>
-<pre><code>10 B = $FFDE800
+<pre data-download="code/ch17/sending-a-frame.bas code/ch17/sending-a-frame.prg"><code>10 B = $FFDE800
 20 IF (PEEK($D6E0) AND 128) = 0 THEN 20                    : REM WAIT FOR TXIDLE
 30 FOR I = 0 TO 5 : POKE B + I, $FF : NEXT                 : REM TO: EVERYONE
 40 FOR I = 0 TO 5 : POKE B + 6 + I, PEEK($D6E9 + I) : NEXT : REM FROM: THIS MEGA65
@@ -519,7 +521,7 @@ later</td>
 </table>
 <p>The values are BCD, so <code>$59</code> means 59 seconds. In
 BASIC:</p>
-<pre><code>10 RT = $FFD7110
+<pre data-download="code/ch17/the-real-time-clock.bas code/ch17/the-real-time-clock.prg"><code>10 RT = $FFD7110
 20 S = PEEK(RT) : M = PEEK(RT + 1) : H = PEEK(RT + 2) AND $7F
 30 PRINT RIGHT$(HEX$(H), 2); &quot;:&quot;; RIGHT$(HEX$(M), 2); &quot;:&quot;; RIGHT$(HEX$(S), 2)</code></pre>
 <p>Printing the last two digits of each value's <code>HEX$</code> shows
@@ -574,7 +576,7 @@ copy the value from the chip, so it always reads 0. Use a CIA timer or
 the raster for fine timing.</li>
 </ul>
 <p>Saving four bytes of settings in BASIC therefore looks like this:</p>
-<pre><code>10 FOR I = 0 TO 3
+<pre data-download="code/ch17/the-clock-on-r4-and-later-boards.bas code/ch17/the-clock-on-r4-and-later-boards.prg"><code>10 FOR I = 0 TO 3
 20 READ V : POKE $FFD7150 + I, V
 30 SLEEP 0.05                     : REM LET THE CORE SEND IT
 40 NEXT
@@ -630,7 +632,7 @@ one of the RV-3032's alarm registers, and no unlocking is needed.
 <code>PEEK($D629)</code> returns 3 on an R3 board and the board's
 revision number, such as 6, on R5 and later (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>c65uart.vhdl</code>), so a program can tell the two apart:</p>
-<pre><code>10 RT = $FFD7110 : R3 = PEEK($D629) = 3
+<pre data-download="code/ch17/setting-the-clock.bas code/ch17/setting-the-clock.prg"><code>10 RT = $FFD7110 : R3 = PEEK($D629) = 3
 20 INPUT &quot;HOURS (0-23)&quot;; H$ : INPUT &quot;MINUTES&quot;; M$
 30 IF R3 THEN POKE RT + 8, PEEK(RT + 8) OR $40 : SLEEP 0.05
 40 POKE RT, 0 : SLEEP 0.05                  : REM SECONDS

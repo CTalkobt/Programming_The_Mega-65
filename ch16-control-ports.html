@@ -24,6 +24,7 @@ Ports</title>
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch15-using-the-disk-drive.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch17-major-peripherals.html">Next &rarr;</a></span></nav>
@@ -31,6 +32,7 @@ Ports</title>
 id="programming-the-mega65--chapter-16-the-control-ports">Programming
 the MEGA65 — Chapter 16: The Control Ports</h1>
 <p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch16/ch16.d81">ch16.d81</a> holds this chapter's 6 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The two controller ports on the MEGA65's left side are the same 9-pin
 ports the C64 had, and they accept the same devices: digital joysticks,
@@ -100,7 +102,7 @@ adds its own bit value: 128 for button 1, the trigger, and higher values
 for the extra buttons described under Multi-Button Controllers below
 (MEGA65 Book, pp. B-143, B-144). Port 3 returns the merged state of both
 ports, so a game can accept a joystick in either.</p>
-<pre><code>10 DO
+<pre data-download="code/ch16/from-basic.bas code/ch16/from-basic.prg"><code>10 DO
 20 N = JOY(2)
 30 D = N AND 15
 40 IF D THEN PRINT &quot;DIRECTION&quot;; D;
@@ -203,7 +205,7 @@ BASIC</h3>
 </table>
 <p>AND isolates each button, regardless of the direction and the other
 buttons:</p>
-<pre><code>10 DO
+<pre data-download="code/ch16/reading-the-buttons-from-basic.bas code/ch16/reading-the-buttons-from-basic.prg"><code>10 DO
 20 N = JOY(2)
 30 PRINT &quot;DIR&quot;; N AND 15;
 40 IF N AND 128 THEN PRINT &quot; A&quot;;
@@ -360,7 +362,7 @@ number from 0 to 255. Each paddle also has a fire button, read like a
 joystick switch.</p>
 <p>POT reads paddles 1 to 4: the low byte is the position, and a value
 above 255 means the button is pressed (MEGA65 Book, p. B-197):</p>
-<pre><code>10 X = POT(1)
+<pre data-download="code/ch16/paddles.bas code/ch16/paddles.prg"><code>10 X = POT(1)
 20 B = X &gt; 255 : REM -1 WHILE THE BUTTON IS PRESSED
 30 V = X AND 255 : REM POSITION, 0 TO 255</code></pre>
 <p>C64 software reads the two values from SID registers
@@ -411,7 +413,7 @@ keyboard (MEGA65 Book, p. 4-4).</p>
 <p>BASIC 65 includes a complete mouse driver. MOUSE ON starts it, with a
 sprite as the pointer; RMOUSE reads the position and buttons; MOUSE OFF
 stops it:</p>
-<pre><code>10 MOUSE ON, 1    : REM MOUSE IN PORT 1, SPRITE 0 AS POINTER
+<pre data-download="code/ch16/mice.bas code/ch16/mice.prg"><code>10 MOUSE ON, 1    : REM MOUSE IN PORT 1, SPRITE 0 AS POINTER
 20 DO
 30 RMOUSE X, Y, B
 40 IF B THEN PRINT &quot;CLICK AT&quot;; X; Y
@@ -604,7 +606,7 @@ joystick or an empty port also leaves the paddle lines at an extreme.
 The configuration utility uses bit 0 this way: it sets bit 0, reads it
 back, and treats a 0 as a 1351 in port 1 (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>mega65_config.s</code>).</p>
-<pre><code>10 M = PEEK($D61B)
+<pre data-download="code/ch16/amiga-mice-and-autodetection.bas code/ch16/amiga-mice-and-autodetection.prg"><code>10 M = PEEK($D61B)
 20 IF M AND 2 THEN PRINT &quot;AMIGA MOUSE IN PORT 1&quot;
 30 IF (M AND 1) = 0 THEN PRINT &quot;1351 OR PADDLES IN PORT 1&quot;</code></pre>
 <p>Because Amiga mode hides the direction lines, a joystick that the
@@ -619,7 +621,7 @@ does not return the written bits, that POKE copies port 2's direction
 lines into bits 4 to 7. While port 2's joystick is idle those lines read
 1, so it sets bits 6 and 7 and turns off both keyboard filters. Write
 the value outright instead:</p>
-<pre><code>10 POKE $D61B, 0 : REM AMIGA MOUSE TRANSLATION OFF ON BOTH PORTS</code></pre>
+<pre data-download="code/ch16/amiga-mice-and-autodetection-2.bas code/ch16/amiga-mice-and-autodetection-2.prg"><code>10 POKE $D61B, 0 : REM AMIGA MOUSE TRANSLATION OFF ON BOTH PORTS</code></pre>
 <p>This also leaves the 1351 de-jitter on for both ports. A program
 cannot read back the user's own setting, so it cannot restore it
 exactly when it ends.</p>

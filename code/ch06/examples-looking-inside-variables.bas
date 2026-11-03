@@ -1,0 +1,8 @@
+10 BANK 0                             : REM SCALARS ARE IN BANK 0
+20 A%=1234 : P=POINTER(A%)
+30 PRINT "A% AT $";HEX$(P);":";PEEK(P);PEEK(P+1)   : REM 4 210
+40 N$="MEGA65" : D=POINTER(N$)
+50 L=PEEK(D) : S=WPEEK(D+1)           : REM LENGTH, TEXT OFFSET
+60 BANK 1                             : REM STRING TEXT IS IN BANK 1
+70 FOR I=0 TO L-1 : PRINT CHR$(PEEK(S+I)); : NEXT : PRINT
+80 BANK 128

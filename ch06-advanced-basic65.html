@@ -23,12 +23,14 @@
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <link rel="stylesheet" href="style.css" />
+  <script src="code.js" defer></script>
 </head>
 <body>
 <nav class="chapnav"><span><a href="ch05-mega65-architecture.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch07-45gs02-machine-language.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-6-advanced-basic-65">Programming
 the MEGA65 — Chapter 6: Advanced BASIC 65</h1>
 <p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch06/ch06.d81">ch06.d81</a> holds this chapter's 17 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 4 treated BASIC 65 as a language: how to structure programs,
 debug them and make them run well. This chapter treats it as a program,
@@ -143,7 +145,7 @@ the reservation bitfields for banks 4 and 5 in the same format as MEM
 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), and
 <code>FRE(-1)</code> returns the ROM version (MEGA65 Book, p. B-117).
 This program reserves 16KB of bank 4 and confirms it:</p>
-<pre><code>10 MEM 3,0                            : REM RESERVE $40000-$43FFF
+<pre data-download="code/ch06/example-checking-memory.bas code/ch06/example-checking-memory.prg"><code>10 MEM 3,0                            : REM RESERVE $40000-$43FFF
 20 PRINT FRE(0);&quot;BYTES FREE FOR PROGRAM&quot;
 30 PRINT FRE(1);&quot;BYTES FREE FOR VARIABLES&quot;
 40 PRINT &quot;BANK 4 RESERVED BLOCKS: &quot;;HEX$(FRE(4))
@@ -230,7 +232,7 @@ executes the SYS. Chapter 9 builds such a header step by step.</p>
 its own listing. This one prints each line's number, address and the
 length of its tokenised text: the line's total size less two bytes of
 link, two of line number and one terminating zero.</p>
-<pre><code>10 BANK 0
+<pre data-download="code/ch06/example-walking-the-program.bas code/ch06/example-walking-the-program.prg"><code>10 BANK 0
 20 A=$2001
 30 DO
 40 N=WPEEK(A) : IF N=0 THEN EXIT
@@ -308,7 +310,7 @@ busiest loops one-letter names. Longer names still work, but they are
 found the old way.</p>
 <h3 id="pointer">POINTER</h3>
 <p>The POINTER function returns the address of a variable's entry:</p>
-<pre><code>10 A%=1234
+<pre data-download="code/ch06/pointer.bas code/ch06/pointer.prg"><code>10 A%=1234
 20 P=POINTER(A%)
 30 PRINT HEX$(P)</code></pre>
 <p>Since ROM 920154, POINTER returns a full flat address rather than a
@@ -342,7 +344,7 @@ ROM source; the Book's POINTER entry says the opposite); a floating-point variab
 string's POINTER is the address of its three-byte descriptor, which
 holds the length and then the text's address as an offset in bank 1
 (MEGA65 Book, p. B-193).</p>
-<pre><code>10 BANK 0                             : REM SCALARS ARE IN BANK 0
+<pre data-download="code/ch06/examples-looking-inside-variables.bas code/ch06/examples-looking-inside-variables.prg"><code>10 BANK 0                             : REM SCALARS ARE IN BANK 0
 20 A%=1234 : P=POINTER(A%)
 30 PRINT &quot;A% AT $&quot;;HEX$(P);&quot;:&quot;;PEEK(P);PEEK(P+1)   : REM 4 210
 40 N$=&quot;MEGA65&quot; : D=POINTER(N$)
@@ -360,7 +362,7 @@ changing fastest. <code>DIM A%(3,2)</code> is laid out as (0,0), (1,0),
 (2,0), (3,0), (0,1), (1,1) and so on, two bytes each, starting at
 <code>POINTER(A%(0,0))</code> (MEGA65 Book, p. B-193). This program
 confirms it by printing each element's offset from the start:</p>
-<pre><code>10 DIM A%(3,2)
+<pre data-download="code/ch06/examples-looking-inside-variables-2.bas code/ch06/examples-looking-inside-variables-2.prg"><code>10 DIM A%(3,2)
 20 B=POINTER(A%(0,0))
 30 FOR Y=0 TO 2 : FOR X=0 TO 3
 40 PRINT &quot;(&quot;;X;&quot;,&quot;;Y;&quot;)&quot;;POINTER(A%(X,Y))-B
@@ -374,7 +376,7 @@ array</h3>
 <code>C@&amp;</code> make the text screen and its colours ordinary BASIC
 data. This draws a bar of solid blocks across row 12, each block in a
 different colour, without a single POKE:</p>
-<pre><code>10 FOR X=0 TO 79
+<pre data-download="code/ch06/example-the-screen-as-an-array.bas code/ch06/example-the-screen-as-an-array.prg"><code>10 FOR X=0 TO 79
 20 T@&amp;(X,12)=160                      : REM SCREEN CODE 160: SOLID BLOCK
 30 C@&amp;(X,12)=X AND 15                 : REM COLOURS 0-15 IN TURN
 40 NEXT</code></pre>
@@ -400,7 +402,7 @@ RAM. Use <code>BANK 128</code> to return to the system view.</p>
 <h3 id="flat-addresses">Flat addresses</h3>
 <p>An address above <code>$FFFF</code> given to PEEK or POKE is treated
 as a full 28-bit address and ignores BANK entirely:</p>
-<pre><code>10 POKE $FF80000,1     : REM FIRST BYTE OF COLOUR RAM
+<pre data-download="code/ch06/flat-addresses.bas code/ch06/flat-addresses.prg"><code>10 POKE $FF80000,1     : REM FIRST BYTE OF COLOUR RAM
 20 PRINT PEEK($8000000) : REM FIRST BYTE OF ATTIC RAM</code></pre>
 <p>This is usually clearer than switching banks, and it combines
 naturally with POINTER, which returns flat addresses.</p>
@@ -500,7 +502,7 @@ restoring the screen</h3>
 the 80 by 25 screen at <code>$0800</code> (2048) to attic RAM, clears
 it, and puts it back, following the Book's own examples (MEGA65 Book, p.
 B-91):</p>
-<pre><code>10 EDMA 0, 80*25, 2048, $8000000      : REM COPY SCREEN TO ATTIC RAM
+<pre data-download="code/ch06/example-saving-and-restoring-the-screen.bas code/ch06/example-saving-and-restoring-the-screen.prg"><code>10 EDMA 0, 80*25, 2048, $8000000      : REM COPY SCREEN TO ATTIC RAM
 20 EDMA 3, 80*25, 32, 2048            : REM FILL SCREEN WITH SPACES
 30 PRINT &quot;PRESS A KEY&quot;
 40 GETKEY A$
@@ -513,7 +515,7 @@ and how big it is. SCRNPTR, <code>$D060-$D062</code>, holds the
 screen's address, and RWINDOW(2) and RWINDOW(3) give the width and
 height of the whole screen, whatever the current window. RWINDOW(3)
 arrived in ROM 920404 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>):</p>
-<pre><code>10 S=WPEEK($D060)+65536*PEEK($D062)  : REM SCREEN ADDRESS (SCRNPTR)
+<pre data-download="code/ch06/example-saving-and-restoring-the-screen-2.bas code/ch06/example-saving-and-restoring-the-screen-2.prg"><code>10 S=WPEEK($D060)+65536*PEEK($D062)  : REM SCREEN ADDRESS (SCRNPTR)
 20 N=RWINDOW(2)*RWINDOW(3)           : REM CHARACTERS ON THE SCREEN
 30 EDMA 0, N, S, $8000000            : REM COPY SCREEN TO ATTIC RAM
 40 EDMA 3, N, 32, S                  : REM FILL SCREEN WITH SPACES
@@ -531,14 +533,14 @@ only 32 reverses the destination alone, which mirrors the data (MEGA65
 ROM source, EDMA; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>gs4510.vhdl</code>). This shifts the top row of the screen one
 character to the right:</p>
-<pre><code>10 EDMA 48, 79, 2126, 2127            : REM BACKWARDS COPY, SAFE FOR OVERLAP</code></pre>
+<pre data-download="code/ch06/example-saving-and-restoring-the-screen-3.bas code/ch06/example-saving-and-restoring-the-screen-3.prg"><code>10 EDMA 48, 79, 2126, 2127            : REM BACKWARDS COPY, SAFE FOR OVERLAP</code></pre>
 <h3 id="example-data-files-in-attic-ram">Example: data files in attic
 RAM</h3>
 <p>BLOAD and BSAVE switch to flat addressing when given an address above
 <code>$FFFF</code>, which lets them reach attic RAM and save more than
 64KB at once. The R option reads or writes raw data with no two-byte
 load address (MEGA65 Book, pp. B-29, B-35):</p>
-<pre><code>10 BLOAD &quot;LEVELS&quot;, P($8000000), R                    : REM INTO ATTIC RAM
+<pre data-download="code/ch06/example-data-files-in-attic-ram.bas code/ch06/example-data-files-in-attic-ram.prg"><code>10 BLOAD &quot;LEVELS&quot;, P($8000000), R                    : REM INTO ATTIC RAM
 20 EDMA 0, 8192, $8000000, $40000                     : REM LEVEL 1 TO BANK 4
 30 BSAVE &quot;BANK4&quot;, P($40000) TO P($42000), R           : REM SAVE IT BACK RAW</code></pre>
 <p>In the older form, a 16-bit P address with a B bank, BLOAD and BSAVE
@@ -599,7 +601,7 @@ again. Inside the handler, three variables describe the error:</p>
 </tbody>
 </table>
 <p>This program keeps running however the user answers:</p>
-<pre><code>10 TRAP 1000
+<pre data-download="code/ch06/trap-and-resume.bas code/ch06/trap-and-resume.prg"><code>10 TRAP 1000
 20 INPUT &quot;DIVIDE 100 BY&quot;;N
 30 PRINT 100/N
 40 GOTO 20
@@ -616,7 +618,7 @@ and the program loops forever.</p>
 rather than in BASIC. A failed OPEN or LOAD may not raise a BASIC error
 at all. After any disk operation, the reserved variables <code>DS</code>
 and <code>DS$</code> hold the drive's status number and message:</p>
-<pre><code>10 DOPEN#1,&quot;SCORES&quot;
+<pre data-download="code/ch06/disk-errors.bas code/ch06/disk-errors.prg"><code>10 DOPEN#1,&quot;SCORES&quot;
 20 IF DS&lt;&gt;0 THEN PRINT DS$:STOP</code></pre>
 <p>A status below 20 means success. Checking DS after every important
 disk operation is the single most effective way to make a BASIC program
@@ -625,7 +627,7 @@ robust. Chapter 15 lists the drive's status codes.</p>
 <p>TRAP and the disk status variables work together. This loader asks
 for a file name, reports BASIC errors and disk errors in plain words,
 and asks again rather than stopping:</p>
-<pre><code>10 TRAP 900
+<pre data-download="code/ch06/example-a-robust-file-loader.bas code/ch06/example-a-robust-file-loader.prg"><code>10 TRAP 900
 20 INPUT &quot;FILE TO LOAD&quot;;F$
 30 BLOAD (F$), P($40000), R
 40 IF DS&lt;&gt;0 THEN PRINT &quot;DISK: &quot;;DS$ : GOTO 20
@@ -642,7 +644,7 @@ where a calculation fails</h3>
 <p>RESUME with a line number lets a program record how far it got before
 an error. This uses the pattern from the Book's TRAP entry to find where
 EXP overflows (MEGA65 Book, p. B-267):</p>
-<pre><code>10 TRAP 100
+<pre data-download="code/ch06/example-finding-where-a-calculation-fails.bas code/ch06/example-finding-where-a-calculation-fails.prg"><code>10 TRAP 100
 20 FOR I=1 TO 100
 30 PRINT EXP(I)
 40 NEXT
@@ -705,7 +707,7 @@ BASIC sees in the system bank (MEGA65 Book, p. B-285). The smallest
 possible USR routine is a single RTS: it leaves BASIC's floating-point
 accumulator untouched, so USR returns its argument unchanged. That is
 enough to show the mechanism:</p>
-<pre><code>10 BANK 0 : POKE $1600, $60           : REM RTS AT $1600
+<pre data-download="code/ch06/example-installing-a-usr-routine.bas code/ch06/example-installing-a-usr-routine.prg"><code>10 BANK 0 : POKE $1600, $60           : REM RTS AT $1600
 20 BANK 128 : WPOKE $02F8, $1600      : REM POINT THE USR VECTOR AT IT
 30 PRINT USR(42)                      : REM SHOULD PRINT 42</code></pre>
 <p>A real USR routine reads its argument from the floating-point
@@ -717,7 +719,7 @@ alongside PLAY</h3>
 pause for the duration of the call. SYS TO with <code>I(1)</code> keeps
 them running, which suits short routines called often while music plays
 (MEGA65 Book, p. B-256):</p>
-<pre><code>10 PLAY &quot;O4T0IC E G O5C O4G E L&quot;
+<pre data-download="code/ch06/example-machine-code-alongside-play.bas code/ch06/example-machine-code-alongside-play.prg"><code>10 PLAY &quot;O4T0IC E G O5C O4G E L&quot;
 20 POKE $1600, $EE, $20, $D0, $60     : REM INC $D020 : RTS
 30 FOR I=1 TO 50
 40 SYS TO $1600, I(1)                 : REM MUSIC KEEPS PLAYING
