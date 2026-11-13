@@ -12,6 +12,36 @@
 <p>The full history is in the <a
 href="https://github.com/CTalkobt/Programming_The_Mega-65/commits/main">Git
 repository</a>.</p>
+<h2 id="2026-11-12">November 12, 2026</h2>
+<ul>
+<li>Chapter 12: Sprites rewritten, with a table of the VIC-IV sprite
+registers, the data layout of each sprite mode, moving the pointer list,
+16-bit sprite pointers, and a program that shows a 16-colour,
+variable-height sprite from bank 4.</li>
+<li>Chapter 12: Bitplanes now give the plane address registers,
+BITPBANK, BPCOMP and the Display Address Translator, explain how V400
+splits a plane between two addresses, and have a program that sets up a
+16-colour bitplane screen by hand.</li>
+<li>Chapter 12: complete, tested programs for VIC-III attributes, a SEAM
+screen (flips, characters above 255, width trims, and rows of any length
+with <code>$FFFF</code>), a full-colour screen, an NCM screen, an
+alternate palette bank, CHRYSCL, and smooth scrolling over a map wider
+than the screen.</li>
+<li>Chapter 12: new section, VIC-II Modes on the VIC-IV, on where the
+C64's modes fetch their data, with a 640 × 200 bitmap program.</li>
+<li>Chapter 12: new section, Animation: timing changes to the frame,
+fixed-point movement, a table of what to change for each effect, and
+programs for colour cycling and double buffering.</li>
+<li>Chapter 12: new section, Perception: how the eye sees motion,
+brightness and colour, why display values are not proportional to light,
+dithering and frame-alternation compared in one program, where viewers
+look, and the core's scan-line emulation.</li>
+<li>Chapter 12: corrections. A <code>$D018</code> write changes CHARPTR
+and SCRNPTR even with HOTREG off; a 16-colour sprite is always 16 pixels
+wide, whatever SPRX64EN says; bold text uses palette entries 16-31, and
+bold with reverse uses the alternate palette instead of reversing; a 640
+× 400 bitplane screen can have at most four planes.</li>
+</ul>
 <h2 id="2026-11-03">November 3, 2026</h2>
 <ul>
 <li>Chapter 12: new section, RRB Objects, on using the Raster Rewrite
