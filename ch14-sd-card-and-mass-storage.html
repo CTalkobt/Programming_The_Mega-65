@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,7 +31,7 @@ Storage</title>
 <h1
 id="programming-the-mega65--chapter-14-the-sd-card-and-mass-storage">Programming
 the MEGA65 — Chapter 14: The SD Card and Mass Storage</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch14/ch14.d81">ch14.d81</a> holds this chapter's 2 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>In West's book this chapter covered the C64's cassette tape. The
@@ -76,6 +76,20 @@ is changed. The utility creates two partitions (MEGA65 Book, pp. 4-9,
 <p>A backup that copies only the files on the FAT32 partition misses the
 configuration and freeze states; a complete backup needs a tool that
 copies whole partitions.</p>
+<p>The card starts with an ordinary PC partition table. Sector 0, the
+master boot record, holds four 16-byte entries from offset
+<code>$1BE</code>; in each, the byte at offset 4 is the partition's type,
+and the four bytes at offset 8 and the four at offset 12 are its first
+sector and its length in sectors, low byte first. The Hypervisor looks
+for two types: <code>$0B</code> or <code>$0C</code>, a FAT32 partition,
+and <code>$41</code>, the MEGA65 system partition (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>src/hyppo/dos.asm</code>). The system partition is not a file
+system. Its first sector begins with the text <code>MEGA65SYS00</code>
+and gives the position and size of two areas of fixed-size slots, one
+for frozen programs and one for installed services, each with a
+directory of 128-byte entries (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>src/hyppo/syspart.asm</code>). A program has no reason to write
+there; the Freezer and the configuration utility look after it.</p>
 <h3 id="preparing-a-card">Preparing a card</h3>
 <p>Switch the MEGA65 off, hold ALT and switch it on to open the utility
 menu, then choose 2, the SD card utility. Choose the card to prepare, 0
@@ -118,6 +132,18 @@ partition</h3>
 </table>
 <p>Files can be organised into subdirectories, which the Freezer's file
 browser and BASIC's CHDIR command understand.</p>
+<p>FAT32 is the PC's file system, unchanged. The partition is divided
+into clusters of one or more 512-byte sectors; a table at its start, the
+FAT, has a 32-bit entry for each cluster that gives the number of the
+cluster that follows it in its file; and a directory is itself a chain
+of clusters holding 32-byte entries. An entry has the name in the first
+11 bytes, eight characters and a three-character extension, an
+attribute byte at offset 11, the file's first cluster at offsets 20 and
+26, two bytes each, and its length in bytes at offset 28. Longer names
+are kept in extra entries in front of the short one. The Hypervisor
+reads both kinds of name, and matches names without regard to case
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>src/hyppo/constants.asm</code>,
+<code>src/hyppo/dos.asm</code>).</p>
 <p>The system files belong with the core. Each core release includes a
 matching set in its <code>sdcard-files</code> folder, and the Book's
 upgrade steps copy them to the root of the card along with the new core
@@ -178,7 +204,53 @@ new D64 images have to be made on a PC (MEGA65 ROM source,
 dos.src).</p>
 <p>The Hypervisor also recognises the sizes of D71 images (1571 disks)
 and D65 images, but the DOS in the ROM handles only D81 and D64 (MEGA65
-ROM source, dos.src).</p>
+ROM source, dos.src). A D65 is the image of a high-density "MEGA disk":
+85 tracks of 64 sectors on each of two sides, 512 bytes a sector, which
+comes to 5,570,560 bytes (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>src/hyppo/dos.asm</code>,
+<code>sdcardio.vhdl</code>).</p>
+<h3 id="inside-a-d81-image">Inside a D81 image</h3>
+<p>The blocks are stored in order, track 1 first and 40 blocks to a
+track, so block S of track T starts at this offset in the file:</p>
+<pre><code>offset = ((T - 1) * 40 + S) * 256</code></pre>
+<p>Tracks are numbered from 1 and sectors from 0, as the DOS numbers
+them. Track 40 holds the system blocks, which are those of a 1581 disk
+(Commodore 1581 Disk Drive User's Guide):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Track, sector</th>
+<th>File offset</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>40, 0</td>
+<td><code>$61800</code></td>
+<td>Header: the track and sector of the first directory block (40, 3) in bytes 0 and 1, the disk name in bytes 4 to 19, padded with <code>$A0</code>, the ID in bytes 22 and 23 and the DOS type in bytes 25 and 26, <code>3D</code> from a 1581 and <code>1D</code> from the MEGA65's DOS</td>
+</tr>
+<tr class="even">
+<td>40, 1</td>
+<td><code>$61900</code></td>
+<td>BAM for tracks 1 to 40: from byte 16, six bytes for each track, the number of free blocks and then 40 bits, one for each sector, set while the sector is free</td>
+</tr>
+<tr class="odd">
+<td>40, 2</td>
+<td><code>$61A00</code></td>
+<td>BAM for tracks 41 to 80, in the same form</td>
+</tr>
+<tr class="even">
+<td>40, 3 to 40, 39</td>
+<td><code>$61B00</code></td>
+<td>The directory: eight 32-byte entries in each block, 296 in all</td>
+</tr>
+</tbody>
+</table>
+<p>Every block of a file, and of the directory, begins with the track
+and sector of the next block; in the last block the track is 0 and the
+second byte is the number of the last byte used. Chapter 15 gives the
+layout of a directory entry and the commands that read and write single
+blocks.</p>
 <h3 id="managed-drives-and-unit-numbers">Managed drives and unit
 numbers</h3>
 <p>The MEGA65 provides two managed drives alongside anything on the IEC
@@ -205,8 +277,8 @@ port (MEGA65 Book, pp. 6-3, 6-4):</p>
 </tbody>
 </table>
 <p>Commands addressed to these units are handled by the MEGA65; any
-other unit number goes to the IEC port. The unit assignments are
-temporary and return to their defaults at power-on.</p>
+other unit number goes to the IEC port. Chapter 15 covers the drives
+themselves, the internal 3.5" drive and those on the IEC port.</p>
 <h3 id="mounting">Mounting</h3>
 <p>In the Freezer, press 0 or 1 to choose a managed drive, pick an image
 from the file browser, and press 8 or 9 to change its unit number. From
@@ -257,14 +329,21 @@ running on.</p>
 <h3 id="the-sd-card-as-unit-12">The SD card as unit 12</h3>
 <p>A few BASIC commands can reach files on the card directly, outside
 any disk image, by using unit 12 (MEGA65 Book, pp. 6-10, 6-11):</p>
-<pre data-download="code/ch14/the-sd-card-as-unit-12.bas code/ch14/the-sd-card-as-unit-12.prg"><code>10 DIR U12, P                  : REM LIST THE CARD, A PAGE AT A TIME
-20 DLOAD &quot;MYPROGRAM.PRG&quot;, U12  : REM NOTE THE .PRG SUFFIX
-30 CHDIR &quot;DEMOS&quot;, U12          : REM CHANGE THE CURRENT DIRECTORY
-40 CHDIR &quot;..&quot;, U12             : REM BACK TO THE PARENT</code></pre>
+<pre><code>DIR U12, P                  : REM LIST THE CARD, A PAGE AT A TIME
+CHDIR &quot;DEMOS&quot;, U12          : REM CHANGE THE CURRENT DIRECTORY
+CHDIR &quot;..&quot;, U12             : REM BACK TO THE PARENT
+DLOAD &quot;MYPROGRAM.PRG&quot;, U12  : REM NOTE THE .PRG SUFFIX</code></pre>
+<p>These are typed in direct mode. In a program, DLOAD replaces the
+program that is running, so it can only be the last thing a program
+does.</p>
 <p>Unit 12 is not a full disk drive. Directory listing, loading with
 DLOAD or LOAD, TYPE (from ROM 920417) and CHDIR work on it, and from
 ROM 920410 DIR also takes a pattern, as in <code>DIR "M*", U12</code>;
-DSAVE does not, so a program cannot save to the card this way (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).
+DSAVE refuses unit 12, so a program cannot save to the card this way,
+and the other file commands, BLOAD and DOPEN among them, have no unit 12
+form: given U12 they look for a drive numbered 12 on the IEC port. Data
+files therefore belong in a disk image, or are read through the
+Hypervisor, as described below (MEGA65 ROM source, b65.src; <a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).
 MOUNT does not take U12, because its U argument chooses the unit to
 mount the image on, but it does use the directory set by CHDIR. Support
 for subdirectories is still developing; for example, changing the
@@ -277,17 +356,23 @@ href="https://github.com/MEGA65/mega65-freezemenu">mega65-freezemenu</a>,
 <code>freezer.c</code>). Keeping disk images in the root directory, or
 mounting them with MOUNT from a program, avoids the problem.</p>
 <h3 id="booting-from-an-image">Booting from an image</h3>
-<p>The configuration utility chooses an image to mount at power-on. If
-that image holds a program named <code>AUTOBOOT.C65</code>, it runs
-automatically; this is how the Intro Disk starts. Saving a short program
-under that name, perhaps one that sets a font, colours and KEY macros,
-gives a personal start-up routine (MEGA65 Book, p. 6-10).</p>
+<p>The configuration utility chooses an image to mount at power-on, and
+a program named <code>AUTOBOOT.C65</code> on that image runs
+automatically. <a href="ch15-using-the-disk-drive.html#booting-disks">Booting
+Disks</a> in Chapter 15 covers this and the other ways to start software
+from a disk.</p>
 <h2 id="sd-card-files-from-machine-language">SD Card Files from Machine
 Language</h2>
 <p>The KERNAL reaches disk images through the usual OPEN, LOAD and SAVE
 calls. For files on the card itself, machine language uses the
 Hypervisor's file services, which work even when a program has switched
-the KERNAL out:</p>
+the KERNAL out. Every service is called the same way: put its number in
+A, write A to the trap register <code>$D640</code>, and follow the write
+with CLV. On return, carry set means success; carry clear means failure,
+and service <code>$38</code> then returns the error code in A. The trap
+register exists only in the MEGA65 I/O personality (MEGA65 Book, pp.
+N-4, N-5). These are the services for files and images (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>src/hyppo/dos.asm</code>):</p>
 <table>
 <thead>
 <tr class="header">
@@ -300,27 +385,37 @@ the KERNAL out:</p>
 <tr class="odd">
 <td>setname</td>
 <td><code>$2E</code></td>
-<td>Set the file name: a page-aligned ASCII name, page in Y</td>
+<td>Set the file name: a page-aligned ASCII name ending in a zero byte, page in Y</td>
 </tr>
 <tr class="even">
-<td>loadfile</td>
-<td><code>$36</code></td>
-<td>Load the whole file to chip RAM</td>
+<td>findfile</td>
+<td><code>$34</code></td>
+<td>Find the named file in the current directory; needed before openfile</td>
 </tr>
 <tr class="odd">
-<td>loadfile_attic</td>
-<td><code>$3E</code></td>
-<td>Load the whole file to attic RAM</td>
-</tr>
-<tr class="even">
 <td>findfirst, findnext</td>
 <td><code>$30</code>, <code>$32</code></td>
 <td>Search the current directory</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>openfile, readfile, closefile</td>
 <td><code>$18</code>, <code>$1A</code>, <code>$20</code></td>
-<td>Read a file a sector at a time</td>
+<td>Read a file a sector at a time. openfile returns a file descriptor in A, which closefile takes in X; readfile returns the number of bytes read in X (low) and Y (high), 0 at the end of the file</td>
+</tr>
+<tr class="odd">
+<td>loadfile</td>
+<td><code>$36</code></td>
+<td>Load the whole file to chip RAM</td>
+</tr>
+<tr class="even">
+<td>loadfile_attic</td>
+<td><code>$3E</code></td>
+<td>Load the whole file to attic RAM</td>
+</tr>
+<tr class="odd">
+<td>geterrorcode</td>
+<td><code>$38</code></td>
+<td>Return the error code of the last failed service in A</td>
 </tr>
 <tr class="even">
 <td>chdir, cdrootdir</td>
@@ -330,16 +425,179 @@ the KERNAL out:</p>
 <tr class="odd">
 <td>attach</td>
 <td><code>$4A</code></td>
-<td>Mount or unmount a disk image: X bit 0 selects the drive, bit 7
-unmounts. The older d81attach0 and d81attach1 (<code>$40</code>,
-<code>$46</code>) still work but are deprecated from Hyppo 1.3</td>
+<td>Mount or unmount a disk image: X bit 0 selects the drive, bit 7 unmounts. The older d81attach0 and d81attach1 (<code>$40</code>, <code>$46</code>) still work but are deprecated from Hyppo 1.3</td>
+</tr>
+<tr class="even">
+<td>d81write_en</td>
+<td><code>$44</code></td>
+<td>Allow writing to the attached image</td>
 </tr>
 </tbody>
 </table>
-<p>Chapter 8 gives a complete loading example, and Chapter 11 lists
-every service and which ones the current Hypervisor implements.
-loadfile_attic can load a large file, such as a game's levels or music,
-straight into attic RAM at start-up.</p>
+<p>Chapter 8 gives a complete loading example and the rules for
+setname, and Chapter 11 lists every service and which ones the current
+Hypervisor implements. loadfile_attic can load a large file, such as a
+game's levels or music, straight into attic RAM at start-up.</p>
+<p>The Hypervisor can write as well as read, but only just: writefile
+(<code>$1C</code>) writes a sector to a file that already exists, and
+mkfile (<code>$1E</code>), which creates one, is only partly
+implemented. Chapter 11 gives their limits. A program that must save
+data should keep it in a disk image and use the KERNAL.</p>
+<h3 id="reading-a-file-a-sector-at-a-time">Reading a file a sector at a
+time</h3>
+<p>readfile does not copy anything into the program's memory. It reads
+the next 512-byte sector of the file into the SD card's sector buffer,
+which a program reaches at <code>$FFD6E00-$FFD6FFF</code>, and moves on
+to the following sector (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>src/hyppo/dos.asm</code>,
+<code>iomapper.vhdl</code>). This routine opens a file, reads its first
+sector, takes the first two bytes from the buffer and closes the file:</p>
+<pre><code>buf     = $fb             ; four bytes: pointer to $FFD6E00
+
+readf   ldy #&gt;fname       ; page of the name
+        lda #$2e          ; setname
+        sta $d640
+        clv
+        bcc fail
+        lda #$34          ; findfile
+        sta $d640
+        clv
+        bcc fail
+        lda #$18          ; openfile
+        sta $d640
+        clv
+        bcc fail
+        sta fd            ; A = file descriptor
+        lda #$1a          ; readfile: one sector into the buffer
+        sta $d640
+        clv
+        stx count         ; X/Y = number of bytes read,
+        sty count+1       ; 0 at the end of the file
+        lda #$00          ; point at the buffer, $FFD6E00
+        sta buf
+        lda #$6e
+        sta buf+1
+        lda #$fd
+        sta buf+2
+        lda #$0f
+        sta buf+3
+        ldz #0
+        lda [buf],z       ; first byte of the file
+        sta first
+        inz
+        lda [buf],z
+        sta first+1
+        ldz #0            ; leave Z at 0, for code that uses STZ
+        ldx fd
+        lda #$20          ; closefile
+        sta $d640
+        clv
+        sec               ; success
+        rts
+fail    lda #$38          ; geterrorcode: A = the reason
+        sta $d640
+        clv
+        clc
+        rts
+
+fd      .byte 0
+count   .word 0
+first   .byte 0, 0
+
+        .enc &quot;ascii&quot;      ; names are ASCII, not PETSCII
+        .cdef &quot; ~&quot;, 32
+        .align 256        ; and must start a page
+fname   .text &quot;FREEZER.M65&quot;, 0</code></pre>
+<p>Call readfile again for each further sector, until it returns a
+count of 0. The two <code>.enc</code> and <code>.cdef</code> lines are
+64tass's way of storing text unconverted; without them, and with the
+assembler told that its source is ASCII, the name is stored as PETSCII
+and the Hypervisor reports error <code>$88</code>, file not found. Run
+in Xemu with ROM 920413, the routine returns a count of
+<code>$0200</code> and the bytes <code>$01</code>, <code>$08</code>, the
+load address at the front of that file.</p>
+<h3 id="mounting-an-image-from-machine-language">Mounting an image from
+machine language</h3>
+<p>attach needs only the image's name. The image must be in the current
+directory of the card and in one piece, as explained under <a
+href="#keeping-disk-images-in-one-piece">Keeping disk images in one
+piece</a>:</p>
+<pre><code>mount   ldy #&gt;iname       ; page of the image's name
+        lda #$2e          ; setname
+        sta $d640
+        clv
+        bcc mfail
+        ldx #$01          ; X bit 0: drive 0 or 1; bit 7 clear: attach
+        lda #$4a          ; attach
+        sta $d640
+        clv
+mfail   rts               ; carry set: mounted
+
+        .align 256
+iname   .text &quot;MEGA65.D81&quot;, 0   ; ASCII, as above</code></pre>
+<p>This mounts the image on the second managed drive; X = 0 chooses the
+first, and X = <code>$80</code> or <code>$81</code> unmounts one. The
+service needs Hyppo 1.3; on an older Hypervisor use d81attach0 or
+d81attach1 instead. It does only the Hypervisor's part of the job.
+BASIC's MOUNT also remembers the image for the next reset and tells the
+DOS about the change, so a program that keeps the KERNAL running is
+better served by a short BASIC loader that gives MOUNT.</p>
+<h3 id="reading-sectors-of-the-card">Reading sectors of the card</h3>
+<p>Beneath the Hypervisor's file services is the SD card controller,
+which reads and writes whole 512-byte sectors of the card, whatever
+partition they belong to (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>sdcardio.vhdl</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D680</code></td>
+<td>Write a command; read the status. Commands: <code>$02</code> read the sector, <code>$03</code> write it, <code>$C0</code> and <code>$C1</code> choose the internal or the external card. Status: bits 0 and 1 are set while the controller or the card is busy, bit 4 is set for an SDHC card, and bits 5 and 6 report an error</td>
+</tr>
+<tr class="even">
+<td><code>$D681-$D684</code></td>
+<td>The sector number, low byte first</td>
+</tr>
+<tr class="odd">
+<td><code>$D689</code> bit 7</td>
+<td>Chooses what a program sees at <code>$FFD6E00</code>, and at <code>$DE00</code> when the buffer is mapped there: 1 for the SD card's sector buffer, 0 for the floppy controller's</td>
+</tr>
+<tr class="even">
+<td><code>$FFD6E00-$FFD6FFF</code></td>
+<td>The sector buffer</td>
+</tr>
+</tbody>
+</table>
+<p>To read a sector, set bit 7 of <code>$D689</code>, write the sector
+number, write <code>$02</code> to <code>$D680</code>, wait for the two
+busy bits to clear, and take the data from the buffer. Clear bit 7 of
+<code>$D689</code> afterwards: it is clear while BASIC runs, and the
+ROM's DOS does not set it for itself. This program reads sector 0 and
+prints the partition table described at the start of the chapter:</p>
+<pre data-download="code/ch14/reading-sectors-of-the-card.bas code/ch14/reading-sectors-of-the-card.prg"><code>10 POKE $D689, PEEK($D689) OR $80   : REM SHOW THE CARD'S BUFFER
+20 POKE $D681, 0, 0, 0, 0           : REM SECTOR 0
+30 POKE $D680, 2                    : REM READ IT
+40 DO WHILE PEEK($D680) AND 3 : LOOP
+50 B = $FFD6E00
+60 FOR P = 0 TO 3 : E = B + $1BE + 16 * P
+70 T = PEEK(E + 4) : IF T = 0 THEN 110
+80 S = PEEK(E + 8) + 256 * PEEK(E + 9) + 65536 * PEEK(E + 10) + 16777216 * PEEK(E + 11)
+90 N = PEEK(E + 12) + 256 * PEEK(E + 13) + 65536 * PEEK(E + 14) + 16777216 * PEEK(E + 15)
+100 PRINT &quot;PARTITION&quot;; P + 1; &quot;TYPE $&quot;; RIGHT$(HEX$(T), 2); &quot; FROM SECTOR&quot;; S; &quot;FOR&quot;; N
+110 NEXT
+120 POKE $D689, PEEK($D689) AND $7F  : REM GIVE THE BUFFER BACK</code></pre>
+<p>In Xemu it prints a FAT32 partition, type <code>$0C</code>, from
+sector 2048, and a system partition, type <code>$41</code>, after it.
+Writing is deliberately harder. The controller ignores command
+<code>$03</code> unless <code>$57</code> has been written to
+<code>$D680</code> just before it, and for sector 0 it needs
+<code>$4D</code> instead (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>sdcardio.vhdl</code>). A
+wrong sector number destroys files or the whole card, so leave writing
+to the Hypervisor and the Freezer unless the program is a disk utility
+and has been tested on a card that does not matter.</p>
 <h2 id="getting-files-onto-the-card">Getting Files onto the Card</h2>
 <p>There are three ways to move files between a PC and the MEGA65's SD
 card:</p>
@@ -396,8 +654,14 @@ OFF, renumber drives with SET DISK, and find their own unit with
 RDISK(1).</li>
 <li><strong>Unit 12.</strong> DIR, DLOAD, LOAD, TYPE and CHDIR can reach
 files on the card directly; DSAVE cannot save to it.</li>
-<li><strong>Machine language.</strong> Hypervisor services load, read
-and search card files, and mount images, independent of the KERNAL.</li>
+<li><strong>Machine language.</strong> Hypervisor services, called
+through <code>$D640</code>, load, read and search card files, and mount
+images, independent of the KERNAL. The SD controller at
+<code>$D680</code> reads single sectors into the buffer at
+<code>$FFD6E00</code>.</li>
+<li><strong>Layout.</strong> The card has a PC partition table, a FAT32
+partition and a system partition of type <code>$41</code>. A D81 keeps
+its header, BAM and directory on track 40.</li>
 <li><strong>Transfer.</strong> Move the card, or use M65Connect or
 mega65_ftp over Ethernet.</li>
 </ul>

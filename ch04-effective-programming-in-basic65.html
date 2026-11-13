@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,7 +31,7 @@ BASIC 65</title>
 <h1
 id="programming-the-mega65--chapter-4-effective-programming-in-basic-65">Programming
 the MEGA65 — Chapter 4: Effective Programming in BASIC 65</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch04/ch04.d81">ch04.d81</a> holds this chapter's 14 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 3 described each keyword. This chapter is about putting them
@@ -53,8 +53,9 @@ data structures and dates</li>
 <li>Making BASIC 65 run faster</li>
 </ul>
 <p>Every example program in this chapter was run in the Xemu emulator
-with BASIC 65 ROM 920418. Where a result is shown, it is the result Xemu
-printed.</p>
+with BASIC 65 ROM 920418, a beta ROM; none of them needs anything newer
+than the stable ROM 920413 that Chapter 1 describes. Where a result is
+shown, it is the result Xemu printed.</p>
 <h2 id="how-to-become-fluent-in-basic-65">How to Become Fluent in BASIC
 65</h2>
 <p>BASIC is a language, and like any language it is learned by reading
@@ -73,9 +74,8 @@ expression on its own:</p>
  4
 PRINT USING &quot;#####.##&quot;; 12.257
    12.26</code></pre>
-<p>After an error, HELP lists the line and highlights the statement that
-failed (MEGA65 Book, p. B-131). Keep experiments away from programs that
-matter: save the program first, or work on a copy.</p>
+<p>Keep experiments away from programs that matter: save the program
+first, or work on a copy.</p>
 <h3 id="read-other-programs">Read other programs</h3>
 <p>The examples in Chapter 3 and in the MEGA65 Book are short and each
 shows one idea. Longer programs show how the ideas fit together. LIST
@@ -321,9 +321,11 @@ accident.</li>
 </ul>
 <p>ON ... GOSUB and FGOSUB select a subroutine by number, which replaces
 chains of IF statements:</p>
-<pre><code>10 GETKEY K$ : K = INSTR(&quot;WASD&quot;, K$)
-20 IF K THEN ON K GOSUB 1000, 1100, 1200, 1300
-30 GOTO 10</code></pre>
+<pre><code>10 DO
+20 GETKEY K$ : K = INSTR(&quot;WASD&quot;, K$)
+30 ON K GOSUB 1000, 1100, 1200, 1300
+40 LOOP</code></pre>
+<p>Any other key gives K = 0, and ON ... GOSUB with 0 does nothing.</p>
 <h4 id="functions">Functions</h4>
 <p>DEF FN defines a one-line numeric function, which keeps a repeated
 formula in one place:</p>
@@ -341,9 +343,13 @@ add, search and print members, needs three more steps before any code is
 written.</p>
 <p><strong>Ask whether it is feasible.</strong> Estimate how much data
 there will be and where it will live. In Xemu with ROM 920418, a new
-program has about 55,000 bytes free for its own lines and another 55,000
-for variables, which <code>FRE(0)</code> and <code>FRE(1)</code> report
-(MEGA65 Book, p. B-117). More data than that must stay in disk files and
+program has about 55,000 bytes free for its own lines, which
+<code>FRE(0)</code> reports, and another 55,000 for arrays and strings,
+which <code>FRE(1)</code> reports (MEGA65 Book, p. B-117). Simple
+variables are not part of either figure. They have a small area of their
+own, with room for every one-letter name and for 183 longer ones, as <a
+href="ch06-advanced-basic65.html#where-basic-65-keeps-things">Chapter
+6</a> explains, so bulk data belongs in arrays. More data than that must stay in disk files and
 be read a record at a time. Estimate the speed too: a search through a
 few hundred records in memory is quick, but reading them from disk for
 every search may not be. If in doubt, write a short test program that
@@ -414,9 +420,10 @@ A few conventions make listings readable:</p>
 <ul>
 <li>One statement per line where practical, except for short, closely
 related ones.</li>
-<li>REM lines to head each section and each subroutine. Do not put a
-REM on a line that GOTO or GOSUB jumps to, so it can be deleted
-later without breaking the jump.</li>
+<li>REM lines to head each section and each subroutine. This chapter's
+subroutines start with their REM, so the line a GOSUB names says what
+the subroutine does. The cost is that such a REM cannot be deleted later
+to save space without changing every GOSUB that jumps to it.</li>
 <li>Line numbers in steps of 10, with each major section starting on a
 round hundred or thousand. Keep a standard subroutine at the same line
 number in every program, so it can be MERGEd without clashes.</li>
@@ -424,7 +431,9 @@ number in every program, so it can be MERGEd without clashes.</li>
 <code>TOTAL</code> contains <code>TO</code>, and <code>SCORE</code>
 contains <code>OR</code>, and both cause syntax errors. Only the first
 two characters count, so <code>COUNT</code> and <code>CO</code> are the
-same variable.</li>
+same variable. Eight names belong to BASIC itself and should not be used for a
+program's own variables: DS, <code>DS$</code>, <code>DT$</code>, EL, ER, ST, TI and
+<code>TI$</code> (MEGA65 ROM source, <code>System_Variables</code>).</li>
 <li>A convention for working variables. All BASIC variables are global,
 so a subroutine that uses I as a loop counter will change the I of a
 loop that calls it. Reserve some names, such as those ending in 9, for
@@ -458,11 +467,15 @@ bottom line for three seconds, then clears it:</p>
 <pre><code>9000 REM SHOW EM$ ON THE BOTTOM LINE
 9010 CURSOR 0, 24 : PRINT CHR$(18); EM$; CHR$(146);
 9020 SLEEP 3
-9030 CURSOR 0, 24 : PRINT SPC(LEN(EM$));
+9030 CURSOR 0, 24 : PRINT CHR$(27); &quot;Q&quot;;
 9040 RETURN</code></pre>
 <p>Call it with <code>EM$ = "NAME TOO LONG" : GOSUB 9000</code>.
 CHR$(18) and CHR$(146) turn reverse on and off, and SLEEP waits the
-given number of seconds (MEGA65 Book, p. B-242).</p>
+given number of seconds (MEGA65 Book, p. B-242). Line 9030 clears the
+message with ESC Q, which erases from the cursor to the end of the line.
+<code>PRINT SPC(LEN(EM$))</code> would not do: on the screen, SPC and TAB
+move the cursor over what is already there without erasing it (MEGA65
+ROM source, <code>outspc</code>). The routine assumes a 25-row screen.</p>
 <h3 id="easy-input">Easy input</h3>
 <p>INPUT is fine for many programs, but it lets the user type anything,
 and a letter typed where a number is expected gives a
@@ -516,8 +529,8 @@ RETURN, a very long string, or a comma or quotation mark, which INPUT
 treats specially.</li>
 <li><strong>Generated data.</strong> A loop can feed a routine a range
 of values, and RND can make up random ones. Seed RND with a negative
-number so that the same test data comes back on every run (MEGA65 Book,
-p. B-218).</li>
+number, as described under <a href="#designing-a-program">Designing a
+program</a>, so that the same test data comes back on every run.</li>
 </ul>
 <p>It is hard to test your own program fairly, because you avoid the
 mistakes you know it cannot handle. Ask someone else to try it.</p>
@@ -543,8 +556,8 @@ did not expect. Four habits deal with most of them:</p>
 <li><strong>Validate input.</strong> Check that a number is in range and
 a string is not empty before using it, and ask again if not.</li>
 <li><strong>Check every disk operation.</strong> Test DS after DOPEN,
-DLOAD and similar commands, and show <code>DS$</code> if it is not
-zero.</li>
+DLOAD and similar commands, and show <code>DS$</code> if DS is 20 or
+more. Values below 20 are information, not errors.</li>
 <li><strong>Trap the rest.</strong> A TRAP handler that reports the
 problem and returns to a safe point, such as the main menu, is better
 than a program that stops with an error.</li>
@@ -555,13 +568,19 @@ close every file.</li>
 <p>This input routine combines several of them:</p>
 <pre><code>1000 REM INPUT A NUMBER FROM LO TO HI INTO N
 1010 DO
-1020 INPUT &quot;NUMBER&quot;; N$
+1020 N$ = &quot;&quot; : INPUT &quot;NUMBER&quot;; N$
 1030 N = VAL(N$)
 1040 LOOP UNTIL N &gt;= LO AND N &lt;= HI AND N$ &lt;&gt; &quot;&quot;
 1050 RETURN</code></pre>
 <p>Reading the input as a string and converting it with VAL means a
 typed letter never produces a REDO FROM START message or stops the
-program.</p>
+program. Line 1020 empties N$ first, so pressing RETURN alone can never
+pass off an earlier answer as a new one. The check is still a loose one.
+VAL reads as far as the first character that cannot be part of a number,
+so <code>12X</code> is accepted as 12, and a word counts as 0, which
+passes whenever 0 lies between LO and HI. Where that matters, use the
+key-by-key routine under <a href="#input">Input</a>, which never lets a
+wrong character in.</p>
 <h2 id="debugging-basic-65-programs">Debugging BASIC 65 Programs</h2>
 <p>Errors come in three kinds:</p>
 <ul>
@@ -817,9 +836,9 @@ order they went on:</p>
 120 FOR R = 0 TO 2 : FOR C = 0 TO 2
 130 IF B$(R, C) = &quot;&quot; THEN PRINT &quot;.&quot;; : ELSE PRINT B$(R, C);
 140 NEXT : PRINT : NEXT
-200 DIM ST(20) : SP = 0 : REM A STACK
-210 FOR I = 1 TO 3 : SP = SP + 1 : ST(SP) = I * 10 : NEXT
-220 DO WHILE SP &gt; 0 : PRINT ST(SP); : SP = SP - 1 : LOOP : PRINT</code></pre>
+200 DIM SK(20) : SP = 0 : REM A STACK
+210 FOR I = 1 TO 3 : SP = SP + 1 : SK(SP) = I * 10 : NEXT
+220 DO WHILE SP &gt; 0 : PRINT SK(SP); : SP = SP - 1 : LOOP : PRINT</code></pre>
 <pre><code>BEST: BOB 450
 ..O
 .X.
@@ -943,7 +962,8 @@ mode can use <code>POKE 0,65</code>.</p>
 <h3 id="move-work-out-of-loops">Move work out of loops</h3>
 <p>Calculate values that do not change before the loop starts, and use
 tables read from DATA instead of repeated arithmetic. A table of 360
-sine values, read once, is much faster than calling SIN in every pass.
+sine values, read once, took about a third less time than calling SIN in
+every pass: 0.43 seconds against 0.64 in the timings above.
 A REM inside a loop is skipped on every pass, so put comments before
 or after the loop instead.</p>
 <h3 id="keep-constants-in-variables">Keep constants in variables</h3>

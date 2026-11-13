@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,8 +31,8 @@ Ports</title>
 <h1
 id="programming-the-mega65--chapter-16-the-control-ports">Programming
 the MEGA65 — Chapter 16: The Control Ports</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
-<p class="downloads">Disk image: <a href="code/ch16/ch16.d81">ch16.d81</a> holds this chapter's 6 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch16/ch16.d81">ch16.d81</a> holds this chapter's 7 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The two controller ports on the MEGA65's left side are the same 9-pin
 ports the C64 had, and they accept the same devices: digital joysticks,
@@ -93,8 +93,14 @@ active low. The ports are read through CIA 1:</p>
 </tr>
 </tbody>
 </table>
-<p>The same CIA registers scan the keyboard, which is why holding a
-joystick in port 1 can produce stray key presses.</p>
+<p>The same CIA registers scan the keyboard, which is why, on a C64 and
+in the MEGA65's C64 mode, holding a joystick in port 1 can produce stray
+key presses. The MEGA65's own KERNAL does not scan the keyboard through
+the CIA: it takes typed characters from the hardware's typing event
+queue, described at the end of this chapter (MEGA65 ROM source,
+system.src). The overlap still matters to any program that reads
+<code>$DC01</code> for itself, since keys and the joystick in port 1
+both appear there.</p>
 <h3 id="from-basic">From BASIC</h3>
 <p>JOY decodes a port for you: the low four bits give a direction from 1
 (up) clockwise to 8 (up and left), 0 when centred, and each fire button
@@ -116,10 +122,11 @@ mask off the five joystick bits:</p>
         eor #$ff        ; pressed = 1
         and #$1f        ; bits 0-4: up, down, left, right, fire
         rts</code></pre>
-<p>A routine run with the KERNAL active should read the port when no
-keys are being scanned, or accept the occasional false reading; a
-takeover program that does its own keyboard scanning avoids the conflict
-entirely.</p>
+<p>Keys held down can show up in these registers as joystick switches.
+BASIC's JOY guards against that by writing <code>$FF</code> to
+<code>$DC00</code> with interrupts off while it reads, and restoring it
+afterwards (MEGA65 ROM source, <code>joy</code>); a machine-language
+routine can do the same, or accept the occasional false reading.</p>
 <p>Players with a joystick in the wrong port can swap the ports from the
 Freezer with J, so a program only needs to support one port to be
 usable.</p>
@@ -247,22 +254,22 @@ lines directly, without any SID or CIA setup (MEGA65 Book, p. T-6):</p>
 <tr class="odd">
 <td><code>$D620</code></td>
 <td>POTAX</td>
-<td>Port A, paddle X line</td>
+<td>Port 1, paddle X line</td>
 </tr>
 <tr class="even">
 <td><code>$D621</code></td>
 <td>POTAY</td>
-<td>Port A, paddle Y line</td>
+<td>Port 1, paddle Y line</td>
 </tr>
 <tr class="odd">
 <td><code>$D622</code></td>
 <td>POTBX</td>
-<td>Port B, paddle X line</td>
+<td>Port 2, paddle X line</td>
 </tr>
 <tr class="even">
 <td><code>$D623</code></td>
 <td>POTBY</td>
-<td>Port B, paddle Y line</td>
+<td>Port 2, paddle Y line</td>
 </tr>
 </tbody>
 </table>
@@ -272,7 +279,7 @@ reads as a high value near <code>$FF</code>, as an empty paddle input
 does; a pressed button pulls the line up and it reads as a low value.
 Treating anything below <code>$80</code> as pressed gives a reliable
 result:</p>
-<pre><code>; return buttons 2 and 3 of the pad on port A in bits 1 and 2 of A
+<pre><code>; return buttons 2 and 3 of the pad on port 1 in bits 1 and 2 of A
 btn23   lda #0
         ldx $d620       ; POTAX: button 2
         cpx #$80
@@ -283,9 +290,12 @@ nob2    ldx $d621       ; POTAY: button 3
         bcs nob3
         ora #%00000100
 nob3    rts</code></pre>
-<p>The Book names the ports A and B; press a button on a pad in each
-port and watch the registers to confirm which physical port each pair
-belongs to. Buttons 4 and 5 of the 5plusbuttonsJoystick protocol are
+<p>The Book and the core name the ports A and B. A is port 1 and B is
+port 2: the ROM reads <code>POT(1)</code> and <code>POT(2)</code> from
+<code>$D620</code> and <code>$D621</code>, with their buttons from port
+1's switches in <code>$DC01</code>, and <code>POT(3)</code> and
+<code>POT(4)</code> from <code>$D622</code> and <code>$D623</code>
+(MEGA65 ROM source, <code>pot</code>). Buttons 4 and 5 of the 5plusbuttonsJoystick protocol are
 encoded in the direction signals; JOY decodes them in BASIC, and machine
 language that needs them should follow the protocol's own
 specification.</p>
@@ -362,9 +372,15 @@ number from 0 to 255. Each paddle also has a fire button, read like a
 joystick switch.</p>
 <p>POT reads paddles 1 to 4: the low byte is the position, and a value
 above 255 means the button is pressed (MEGA65 Book, p. B-197):</p>
-<pre data-download="code/ch16/paddles.bas code/ch16/paddles.prg"><code>10 X = POT(1)
-20 B = X &gt; 255 : REM -1 WHILE THE BUTTON IS PRESSED
-30 V = X AND 255 : REM POSITION, 0 TO 255</code></pre>
+<pre data-download="code/ch16/paddles.bas code/ch16/paddles.prg"><code>10 DO
+20 X = POT(1)
+30 PRINT &quot;POSITION&quot;; X AND 255;
+40 IF X &gt; 255 THEN PRINT &quot;  BUTTON&quot;;
+50 PRINT
+60 LOOP</code></pre>
+<p>Paddles 1 and 2 are the pair in port 1, and 3 and 4 the pair in port
+2. From ROM 920409 POT reads the MEGA65's own paddle registers, below,
+instead of going through the SID (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <p>C64 software reads the two values from SID registers
 <code>$D419</code> and <code>$D41A</code>, after selecting a port
 through bits 6 and 7 of CIA 1's port A. The MEGA65 adds four registers
@@ -397,7 +413,7 @@ the MEGA65 I/O personality:</p>
 </tbody>
 </table>
 <pre><code>paddle  lda $d620       ; port 1, paddle X: 0-255
-        sta pos
+        sta pos         ; pos: a byte of the program's own
         lda $dc01       ; CIA 1 port B holds port 1's switches
         and #%00000100  ; paddle X's button is the joystick left line
         rts             ; Z set while the button is pressed</code></pre>
@@ -418,6 +434,34 @@ stops it:</p>
 30 RMOUSE X, Y, B
 40 IF B THEN PRINT &quot;CLICK AT&quot;; X; Y
 50 LOOP</code></pre>
+<p>RMOUSE's third variable holds the buttons (MEGA65 ROM source,
+<code>rmouse</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Buttons pressed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>None</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>Right</td>
+</tr>
+<tr class="odd">
+<td>128</td>
+<td>Left</td>
+</tr>
+<tr class="even">
+<td>129</td>
+<td>Both</td>
+</tr>
+</tbody>
+</table>
 <p>Sprite 0 holds a mouse-pointer image after start-up; another sprite
 needs pointer data loaded first (MEGA65 Book, MOUSE). The driver runs in
 the KERNAL's raster interrupt, so the pointer moves smoothly while the
@@ -606,6 +650,11 @@ joystick or an empty port also leaves the paddle lines at an extreme.
 The configuration utility uses bit 0 this way: it sets bit 0, reads it
 back, and treats a 0 as a 1351 in port 1 (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>mega65_config.s</code>).</p>
+<p>The core works out bits 0 and 2 all the time, so they can be read
+without changing anything. Bits 1 and 3 can only be set while
+translation is switched on for that port, so the first test below finds
+an Amiga mouse only if the user, or the program, has enabled it
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>mouse_input.vhdl</code>):</p>
 <pre data-download="code/ch16/amiga-mice-and-autodetection.bas code/ch16/amiga-mice-and-autodetection.prg"><code>10 M = PEEK($D61B)
 20 IF M AND 2 THEN PRINT &quot;AMIGA MOUSE IN PORT 1&quot;
 30 IF (M AND 1) = 0 THEN PRINT &quot;1351 OR PADDLES IN PORT 1&quot;</code></pre>
@@ -668,7 +717,8 @@ translated into characters:</p>
 <td>PETSCIIKEY</td>
 <td>The next event as PETSCII; <code>$FF</code> if the queue is empty or
 the event has no PETSCII form (bit 7 of <code>$D60A</code> tells these
-apart) (<a href="https://github.com/MEGA65/mega65-core/pull/720">mega65-core PR #720</a>)</td>
+apart). Added in September 2023, so it needs the release 0.96 core or
+later; ROMs from 920387 need it too (<a href="https://github.com/MEGA65/mega65-core/pull/720">mega65-core PR #720</a>; <a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>)</td>
 </tr>
 <tr class="odd">
 <td><code>$D60A</code> bits 0-6</td>
@@ -721,9 +771,127 @@ eight rows (MEGA65 Book, p. F-14):</p>
 </tbody>
 </table>
 <p>Unlike CIA scanning, these registers report any combination of keys
-without ghosting, and they do not disturb the joystick ports. The Book's
-keyboard appendix gives the key at each row and column. The space bar,
-for example, is in column 7, row 4:</p>
+without ghosting, and they do not disturb the joystick ports. The first
+eight columns are the C64's matrix and the ninth holds the keys the C65
+added. A row's number is its bit number in <code>$D613</code>
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>matrix_to_ascii.vhdl</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Row 0</th>
+<th>Row 1</th>
+<th>Row 2</th>
+<th>Row 3</th>
+<th>Row 4</th>
+<th>Row 5</th>
+<th>Row 6</th>
+<th>Row 7</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td>INST/DEL</td>
+<td>RETURN</td>
+<td>CRSR left/right</td>
+<td>F7</td>
+<td>F1</td>
+<td>F3</td>
+<td>F5</td>
+<td>CRSR up/down</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td>3</td>
+<td>W</td>
+<td>A</td>
+<td>4</td>
+<td>Z</td>
+<td>S</td>
+<td>E</td>
+<td>Left SHIFT</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td>5</td>
+<td>R</td>
+<td>D</td>
+<td>6</td>
+<td>C</td>
+<td>F</td>
+<td>T</td>
+<td>X</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td>7</td>
+<td>Y</td>
+<td>G</td>
+<td>8</td>
+<td>B</td>
+<td>H</td>
+<td>U</td>
+<td>V</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>9</td>
+<td>I</td>
+<td>J</td>
+<td>0</td>
+<td>M</td>
+<td>K</td>
+<td>O</td>
+<td>N</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td>+</td>
+<td>P</td>
+<td>L</td>
+<td>-</td>
+<td>.</td>
+<td>:</td>
+<td>@</td>
+<td>,</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td>£</td>
+<td>*</td>
+<td>;</td>
+<td>CLR/HOME</td>
+<td>Right SHIFT</td>
+<td>=</td>
+<td>↑</td>
+<td>/</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td>1</td>
+<td>←</td>
+<td>CTRL</td>
+<td>2</td>
+<td>SPACE</td>
+<td>MEGA</td>
+<td>Q</td>
+<td>RUN/STOP</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td>NO SCROLL</td>
+<td>TAB</td>
+<td>ALT</td>
+<td>HELP</td>
+<td>F9</td>
+<td>F11</td>
+<td>F13</td>
+<td>ESC</td>
+</tr>
+</tbody>
+</table>
+<p>The space bar, for example, is in column 7, row 4:</p>
 <pre><code>space   lda #7          ; select column 7
         sta $d614
         lda $d613       ; read its eight rows
@@ -731,10 +899,24 @@ for example, is in column 7, row 4:</p>
         rts             ; Z set while space is held</code></pre>
 <p>A game can poll several columns this way every frame, and react to
 any combination of keys held at once.</p>
-<h3 id="from-basic-1">From BASIC</h3>
-<p>GET and GETKEY read the typing queue. For held keys, a BASIC program
-can read the matrix registers with POKE and PEEK, though the keyboard is
-usually simpler to treat as a source of single key presses in BASIC.</p>
+<h3 id="from-basic-1">The keyboard from BASIC</h3>
+<p>GET and GETKEY read the typing queue, which suits menus and text. For
+held keys, a BASIC program can read the matrix registers with POKE and
+PEEK. This loop reports W, A, S, D and the space bar, in any
+combination, for as long as they are held:</p>
+<pre data-download="code/ch16/from-basic-1.bas code/ch16/from-basic-1.prg"><code>10 DO
+20 POKE $D614, 1 : K = PEEK($D613)                   : REM COLUMN 1
+30 IF (K AND 2) = 0 THEN PRINT &quot;W &quot;;
+40 IF (K AND 4) = 0 THEN PRINT &quot;A &quot;;
+50 IF (K AND 32) = 0 THEN PRINT &quot;S &quot;;
+60 POKE $D614, 2 : IF (PEEK($D613) AND 4) = 0 THEN PRINT &quot;D &quot;;
+70 POKE $D614, 7 : IF (PEEK($D613) AND 16) = 0 THEN PRINT &quot;SPACE&quot;;
+80 PRINT
+90 LOOP</code></pre>
+<p>The keys still go into the typing queue as well, so a program that
+reads the matrix should empty the queue now and then, with
+<code>GET A$</code> in a loop until it returns an empty string, or the
+characters appear at the READY prompt when it ends.</p>
 <h2 id="summary">Summary</h2>
 <ul>
 <li><strong>Joysticks.</strong> Read with JOY in BASIC, or from
@@ -754,7 +936,8 @@ though the current core latches only touch input.</li>
 <li><strong>Keyboard.</strong> The typing queue at <code>$D610</code>,
 <code>$D619</code> and <code>$D60A</code> gives characters; the matrix
 registers at <code>$D614</code>, <code>$D613</code> and
-<code>$D611</code> give held keys without ghosting.</li>
+<code>$D611</code> give held keys without ghosting, to BASIC as well
+as to machine language.</li>
 </ul>
 <p>Chapter 17 covers the remaining peripherals.</p>
 <nav class="chapnav"><span><a href="ch15-using-the-disk-drive.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch17-major-peripherals.html">Next &rarr;</a></span></nav>

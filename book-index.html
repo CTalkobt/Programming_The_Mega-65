@@ -18,9 +18,9 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <h2 id="index-0-9">0-9</h2>
 <ul class="bookindex">
 <li><a href="ch12-graphics.html#1-bit-per-pixel-hi-res-bitmap-bitplanes-monochrome-quilt">1 bit per pixel: hi-res bitmap, bitplanes, monochrome quilt</a> — Chapter 12</li>
+<li><a href="ch12-graphics.html#16-bit-sprite-pointers">16-bit sprite pointers</a> — Chapter 12</li>
+<li><a href="ch12-graphics.html#a-16-colour-sprite">16-colour sprite</a> — Chapter 12</li>
 <li><a href="ch12-graphics.html#2-bits-per-pixel-multicolour-bitmap">2 bits per pixel: multicolour bitmap</a> — Chapter 12</li>
-<li><a href="ch12-graphics.html#16-bit-sprite-pointers">16-Bit sprite pointers</a> — Chapter 12</li>
-<li><a href="ch12-graphics.html#a-16-colour-sprite">16-Colour sprite</a> — Chapter 12</li>
 <li><a href="appendices.html#the-28-bit-address-space-1">28-Bit address space</a> — Appendix I</li>
 <li><a href="ch05-mega65-architecture.html#the-28-bit-address-space">28-Bit address space</a> — Chapter 5</li>
 <li><a href="ch07-45gs02-machine-language.html#32-bit-operations">32-Bit operations</a> — Chapter 7</li>
@@ -34,7 +34,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch05-mega65-architecture.html#speed">45GS02 processor: speed</a> — Chapter 5</li>
 <li><a href="ch12-graphics.html#8-bits-per-pixel-fcm-quilt">8 bits per pixel: FCM quilt</a> — Chapter 12</li>
 <li><a href="ch07-45gs02-machine-language.html#8-bit-and-16-bit-stacks">8-bit and 16-bit stacks</a> — Chapter 7</li>
-<li><a href="ch12-graphics.html#an-80-column-bitmap">80-Column bitmap</a> — Chapter 12</li>
+<li><a href="ch12-graphics.html#an-80-column-bitmap">80-column bitmap</a> — Chapter 12</li>
 </ul>
 <h2 id="index-a">A</h2>
 <ul class="bookindex">
@@ -48,8 +48,8 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch12-graphics.html#several-palettes">Alternate palette bank</a> — Chapter 12</li>
 <li><a href="ch16-control-ports.html#amiga-mice-and-autodetection">Amiga mice and autodetection</a> — Chapter 16</li>
 <li><a href="ch03-basic65-reference-guide.html#and-or-xor-not"><code>AND</code></a> — Chapter 3</li>
-<li><a href="ch03-basic65-reference-guide.html#dopen-dclose-append"><code>APPEND</code></a> — Chapter 3</li>
 <li><a href="ch12-graphics.html#animation">Animation</a> — Chapter 12</li>
+<li><a href="ch03-basic65-reference-guide.html#dopen-dclose-append"><code>APPEND</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#arrays">Arrays</a> — Chapter 3</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#arrow-keys-and-cursor-keys">Arrow keys and cursor keys</a> — Chapter 2</li>
 <li><a href="ch03-basic65-reference-guide.html#asc-chr"><code>ASC</code></a> — Chapter 3</li>
@@ -121,6 +121,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <ul class="bookindex">
 <li><a href="ch05-mega65-architecture.html#the-c64-cpu-port">C64 CPU port</a> — Chapter 5</li>
 <li><a href="ch03-basic65-reference-guide.html#t-c"><code>C@&amp;</code></a> — Chapter 3</li>
+<li><a href="ch12-graphics.html#calling-it-from-basic">Calling it from BASIC</a> — Chapter 12</li>
 <li><a href="ch09-mixing-basic-with-machine-language.html#calling-machine-code-and-passing-parameters">Calling machine code and passing parameters</a> — Chapter 9</li>
 <li><a href="ch09-mixing-basic-with-machine-language.html#pointer">Calling machine code and passing parameters: POINTER</a> — Chapter 9</li>
 <li><a href="ch09-mixing-basic-with-machine-language.html#registers">Calling machine code and passing parameters: registers</a> — Chapter 9</li>
@@ -169,6 +170,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#cont"><code>CONT</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#controllers">Controllers</a> — Chapter 3</li>
 <li><a href="ch08-ml-methods-specific-to-the-mega65.html#controlling-cpu-speed">Controlling CPU speed</a> — Chapter 8</li>
+<li><a href="ch05-mega65-architecture.html#controlling-the-speed">Controlling the speed</a> — Chapter 5</li>
 <li><a href="appendices.html#converting-between-hex-and-decimal">Converting between hex and decimal</a> — Appendix C</li>
 <li><a href="appendices.html#appendix-f-converting-c64-and-c65-programs">Converting C64 and C65 programs</a> — Appendix F</li>
 <li><a href="appendices.html#basic-programs">Converting C64 and C65 programs: BASIC programs</a> — Appendix F</li>
@@ -178,11 +180,11 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#copy-concat"><code>COPY</code></a> — Chapter 3</li>
 <li><a href="ch15-using-the-disk-drive.html#copying-renaming-and-scratching">Copying, renaming and scratching</a> — Chapter 15</li>
 <li><a href="ch03-basic65-reference-guide.html#sin-cos-tan-atn"><code>COS</code></a> — Chapter 3</li>
+<li><a href="ch03-basic65-reference-guide.html#sin-cos-tan-atn"><code>COSD</code></a> — Chapter 3</li>
 <li><a href="ch09-mixing-basic-with-machine-language.html#the-cost-of-usr">Cost of USR</a> — Chapter 9</li>
 <li><a href="ch03-basic65-reference-guide.html#cursor-rcursor"><code>CURSOR</code></a> — Chapter 3</li>
 <li><a href="ch12-graphics.html#custom-screen-sizes">Custom screen sizes</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#cut-gcopy-paste"><code>CUT</code></a> — Chapter 3</li>
-<li><a href="ch12-graphics.html#the-cycle-budget">Cycle budget</a> — Chapter 12</li>
 </ul>
 <h2 id="index-d">D</h2>
 <ul class="bookindex">
@@ -210,6 +212,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#dim"><code>DIM</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#dir-catalog"><code>DIR</code></a> — Chapter 3</li>
 <li><a href="ch13-sound.html#direct-digital-audio">Direct digital audio</a> — Chapter 13</li>
+<li><a href="ch03-basic65-reference-guide.html#dir-catalog"><code>DIRECTORY</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#disk"><code>DISK</code></a> — Chapter 3</li>
 <li><a href="ch15-using-the-disk-drive.html#disk-access-from-machine-language">Disk access from machine language</a> — Chapter 15</li>
 <li><a href="ch03-basic65-reference-guide.html#disk-and-device-errors">Disk and device errors</a> — Chapter 3</li>
@@ -220,12 +223,12 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch14-sd-card-and-mass-storage.html#disk-images">Disk images</a> — Chapter 14</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#disk-images-and-drives">Disk images and drives</a> — Chapter 2</li>
 <li><a href="ch14-sd-card-and-mass-storage.html#mounting">Disk images: mounting</a> — Chapter 14</li>
+<li><a href="ch12-graphics.html#the-display-address-translator">Display address translator</a> — Chapter 12</li>
+<li><a href="ch12-graphics.html#mixing-colours">Dithering and colour mixing</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#dload-dsave-dverify"><code>DLOAD</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#dma"><code>DMA</code></a> — Chapter 3</li>
-<li><a href="ch12-graphics.html#the-display-address-translator">Display Address Translator</a> — Chapter 12</li>
-<li><a href="ch12-graphics.html#mixing-colours">Dithering and colour mixing</a> — Chapter 12</li>
-<li><a href="ch12-graphics.html#scaling-an-object-with-dma">DMA: texture scaling</a> — Chapter 12</li>
 <li><a href="ch08-ml-methods-specific-to-the-mega65.html#dma-and-the-cpu">DMA and the CPU</a> — Chapter 8</li>
+<li><a href="ch12-graphics.html#scaling-an-object-with-dma">DMA: texture scaling</a> — Chapter 12</li>
 <li><a href="ch05-mega65-architecture.html#dmagic">DMAgic</a> — Chapter 5</li>
 <li><a href="ch05-mega65-architecture.html#a-dma-list">DMAgic: A DMA list</a> — Chapter 5</li>
 <li><a href="ch05-mega65-architecture.html#the-registers">DMAgic: the registers</a> — Chapter 5</li>
@@ -235,7 +238,6 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#dopen-dclose-append"><code>DOPEN</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#dot-pixel"><code>DOT</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#dmode-dpat"><code>DPAT</code></a> — Chapter 3</li>
-<li><a href="ch12-graphics.html#double-buffering">Double buffering</a> — Chapter 12</li>
 <li><a href="ch15-using-the-disk-drive.html#drive-status">Drive status</a> — Chapter 15</li>
 <li><a href="ch15-using-the-disk-drive.html#drives-units-and-drive-numbers">Drives, units and drive numbers</a> — Chapter 15</li>
 <li><a href="ch03-basic65-reference-guide.html#ds-ds-st"><code>DS</code></a> — Chapter 3</li>
@@ -257,6 +259,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#end"><code>END</code></a> — Chapter 3</li>
 <li><a href="ch13-sound.html#end-of-sample-and-interrupts">End of sample and interrupts</a> — Chapter 13</li>
 <li><a href="ch03-basic65-reference-guide.html#envelope"><code>ENVELOPE</code></a> — Chapter 3</li>
+<li><a href="ch13-sound.html#envelope-times">Envelope times</a> — Chapter 13</li>
 <li><a href="ch03-basic65-reference-guide.html#er-el"><code>ER</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#scratch-erase"><code>ERASE</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#err"><code>ERR$</code></a> — Chapter 3</li>
@@ -264,6 +267,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#error-handling-and-debugging">Error handling and debugging</a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#error-messages">Error messages</a> — Chapter 3</li>
 <li><a href="ch04-effective-programming-in-basic65.html#error-messages">Error messages</a> — Chapter 4</li>
+<li><a href="appendices.html#escape-sequences">Escape sequences</a> — Appendix B</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#escape-sequences">Escape sequences</a> — Chapter 2</li>
 <li><a href="ch17-major-peripherals.html#ethernet">Ethernet</a> — Chapter 17</li>
 <li><a href="ch15-using-the-disk-drive.html#example-a-high-score-table">Example: a high-score table</a> — Chapter 15</li>
@@ -280,6 +284,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch06-advanced-basic65.html#example-one-command-start-up">Example: one-command start-up</a> — Chapter 6</li>
 <li><a href="ch11-mega65-rom-guide.html#example-printing-with-primm">Example: printing with PRIMM</a> — Chapter 11</li>
 <li><a href="ch11-mega65-rom-guide.html#example-restoring-the-display">Example: restoring the display</a> — Chapter 11</li>
+<li><a href="ch11-mega65-rom-guide.html#example-saving-and-loading-a-file">Example: saving and loading a file</a> — Chapter 11</li>
 <li><a href="ch06-advanced-basic65.html#example-saving-and-restoring-the-screen">Example: saving and restoring the screen</a> — Chapter 6</li>
 <li><a href="ch06-advanced-basic65.html#example-the-screen-as-an-array">Example: the screen as an array</a> — Chapter 6</li>
 <li><a href="ch06-advanced-basic65.html#example-walking-the-program">Example: walking the program</a> — Chapter 6</li>
@@ -316,9 +321,9 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#format-header"><code>FORMAT</code></a> — Chapter 3</li>
 <li><a href="ch15-using-the-disk-drive.html#formatting-and-copying-whole-disks">Formatting and copying whole disks</a> — Chapter 15</li>
 <li><a href="ch13-sound.html#the-four-sids">Four SIDs</a> — Chapter 13</li>
+<li><a href="ch12-graphics.html#one-change-per-frame">Frame timing for animation</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#fre"><code>FRE</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#fread-fwrite"><code>FREAD#</code></a> — Chapter 3</li>
-<li><a href="ch12-graphics.html#one-change-per-frame">Frame timing for animation</a> — Chapter 12</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#freeze-slots">Freeze slots</a> — Chapter 2</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#the-freezer">Freezer</a> — Chapter 2</li>
 <li><a href="ch03-basic65-reference-guide.html#freezer"><code>FREEZER</code></a> — Chapter 3</li>
@@ -326,21 +331,22 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch01-introduction.html#from-the-c65-to-the-mega65">From the C65 to the MEGA65</a> — Chapter 1</li>
 <li><a href="ch12-graphics.html#full-colour-mode">Full colour Mode</a> — Chapter 12</li>
 <li><a href="ch12-graphics.html#full-colour-and-nybble-colour-characters">Full-Colour and Nybble-Colour characters</a> — Chapter 12</li>
-<li><a href="ch03-basic65-reference-guide.html#fread-fwrite"><code>FWRITE#</code></a> — Chapter 3</li>
 <li><a href="ch12-graphics.html#a-full-colour-screen">Full-colour screen</a> — Chapter 12</li>
+<li><a href="ch03-basic65-reference-guide.html#fread-fwrite"><code>FWRITE#</code></a> — Chapter 3</li>
 </ul>
 <h2 id="index-g">G</h2>
 <ul class="bookindex">
+<li><a href="ch12-graphics.html#light-is-not-linear">Gamma (light is not linear)</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#cut-gcopy-paste"><code>GCOPY</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#get"><code>GET</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#print-input-line-input-get"><code>GET#</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#getkey"><code>GETKEY</code></a> — Chapter 3</li>
-<li><a href="ch12-graphics.html#light-is-not-linear">Gamma (light is not linear)</a> — Chapter 12</li>
 <li><a href="ch14-sd-card-and-mass-storage.html#getting-files-onto-the-card">Getting files onto the card</a> — Chapter 14</li>
 <li><a href="ch09-mixing-basic-with-machine-language.html#getting-machine-code-into-memory">Getting machine code into memory</a> — Chapter 9</li>
 <li><a href="ch13-sound.html#global-control-d711">Global control: $D711</a> — Chapter 13</li>
 <li><a href="appendices.html#appendix-j-glossary">Glossary</a> — Appendix J</li>
 <li><a href="ch03-basic65-reference-guide.html#go64"><code>GO64</code></a> — Chapter 3</li>
+<li><a href="ch12-graphics.html#going-further">Going further</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#gosub-return"><code>GOSUB</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#goto"><code>GOTO</code></a> — Chapter 3</li>
 <li><a href="ch12-graphics.html#gotox">GOTOX</a> — Chapter 12</li>
@@ -350,6 +356,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <h2 id="index-h">H</h2>
 <ul class="bookindex">
 <li><a href="ch01-introduction.html#the-hardware-at-a-glance">Hardware at a glance</a> — Chapter 1</li>
+<li><a href="ch12-graphics.html#hardware-sprites-or-rrb-objects">Hardware sprites or RRB objects</a> — Chapter 12</li>
 <li><a href="ch11-mega65-rom-guide.html#hardware-vectors">Hardware vectors</a> — Chapter 11</li>
 <li><a href="ch03-basic65-reference-guide.html#setbit-clrbit-hasbit"><code>HASBIT</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#format-header"><code>HEADER</code></a> — Chapter 3</li>
@@ -361,6 +368,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch06-advanced-basic65.html#tokens">How a program is stored: tokens</a> — Chapter 6</li>
 <li><a href="ch01-introduction.html#how-compatible-is-c64-mode">How compatible is C64 mode?</a> — Chapter 1</li>
 <li><a href="ch03-basic65-reference-guide.html#how-errors-are-reported">How errors are reported</a> — Chapter 3</li>
+<li><a href="ch12-graphics.html#the-raster-rewrite-buffer">How the buffer works</a> — Chapter 12</li>
 <li><a href="ch17-major-peripherals.html#how-the-mega65-starts-a-cartridge">How the MEGA65 starts a cartridge</a> — Chapter 17</li>
 <li><a href="ch07-45gs02-machine-language.html#how-the-prefix-works">How the prefix works</a> — Chapter 7</li>
 <li><a href="ch04-effective-programming-in-basic65.html#how-to-become-fluent-in-basic-65">How to become fluent in BASIC 65</a> — Chapter 4</li>
@@ -388,6 +396,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#info"><code>INFO</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#input"><code>INPUT</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#print-input-line-input-get"><code>INPUT#</code></a> — Chapter 3</li>
+<li><a href="ch14-sd-card-and-mass-storage.html#inside-a-d81-image">Inside a D81 image</a> — Chapter 14</li>
 <li><a href="ch04-effective-programming-in-basic65.html#inspect-variables">Inspect variables</a> — Chapter 4</li>
 <li><a href="ch03-basic65-reference-guide.html#instr"><code>INSTR</code></a> — Chapter 3</li>
 <li><a href="ch07-45gs02-machine-language.html#instruction-groups">Instruction groups</a> — Chapter 7</li>
@@ -417,11 +426,13 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#key"><code>KEY</code></a> — Chapter 3</li>
 <li><a href="appendices.html#appendix-e-key-registers">Key registers</a> — Appendix E</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#the-keyboard">Keyboard</a> — Chapter 2</li>
+<li><a href="ch17-major-peripherals.html#the-keyboard-and-drive-leds">Keyboard and drive LEDs</a> — Chapter 17</li>
 <li><a href="ch03-basic65-reference-guide.html#keyboard-and-screen-input">Keyboard and screen input</a> — Chapter 3</li>
 <li><a href="ch16-control-ports.html#the-keyboard-as-an-input-device">Keyboard as an input device</a> — Chapter 16</li>
-<li><a href="ch16-control-ports.html#from-basic-1">Keyboard as an input device: from BASIC</a> — Chapter 16</li>
+<li><a href="ch16-control-ports.html#from-basic-1">Keyboard from BASIC</a> — Chapter 16</li>
 <li><a href="ch16-control-ports.html#the-keyboard-matrix-registers">Keyboard matrix registers</a> — Chapter 16</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#keys-held-at-start-up">Keys held at start-up</a> — Chapter 2</li>
+<li><a href="ch03-basic65-reference-guide.html#keywords-a-to-z">Keywords a to z</a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#keywords-in-variable-names">Keywords in variable names</a> — Chapter 3</li>
 <li><a href="ch05-mega65-architecture.html#kinds-of-memory">Kinds of memory</a> — Chapter 5</li>
 <li><a href="ch04-effective-programming-in-basic65.html#kinds-of-program">Kinds of program</a> — Chapter 4</li>
@@ -450,7 +461,6 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#do-loop-while-until-exit"><code>LOOP</code></a> — Chapter 3</li>
 <li><a href="ch04-effective-programming-in-basic65.html#loops-without-goto">Loops without GOTO</a> — Chapter 4</li>
 <li><a href="ch03-basic65-reference-guide.html#lpen"><code>LPEN</code></a> — Chapter 3</li>
-<li><a href="ch12-graphics.html#brightness-first">Luma (brightness first)</a> — Chapter 12</li>
 </ul>
 <h2 id="index-m">M</h2>
 <ul class="bookindex">
@@ -477,16 +487,17 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#monitor"><code>MONITOR</code></a> — Chapter 3</li>
 <li><a href="ch16-control-ports.html#more-joysticks-and-port-options">More joysticks and port options</a> — Chapter 16</li>
 <li><a href="ch03-basic65-reference-guide.html#mount"><code>MOUNT</code></a> — Chapter 3</li>
+<li><a href="ch14-sd-card-and-mass-storage.html#mounting-an-image-from-machine-language">Mounting an image from machine language</a> — Chapter 14</li>
 <li><a href="ch03-basic65-reference-guide.html#mouse-rmouse"><code>MOUSE</code></a> — Chapter 3</li>
 <li><a href="ch04-effective-programming-in-basic65.html#move-work-out-of-loops">Move work out of loops</a> — Chapter 4</li>
-<li><a href="ch03-basic65-reference-guide.html#movspr"><code>MOVSPR</code></a> — Chapter 3</li>
 <li><a href="ch12-graphics.html#moving-the-pointer-list">Moving the sprite pointer list</a> — Chapter 12</li>
+<li><a href="ch03-basic65-reference-guide.html#movspr"><code>MOVSPR</code></a> — Chapter 3</li>
 <li><a href="ch16-control-ports.html#multi-button-controllers">Multi-Button controllers</a> — Chapter 16</li>
 </ul>
 <h2 id="index-n">N</h2>
 <ul class="bookindex">
-<li><a href="ch03-basic65-reference-guide.html#new"><code>NEW</code></a> — Chapter 3</li>
 <li><a href="ch12-graphics.html#an-ncm-screen">NCM screen</a> — Chapter 12</li>
+<li><a href="ch03-basic65-reference-guide.html#new"><code>NEW</code></a> — Chapter 3</li>
 <li><a href="ch07-45gs02-machine-language.html#the-new-modes-in-practice">New modes in practice</a> — Chapter 7</li>
 <li><a href="ch03-basic65-reference-guide.html#for-to-step-next"><code>NEXT</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#and-or-xor-not"><code>NOT</code></a> — Chapter 3</li>
@@ -500,6 +511,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 </ul>
 <h2 id="index-o">O</h2>
 <ul class="bookindex">
+<li><a href="ch12-graphics.html#objects-from-basic">Objects from BASIC</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#off"><code>OFF</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#on"><code>ON</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#open-close"><code>OPEN</code></a> — Chapter 3</li>
@@ -511,9 +523,9 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <h2 id="index-p">P</h2>
 <ul class="bookindex">
 <li><a href="ch16-control-ports.html#paddles">Paddles</a> — Chapter 16</li>
+<li><a href="ch12-graphics.html#double-buffering">Page flipping</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#paint"><code>PAINT</code></a> — Chapter 3</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#pal-and-ntsc">PAL and NTSC</a> — Chapter 2</li>
-<li><a href="ch12-graphics.html#where-the-eye-goes">PALEMU scan-line emulation</a> — Chapter 12</li>
 <li><a href="ch12-graphics.html#the-palette">Palette</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#palette-rpalette"><code>PALETTE</code></a> — Chapter 3</li>
 <li><a href="ch12-graphics.html#palette-effects">Palette effects</a> — Chapter 12</li>
@@ -525,9 +537,11 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#peek-poke"><code>PEEK</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#pen-rpen"><code>PEN</code></a> — Chapter 3</li>
 <li><a href="ch12-graphics.html#perception">Perception</a> — Chapter 12</li>
+<li><a href="appendices.html#petscii-chart">PETSCII chart</a> — Appendix B</li>
 <li><a href="appendices.html#appendix-b-petscii-codes">PETSCII codes</a> — Appendix B</li>
 <li><a href="appendices.html#control-codes">PETSCII codes: control codes</a> — Appendix B</li>
 <li><a href="ch03-basic65-reference-guide.html#dot-pixel"><code>PIXEL</code></a> — Chapter 3</li>
+<li><a href="ch12-graphics.html#planning-the-library">Planning the library</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#play-rplay"><code>PLAY</code></a> — Chapter 3</li>
 <li><a href="ch13-sound.html#playing-a-note">Playing a note</a> — Chapter 13</li>
 <li><a href="ch12-graphics.html#plotting-pixels-and-drawing-lines">Plotting pixels and drawing lines</a> — Chapter 12</li>
@@ -568,10 +582,8 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch11-mega65-rom-guide.html#ram-vectors">RAM vectors</a> — Chapter 11</li>
 <li><a href="ch08-ml-methods-specific-to-the-mega65.html#raster-interrupts">Raster interrupts</a> — Chapter 8</li>
 <li><a href="ch08-ml-methods-specific-to-the-mega65.html#stability">Raster interrupts: stability</a> — Chapter 8</li>
-<li><a href="ch12-graphics.html#the-raster-rewrite-buffer">Raster rewrite buffer</a> — Chapter 12</li>
-<li><a href="ch12-graphics.html#raster-techniques">Raster techniques</a> — Chapter 12</li>
-<li><a href="ch12-graphics.html#sizing-rows">Raster techniques: sizing rows</a> — Chapter 12</li>
-<li><a href="ch12-graphics.html#time-limits">Raster techniques: time limits</a> — Chapter 12</li>
+<li><a href="ch12-graphics.html#raster-techniques">Raster rewrite buffer</a> — Chapter 12</li>
+<li><a href="ch12-graphics.html#sizing-rows">Raster rewrite buffer: sizing rows</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#rcolor"><code>RCOLOR</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#cursor-rcursor"><code>RCURSOR</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#rdisk"><code>RDISK</code></a> — Chapter 3</li>
@@ -583,6 +595,9 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#data-read-restore"><code>READ</code></a> — Chapter 3</li>
 <li><a href="ch04-effective-programming-in-basic65.html#read-other-programs">Read other programs</a> — Chapter 4</li>
 <li><a href="ch04-effective-programming-in-basic65.html#read-the-message">Read the message</a> — Chapter 4</li>
+<li><a href="ch14-sd-card-and-mass-storage.html#reading-a-file-a-sector-at-a-time">Reading a file a sector at a time</a> — Chapter 14</li>
+<li><a href="ch15-using-the-disk-drive.html#reading-blocks-directly">Reading blocks directly</a> — Chapter 15</li>
+<li><a href="ch14-sd-card-and-mass-storage.html#reading-sectors-of-the-card">Reading sectors of the card</a> — Chapter 14</li>
 <li><a href="ch16-control-ports.html#reading-the-buttons-from-basic">Reading the buttons from BASIC</a> — Chapter 16</li>
 <li><a href="ch16-control-ports.html#reading-the-buttons-from-machine-language">Reading the buttons from machine language</a> — Chapter 16</li>
 <li><a href="ch17-major-peripherals.html#reading-the-clock-from-machine-language">Reading the clock from machine language</a> — Chapter 17</li>
@@ -612,11 +627,11 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch04-effective-programming-in-basic65.html#robust-programs">Robust programs</a> — Chapter 4</li>
 <li><a href="ch05-mega65-architecture.html#rom">ROM</a> — Chapter 5</li>
 <li><a href="ch11-mega65-rom-guide.html#rom-layout-and-versions">ROM layout and versions</a> — Chapter 11</li>
+<li><a href="ch12-graphics.html#rows-of-any-length">Rows of any length (SEAM)</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#palette-rpalette"><code>RPALETTE</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#pen-rpen"><code>RPEN</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#play-rplay"><code>RPLAY</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#rpt"><code>RPT$</code></a> — Chapter 3</li>
-<li><a href="ch12-graphics.html#rows-of-any-length">Rows of any length (SEAM)</a> — Chapter 12</li>
 <li><a href="ch12-graphics.html#an-rrb-demo-in-basic">RRB demo in BASIC</a> — Chapter 12</li>
 <li><a href="ch12-graphics.html#rrb-objects">RRB objects</a> — Chapter 12</li>
 <li><a href="ch12-graphics.html#clipping-at-the-edges">RRB objects: clipping</a> — Chapter 12</li>
@@ -631,7 +646,6 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#rsprite-rsppos-rsprsys"><code>RSPRSYS</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#run"><code>RUN</code></a> — Chapter 3</li>
 <li><a href="ch07-45gs02-machine-language.html#running-and-transferring-programs">Running and transferring programs</a> — Chapter 7</li>
-<li><a href="ch12-graphics.html#running-out-of-time">Running out of time</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#window-rwindow"><code>RWINDOW</code></a> — Chapter 3</li>
 </ul>
 <h2 id="index-s">S</h2>
@@ -642,10 +656,13 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch04-effective-programming-in-basic65.html#saving-often">Saving often</a> — Chapter 4</li>
 <li><a href="ch12-graphics.html#scaling-an-object-with-dma">Scaling an object with DMA</a> — Chapter 12</li>
 <li><a href="ch12-graphics.html#scaling-characters">Scaling characters</a> — Chapter 12</li>
+<li><a href="ch12-graphics.html#scaling-from-machine-language">Scaling from machine language</a> — Chapter 12</li>
+<li><a href="ch12-graphics.html#scaling-the-whole-display">Scaling the whole display</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#scnclr"><code>SCNCLR</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#scratch-erase"><code>SCRATCH</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#screen-graphic"><code>SCREEN</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#screen-arrays">Screen arrays</a> — Chapter 3</li>
+<li><a href="appendices.html#screen-code-chart">Screen code chart</a> — Appendix A</li>
 <li><a href="appendices.html#appendix-a-screen-codes-and-colours">Screen codes and colours</a> — Appendix A</li>
 <li><a href="appendices.html#colours">Screen codes and colours: colours</a> — Appendix A</li>
 <li><a href="appendices.html#screen-codes">Screen codes and colours: screen codes</a> — Appendix A</li>
@@ -676,6 +693,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch13-sound.html#sid-register-reference">SID register reference</a> — Chapter 13</li>
 <li><a href="ch07-45gs02-machine-language.html#signed-numbers">Signed numbers</a> — Chapter 7</li>
 <li><a href="ch03-basic65-reference-guide.html#sin-cos-tan-atn"><code>SIN</code></a> — Chapter 3</li>
+<li><a href="ch03-basic65-reference-guide.html#sin-cos-tan-atn"><code>SIND</code></a> — Chapter 3</li>
 <li><a href="ch13-sound.html#sine-mode">Sine mode</a> — Chapter 13</li>
 <li><a href="ch08-ml-methods-specific-to-the-mega65.html#skipping-bytes">Skipping bytes</a> — Chapter 8</li>
 <li><a href="ch03-basic65-reference-guide.html#sleep"><code>SLEEP</code></a> — Chapter 3</li>
@@ -710,6 +728,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch07-45gs02-machine-language.html#status-flags">Status flags</a> — Chapter 7</li>
 <li><a href="ch03-basic65-reference-guide.html#for-to-step-next"><code>STEP</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#stop"><code>STOP</code></a> — Chapter 3</li>
+<li><a href="ch12-graphics.html#storing-the-images">Storing the images</a> — Chapter 12</li>
 <li><a href="ch03-basic65-reference-guide.html#str-val"><code>STR$</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#strbin-decbin"><code>STRBIN$</code></a> — Chapter 3</li>
 <li><a href="ch04-effective-programming-in-basic65.html#string-handling">String handling</a> — Chapter 4</li>
@@ -717,6 +736,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch06-advanced-basic65.html#strings-and-garbage-collection">Strings and garbage collection</a> — Chapter 6</li>
 <li><a href="ch04-effective-programming-in-basic65.html#structured-programming">Structured programming</a> — Chapter 4</li>
 <li><a href="ch07-45gs02-machine-language.html#the-stz-trap">STZ trap</a> — Chapter 7</li>
+<li><a href="ch15-using-the-disk-drive.html#subdirectories">Subdirectories</a> — Chapter 15</li>
 <li><a href="ch01-introduction.html#switching-modes">Switching modes</a> — Chapter 1</li>
 <li><a href="ch02-getting-to-know-the-mega65.html#switching-on">Switching on</a> — Chapter 2</li>
 <li><a href="ch03-basic65-reference-guide.html#symbols-and-special-names">Symbols and special names</a> — Chapter 3</li>
@@ -729,6 +749,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch10-vocabulary-of-the-45gs02.html#tab-to-tza">TAB to TZA</a> — Chapter 10</li>
 <li><a href="ch08-ml-methods-specific-to-the-mega65.html#taking-control">Taking control</a> — Chapter 8</li>
 <li><a href="ch03-basic65-reference-guide.html#sin-cos-tan-atn"><code>TAN</code></a> — Chapter 3</li>
+<li><a href="ch03-basic65-reference-guide.html#sin-cos-tan-atn"><code>TAND</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#tempo"><code>TEMPO</code></a> — Chapter 3</li>
 <li><a href="ch13-sound.html#tempo-envelope-filter-and-vol">TEMPO, ENVELOPE, FILTER and VOL</a> — Chapter 13</li>
 <li><a href="ch04-effective-programming-in-basic65.html#testing">Testing</a> — Chapter 4</li>
@@ -743,6 +764,7 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#ti-ti-dt"><code>TI</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#ti-ti-dt"><code>TI$</code></a> — Chapter 3</li>
 <li><a href="ch04-effective-programming-in-basic65.html#tidy-output">Tidy output</a> — Chapter 4</li>
+<li><a href="ch12-graphics.html#the-cycle-budget">Time limits and the cycle budget</a> — Chapter 12</li>
 <li><a href="ch13-sound.html#timing-music">Timing music</a> — Chapter 13</li>
 <li><a href="ch03-basic65-reference-guide.html#for-to-step-next"><code>TO</code></a> — Chapter 3</li>
 <li><a href="appendices.html#the-top-of-memory">Top of memory</a> — Appendix I</li>
@@ -753,6 +775,8 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="ch03-basic65-reference-guide.html#tron-troff"><code>TROFF</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#tron-troff"><code>TRON</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#true-and-false">True and false</a> — Chapter 3</li>
+<li><a href="ch13-sound.html#a-tune-from-an-interrupt">Tune from an interrupt</a> — Chapter 13</li>
+<li><a href="ch03-basic65-reference-guide.html#turbo"><code>TURBO</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#type"><code>TYPE</code></a> — Chapter 3</li>
 <li><a href="ch03-basic65-reference-guide.html#type-suffixes">Type suffixes</a> — Chapter 3</li>
 <li><a href="ch16-control-ports.html#the-typing-event-queue">Typing event queue</a> — Chapter 16</li>
@@ -840,32 +864,50 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <ul class="bookindex">
 <li><a href="appendices.html#appendix-e-key-registers"><code>$00</code> (CPU port direction)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$01</code> (CPU port)</a> — Appendix E, <a href="ch05-mega65-architecture.html">Chapter 5</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D000-$D010</code> (Sprite positions)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D011</code>, <code>$D012</code> (Control, raster)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D015</code> (SE)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D016</code> (XSCL, CSEL, MCM)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a>, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D018</code> (VS, CB)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a>, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D019</code>, <code>$D01A</code> (IRQ flags, mask)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D020</code>, <code>$D021</code> (Border, background)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D027-$D02E</code> (SPR0COL to SPR7COL)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D02F</code> (KEY)</a> — Appendix E, <a href="ch05-mega65-architecture.html">Chapter 5</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D030</code> (VIC-III control)</a> — Appendix E, <a href="ch05-mega65-architecture.html">Chapter 5</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D031</code> (VIC-III control)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a>, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D032</code>, <code>$D03B</code> (BPENABLE, BPCOMP)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D048-$D04B</code> (TBDRPOS, BBDRPOS)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D04C</code>, <code>$D04E</code> (TEXTXPOS, TEXTYPOS)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D051</code> (NORRDEL, DBLRR)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D052</code>, <code>$D053</code> (FNRASTER)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D054</code> (CHR16, FCLRLO, FCLRHI, VFAST)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a>, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D055</code>, <code>$D056</code> (SPRHGTEN, SPRHGHT)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D057</code> (SPRX64EN)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D058</code>, <code>$D059</code> (LINESTEP)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D05A</code>, <code>$D05B</code> (CHRXSCL, CHRYSCL)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D05D</code> bit 7 (HOTREG)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D05E</code> (CHRCOUNT)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D060-$D062</code> (SCRNPTR)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D064</code>, <code>$D065</code> (COLPTR)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D068-$D06A</code> (CHARPTR)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D06B</code> (SPR16EN)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D06C-$D06E</code> (SPRPTRADR)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D06F</code> bit 7 (PALNTSC)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a>, <a href="ch13-sound.html">Chapter 13</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D070</code> (MAPEDPAL, BTPALSEL, SPRPALSEL, ABTPALSEL)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D079</code>, <code>$D07A</code> (RASCMP)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D07B</code> (DISPROWS)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D100-$D3FF</code> (Palette)</a> — Appendix E, <a href="ch12-graphics.html">Chapter 12</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D400-$D47F</code> (SIDs)</a> — Appendix E, <a href="ch13-sound.html">Chapter 13</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D600-$D606</code> (UART)</a> — Appendix E, <a href="ch17-major-peripherals.html">Chapter 17</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D60A</code>, <code>$D610</code>, <code>$D619</code> (Keyboard queue)</a> — Appendix E, <a href="ch16-control-ports.html">Chapter 16</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D611</code>, <code>$D613</code>, <code>$D614</code> (Keyboard matrix)</a> — Appendix E, <a href="ch16-control-ports.html">Chapter 16</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D61B</code> (Amiga mouse)</a> — Appendix E, <a href="ch16-control-ports.html">Chapter 16</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D620-$D623</code> (POTAX, POTAY, POTBX, POTBY)</a> — Appendix E, <a href="ch16-control-ports.html">Chapter 16</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D629</code> (M65MODEL)</a> — Appendix E, <a href="ch11-mega65-rom-guide.html">Chapter 11</a>, <a href="ch17-major-peripherals.html">Chapter 17</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D630-$D635</code> (FWDATE, FWGIT)</a> — Appendix E, <a href="ch11-mega65-rom-guide.html">Chapter 11</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D63C</code> (SIDMODE)</a> — Appendix E, <a href="ch13-sound.html">Chapter 13</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D640-$D67F</code> (Hypervisor traps)</a> — Appendix E, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a>, <a href="ch11-mega65-rom-guide.html">Chapter 11</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D6C8-$D6CB</code>, <code>$D6CF</code> (BOOTADDR, RECONFTRIG)</a> — Appendix E, <a href="ch11-mega65-rom-guide.html">Chapter 11</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D6E0</code> onward (Ethernet)</a> — Appendix E, <a href="ch17-major-peripherals.html">Chapter 17</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D6F4</code>, <code>$D6F5</code> (MIXREGSEL, MIXREGDATA)</a> — Appendix E, <a href="ch13-sound.html">Chapter 13</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D700-$D707</code> (DMAgic)</a> — Appendix E, <a href="ch05-mega65-architecture.html">Chapter 5</a>, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a></li>
@@ -873,7 +915,10 @@ href="appendices.html#appendix-j-glossary">Glossary</a>.</p>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D711</code> (AUDEN, NOMIX)</a> — Appendix E, <a href="ch13-sound.html">Chapter 13</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D720-$D75F</code> (Audio DMA)</a> — Appendix E, <a href="ch13-sound.html">Chapter 13</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$D768-$D77F</code> (Math accelerator)</a> — Appendix E, <a href="ch05-mega65-architecture.html">Chapter 5</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D7EF</code> (HWRNG)</a> — Appendix E, <a href="ch03-basic65-reference-guide.html">Chapter 3</a>, <a href="ch04-effective-programming-in-basic65.html">Chapter 4</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$D7FE</code> bit 7 (NOTRDY)</a> — Appendix E, <a href="ch03-basic65-reference-guide.html">Chapter 3</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$DC00</code>, <code>$DC01</code> (CIA 1 ports)</a> — Appendix E, <a href="ch16-control-ports.html">Chapter 16</a></li>
+<li><a href="appendices.html#appendix-e-key-registers"><code>$DD00</code> (CIA 2 port A)</a> — Appendix E, <a href="ch05-mega65-architecture.html">Chapter 5</a>, <a href="ch08-ml-methods-specific-to-the-mega65.html">Chapter 8</a>, <a href="ch12-graphics.html">Chapter 12</a>, <a href="ch17-major-peripherals.html">Chapter 17</a></li>
 <li><a href="appendices.html#appendix-e-key-registers"><code>$FFD7110</code> (RTC)</a> — Appendix E, <a href="ch17-major-peripherals.html">Chapter 17</a></li>
 <li><a href="ch08-ml-methods-specific-to-the-mega65.html#the-00-shortcut">$00 shortcut</a> — Chapter 8</li>
 <li><a href="ch05-mega65-architecture.html#the-d030-rom-bits">$D030 ROM bits</a> — Chapter 5</li>

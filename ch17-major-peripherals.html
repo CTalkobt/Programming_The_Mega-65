@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,8 +31,8 @@ Peripherals</title>
 <h1
 id="programming-the-mega65--chapter-17-major-peripherals">Programming
 the MEGA65 — Chapter 17: Major Peripherals</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
-<p class="downloads">Disk image: <a href="code/ch17/ch17.d81">ch17.d81</a> holds this chapter's 7 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch17/ch17.d81">ch17.d81</a> holds this chapter's 8 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter covers the MEGA65's remaining connections to the outside
 world: the IEC serial bus for printers, the cartridge port, Ethernet,
@@ -147,21 +147,26 @@ text    .text &quot;HELLO FROM THE MEGA65&quot;, 13, 0</code></pre>
 <h3 id="the-bus-and-the-cpu">The bus and the CPU</h3>
 <p>The same bus carries disk drives and modern devices such as SD2IEC,
 as Chapter 15 described. The KERNAL drives it by setting and reading the
-bus lines itself, with the timing of the original machines. For each
-byte it sends or receives, and for each command such as LISTEN or
-UNTALK, it disables interrupts and drops the CPU to 1 MHz, then restores
-the speed and interrupts afterwards (MEGA65 ROM source,
-<code>disk_sei</code>, <code>disk_cli</code>). It slows the CPU by
-clearing the FAST bit in <code>$D031</code>, so the drop doesn't happen
-when full speed has been forced with <code>POKE 0,65</code> or with CAPS
-LOCK down: the core then ignores FAST, and the transfer runs at 40.5 MHz.
-The core can cancel the force while the bus is active, but only when bit
-1 of <code>$D7F1</code> is set, and the ROM doesn't set it (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>gs4510.vhdl</code>). A program that prints or
-reads a disk therefore runs slowly while it does so, and its raster
+bus lines itself, with delays written for the original machines' 1 MHz.
+What happens depends on the CPU speed the program has chosen:</p>
+<ul>
+<li><strong>Normal running.</strong> For each byte it sends or receives,
+and for each command such as LISTEN or UNTALK, the KERNAL disables
+interrupts and drops the CPU to 1 MHz by clearing the FAST bit in
+<code>$D031</code>, then restores the speed and interrupts afterwards
+(MEGA65 ROM source, <code>disk_sei</code>, <code>disk_cli</code>). The
+transfer works, the program runs slowly while it lasts, and its raster
 interrupts can be delayed, so timing-sensitive code should not run
-during IEC transfers.</p>
+during IEC transfers.</li>
+<li><strong>Full speed forced.</strong> With <code>POKE 0,65</code>, or
+with CAPS LOCK down, the core ignores the FAST bit, so the drop does not
+happen and the KERNAL's delays run at 40.5 MHz, a speed they were not
+written for. The core can cancel the force while the bus is active, but
+only when bit 1 of <code>$D7F1</code> is set, and the ROM does not set
+it (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>). Do not force full speed
+around printing or IEC disk access, and release CAPS LOCK; Chapter 15
+gives the same advice for C64 mode.</li>
+</ul>
 <h2 id="the-cartridge-port">The Cartridge Port</h2>
 <p>The expansion port accepts C64 cartridges. Switching the MEGA65 on
 with a C64 cartridge in place starts it in GO64 mode, where most C64
@@ -186,8 +191,9 @@ C64 does, and the cartridge runs in C64 mode. Otherwise the start-up
 continues into MEGA65 mode (MEGA65 ROM source, C64 KERNAL
 <code>start</code>).</p>
 <p>From ROM 920385, the MEGA65 ROM recognises cartridges made for
-MEGA65 mode. The change log calls the format experimental, and full
-auto-starting needs a newer core (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). During
+MEGA65 mode. The change log calls the format experimental, and says
+that full auto-starting needs a core newer than the one current when
+920385 appeared, without naming it (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). During
 start-up the ROM reads the cartridge at <code>$4008006</code> to
 <code>$4008009</code>. If bit 0 of the first byte is set and the next
 three bytes are "M65", it copies <code>$2000</code> bytes from
@@ -199,7 +205,7 @@ cartridge's ROM is therefore laid out like this:</p>
 <table>
 <thead>
 <tr class="header">
-<th>Offset</th>
+<th>Address</th>
 <th>Contents</th>
 </tr>
 </thead>
@@ -222,6 +228,21 @@ cartridge's ROM is therefore laid out like this:</p>
 </tr>
 </tbody>
 </table>
+<p>Assembled to start at <code>$8000</code>, the smallest cartridge that
+the ROM will start looks like this:</p>
+<pre><code>        jmp cold        ; $8000: entered the first time
+        jmp warm        ; $8003: entered on later restarts
+        .byte $01       ; $8006: flags, bit 0 set
+        .byte $4d, $36, $35 ; $8007: &quot;M65&quot;
+cold    lda #$00        ; the program itself: here, a black border
+        sta $d020
+warm    jmp warm</code></pre>
+<p>The ROM copies <code>$2000</code> bytes, so everything the cartridge
+needs at first must lie in its first 8KB; from there the program can
+fetch the rest of its ROM from <code>$4008000</code> upward for itself.
+The KERNAL is mapped in at <code>$E000</code> when the program starts
+(MEGA65 ROM source, <code>boot_cart</code>). This listing has been
+assembled but not tried in a cartridge.</p>
 <p>The core reaches the port's C64-style addresses at
 <code>$7FF0000-$7FFFFFF</code>, so a cartridge's I/O 1 and I/O 2 areas,
 <code>$DE00-$DFFF</code> on a C64, are at <code>$7FFDE00-$7FFDFFF</code>
@@ -317,8 +338,11 @@ machine language.</p>
 configuration utility's Network page, and networking does not work while
 that is all zeros (MEGA65 Book, p. 4-7). The Hypervisor copies it into
 <code>$D6E9-$D6EE</code> at start-up (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hypervisor
-<code>syspart.asm</code>), and a program can read it from there while
-bit 1 of <code>$D6E5</code> is clear:</p>
+<code>syspart.asm</code>), and a program can read it from there. One
+condition applies: while NOCRC, bit 1 of <code>$D6E5</code>, is set,
+the core returns debugging values from five of the six registers instead
+of the address, so read the address with that bit clear, as it normally
+is (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>ethernet.vhdl</code>):</p>
 <pre data-download="code/ch17/ethernet.bas code/ch17/ethernet.prg"><code>10 FOR I = 0 TO 5
 20 PRINT RIGHT$(HEX$(PEEK($D6E9 + I)), 2); : IF I &lt; 5 THEN PRINT &quot;:&quot;;
 30 NEXT : PRINT</code></pre>
@@ -452,8 +476,10 @@ appendix):</p>
 </tr>
 <tr class="even">
 <td><code>$D603</code>, <code>$D604</code></td>
-<td>Baud rate divisor, 16 bits: the baud rate is 7.09375 MHz divided by
-it</td>
+<td>Baud rate divisor, 16 bits: the baud rate is the UART's clock
+divided by it. The clock is 7.09375 MHz while UFAST, bit 0 of
+<code>$D609</code>, is 1, and the 80 MHz pixel clock while it is 0
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>c65uart.vhdl</code>)</td>
 </tr>
 <tr class="odd">
 <td><code>$D605</code>, <code>$D606</code></td>
@@ -526,7 +552,10 @@ BASIC:</p>
 30 PRINT RIGHT$(HEX$(H), 2); &quot;:&quot;; RIGHT$(HEX$(M), 2); &quot;:&quot;; RIGHT$(HEX$(S), 2)</code></pre>
 <p>Printing the last two digits of each value's <code>HEX$</code> shows
 its BCD digits directly. Bit 7 of the hours register is a flag, not
-part of the hour, so the program masks it off, as the ROM does (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, September 2026;
+part of the hour, so the program masks it off, as the ROM does. On R3
+boards it is the clock chip's own 24-hour flag; on R4 and later the chip
+has no such bit, and the core sets it in the copy it shows, so that both
+kinds of board read alike (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>mega65r4_i2c.vhdl</code>;
 MEGA65 ROM source, read_rtc). The battery-backed RAM survives power-off and
 can store a few settings. It is small, 64 bytes on R3 boards and only 16
 on R4 and later, and the Book suggests it for machine configuration, so
@@ -626,18 +655,61 @@ pause after each one as described above (<a href="https://github.com/MEGA65/mega
 writes to the time until bit 6 of <code>$FFD7118</code> is set, and the
 configuration utility sets that bit before writing the time and clears
 it afterwards. It also sets bit 7 of the hours, so that the chip keeps
-24-hour time (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>mega65_config.s</code>,
+24-hour time. On R4 and later a write to the hours register goes to the
+RV-3032 as it stands, and that chip has no 24-hour flag, so the program
+below sets bit 7 only on an R3 (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>mega65_config.s</code>,
 <code>doCommitRTC</code>). On R4 and later, <code>$FFD7118</code> is
 one of the RV-3032's alarm registers, and no unlocking is needed.
-<code>PEEK($D629)</code> returns 3 on an R3 board and the board's
-revision number, such as 6, on R5 and later (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>c65uart.vhdl</code>), so a program can tell the two apart:</p>
+<code>PEEK($D629)</code> returns the model the core was built for
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>c65uart.vhdl</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Machine</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$01</code>, <code>$02</code>, <code>$03</code>, <code>$04</code></td>
+<td>MEGA65 R1, R2, R3 (and R3A) and R4 boards</td>
+</tr>
+<tr class="even">
+<td><code>$05</code>, <code>$06</code> and up</td>
+<td>MEGA65 R5 and later: the board's major revision, read from the board itself</td>
+</tr>
+<tr class="odd">
+<td><code>$21</code>, <code>$22</code></td>
+<td>MEGAphone R1 and R4</td>
+</tr>
+<tr class="even">
+<td><code>$40</code>, <code>$41</code>, <code>$42</code></td>
+<td>Nexys4, Nexys4 DDR and Nexys4 DDR with the widget board</td>
+</tr>
+<tr class="odd">
+<td><code>$60</code>, <code>$61</code>, <code>$62</code></td>
+<td>QMTech A100T, A200T and K325T boards</td>
+</tr>
+<tr class="even">
+<td><code>$FD</code></td>
+<td>Wukong board</td>
+</tr>
+<tr class="odd">
+<td><code>$FE</code></td>
+<td>Simulation</td>
+</tr>
+</tbody>
+</table>
+<p>Xemu returns 3 unless its <code>-model</code> option says otherwise.
+A value of 3 means an R3 board, with the ISL12020M and its unlocking
+step, so a program can tell the two kinds of clock apart:</p>
 <pre data-download="code/ch17/setting-the-clock.bas code/ch17/setting-the-clock.prg"><code>10 RT = $FFD7110 : R3 = PEEK($D629) = 3
 20 INPUT &quot;HOURS (0-23)&quot;; H$ : INPUT &quot;MINUTES&quot;; M$
+25 H = DEC(H$) : IF R3 THEN H = H OR $80  : REM 24-HOUR FLAG, R3 ONLY
 30 IF R3 THEN POKE RT + 8, PEEK(RT + 8) OR $40 : SLEEP 0.05
 40 POKE RT, 0 : SLEEP 0.05                  : REM SECONDS
 50 POKE RT + 1, DEC(M$) : SLEEP 0.05        : REM MINUTES
-60 POKE RT + 2, DEC(H$) OR $80 : SLEEP 0.05 : REM HOURS, 24-HOUR
+60 POKE RT + 2, H : SLEEP 0.05               : REM HOURS
 70 IF R3 THEN POKE RT + 8, PEEK(RT + 8) AND $BF : SLEEP 0.05
 80 PRINT TI$</code></pre>
 <p>DEC reads a string of hexadecimal digits, so the digits typed come
@@ -645,6 +717,30 @@ out as the matching BCD value: <code>DEC("45")</code> is
 <code>$45</code>, which is 45 in BCD. The program does not check what is
 typed, and a value such as <code>$4A</code> would confuse the clock. The
 date registers are written the same way.</p>
+<h2 id="the-keyboard-and-drive-leds">The Keyboard and Drive LEDs</h2>
+<p>The power and drive lights on the MEGA65's keyboard are each a pair of
+red, green and blue LEDs, and the core normally drives them: green for
+power, and for the drive green while the motor runs and other colours,
+flashing, for activity. Two bits of the floppy controller's register
+<code>$D080</code> belong to the drive light: bit 5 turns the motor and
+the light on, and bit 6 makes the light blink (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>sdcardio.vhdl</code>).</p>
+<p>A program can take the lights over. Setting bit 7 of
+<code>$D61D</code> gives it twelve brightness registers; the low bits of
+<code>$D61D</code> select one, 0 to 11, and <code>$D61E</code> is the
+value for it, 0 to 255. Registers 0 to 5 are the red, green and blue of
+the two halves of the drive light, and 6 to 11 the same for the power
+light. Clearing bit 7 hands the lights back to the core (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>c65uart.vhdl</code>, <code>mega65kbd_to_matrix.vhdl</code>).
+These lines turn the power light red and, after a pause, give it
+back; they have not been tried on hardware, and Xemu has no such
+lights:</p>
+<pre data-download="code/ch17/the-keyboard-and-drive-leds.bas code/ch17/the-keyboard-and-drive-leds.prg"><code>10 FOR R = 6 TO 11
+20 V = 0 : IF R = 6 OR R = 9 THEN V = 255     : REM RED OF EACH HALF
+30 POKE $D61E, V : POKE $D61D, $80 + R
+40 SLEEP 0.05                                : REM LET THE KEYBOARD TAKE IT
+50 NEXT
+60 SLEEP 3
+70 POKE $D61D, 0</code></pre>
 <h2 id="video-and-audio-outputs">Video and Audio Outputs</h2>
 <p>The MEGA65 drives a VGA connector and a digital video connector at
 the same time. The digital output can also carry sound, which the
@@ -745,6 +841,9 @@ boards.</li>
 <code>TI$</code> and <code>DT$</code> in BASIC. Set it in the
 configuration utility, or by writing the registers one at a time; R3
 boards need bit 6 of <code>$FFD7118</code> set first.</li>
+<li><strong>Lights.</strong> <code>$D61D</code> and <code>$D61E</code>
+give a program the colours of the keyboard's power and drive
+lights.</li>
 <li><strong>Outputs.</strong> VGA and digital video in PAL or NTSC;
 audio through the 3.5mm jack and digital video, which
 <code>$D61A</code> bit 1 turns off.</li>

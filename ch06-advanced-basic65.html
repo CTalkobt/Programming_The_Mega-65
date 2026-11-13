@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -29,7 +29,7 @@
 <nav class="chapnav"><span><a href="ch05-mega65-architecture.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch07-45gs02-machine-language.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-6-advanced-basic-65">Programming
 the MEGA65 — Chapter 6: Advanced BASIC 65</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch06/ch06.d81">ch06.d81</a> holds this chapter's 17 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 4 treated BASIC 65 as a language: how to structure programs,
@@ -85,9 +85,10 @@ text and data no longer compete:</p>
 </tr>
 <tr class="even">
 <td>Scalar variables</td>
-<td>Bank 0</td>
+<td>Bank 0, <code>$F700-$FEFF</code></td>
 <td>Simple variables such as <code>A</code>, <code>B%</code>,
-<code>C$</code> (the descriptor, not the text)</td>
+<code>C$</code> (the descriptor, not the text); room for every
+one-letter name and 183 longer ones</td>
 </tr>
 <tr class="odd">
 <td>Arrays</td>
@@ -122,6 +123,18 @@ strings share most of bank 1 between them. The split also explains why a
 pointer to a variable is not enough on its own: you also need to know
 which bank it is in. The POINTER function, described below, solves this
 by returning a full flat address.</p>
+<p>The scalar area is small and its size is fixed. Its top two pages,
+<code>$FD00-$FEFF</code>, hold the one-letter variables, each at an
+address worked out from its name. Below them, from <code>$F700</code>,
+come BASIC's eight reserved variables (DS, EL, ER, ST, TI,
+<code>DS$</code>, <code>DT$</code> and <code>TI$</code>) and then every
+scalar with a longer name, in the order the program creates them, at
+eight bytes each. There is room for 183 of those. Creating a 184th stops
+the program with an OUT OF MEMORY error, however much space
+<code>FRE(0)</code> and <code>FRE(1)</code> report (MEGA65 ROM source,
+<code>b65.src</code>, SCABOT and SCATOP; confirmed in Xemu with ROM
+920413). A program with a great many values should keep them in arrays,
+which live in bank 1.</p>
 <h3 id="reserving-memory">Reserving memory</h3>
 <p>Banks 4 and 5 belong to the graphics system, but a program that does
 not use all of them can claim parts for its own data or machine code.
@@ -135,8 +148,8 @@ commands will not use it. For example, <code>MEM 1,0</code> reserves
 <p>Attic RAM needs no reservation, since BASIC 65 does not touch it. It
 is the natural home for large tables, level data, or anything loaded
 once and copied into chip RAM as needed. Bear in mind that some resident
-utilities do use attic RAM, and that early development boards lack it
-entirely.</p>
+utilities do use attic RAM, and that the Nexys FPGA boards that can run
+the MEGA65 core lack it entirely.</p>
 <h3 id="example-checking-memory">Example: checking memory</h3>
 <p>FRE reports more than free space on the MEGA65. <code>FRE(0)</code>
 and <code>FRE(1)</code> give the free bytes in banks 0 and 1,
@@ -147,7 +160,7 @@ the reservation bitfields for banks 4 and 5 in the same format as MEM
 This program reserves 16KB of bank 4 and confirms it:</p>
 <pre data-download="code/ch06/example-checking-memory.bas code/ch06/example-checking-memory.prg"><code>10 MEM 3,0                            : REM RESERVE $40000-$43FFF
 20 PRINT FRE(0);&quot;BYTES FREE FOR PROGRAM&quot;
-30 PRINT FRE(1);&quot;BYTES FREE FOR VARIABLES&quot;
+30 PRINT FRE(1);&quot;BYTES FREE FOR ARRAYS AND STRINGS&quot;
 40 PRINT &quot;BANK 4 RESERVED BLOCKS: &quot;;HEX$(FRE(4))
 50 PRINT &quot;ROM VERSION&quot;;FRE(-1)</code></pre>
 <p>Line 40 shows at least <code>0003</code> (HEX$ always gives four
@@ -201,8 +214,10 @@ LIST reverses the process.</p>
 65 has far more keywords than there are single-byte codes, so most of
 its extensions use two bytes: a prefix byte followed by a code.
 Extended statements use the prefix <code>$FE</code>, a scheme inherited
-from the C128's BASIC 7.0, so BANK is stored as <code>$FE $02</code> and CURSOR as <code>$FE $41</code>. A
-small number of additional functions use a different prefix. Chapter 3
+from the C128's BASIC 7.0, so BANK is stored as <code>$FE $02</code> and CURSOR as <code>$FE $41</code>. The
+functions BASIC 65 adds use the prefix <code>$CE</code> instead, so
+RSPEED is stored as <code>$CE $0E</code> (MEGA65 ROM source,
+<code>esc_func_token</code>). Chapter 3
 gives each keyword's token alongside its description.</p>
 <p>Everything that is not a keyword is stored as PETSCII text, including
 numbers. The constant <code>3000</code> occupies four bytes, and is
@@ -314,11 +329,20 @@ found the old way.</p>
 20 P=POINTER(A%)
 30 PRINT HEX$(P)</code></pre>
 <p>Since ROM 920154, POINTER returns a full flat address rather than a
-16-bit one, so the result can be passed directly to PEEK, POKE or a
-machine-language routine without working out which bank the variable is
-in. This is the cleanest way to share data between BASIC and machine
-code: BASIC calls POINTER, passes the result to the routine, and the
-routine reads or writes the variable in place.</p>
+16-bit one, so a machine-language routine can use the result as a 32-bit
+pointer without working out which bank the variable is in. This is the
+cleanest way to share data between BASIC and machine code: BASIC calls
+POINTER, passes the result to the routine, and the routine reads or
+writes the variable in place.</p>
+<p>PEEK and POKE need one precaution. An array element is in bank 1, so
+its address is above <code>$FFFF</code> and PEEK and POKE take it as a
+flat address. A scalar is in bank 0, so its address is below
+<code>$10000</code>, and PEEK and POKE read such an address through the
+current BANK (see <a href="#flat-addresses">Flat addresses</a>). In the
+default BANK 128 that reaches ROM, not the variable: for the program
+above, <code>PEEK(P)</code> gave 255 in Xemu where the variable holds 4. Select
+BANK 0 before PEEKing or POKEing a scalar, as the examples below
+do.</p>
 <h3 id="strings-and-garbage-collection">Strings and garbage
 collection</h3>
 <p>String text lives in bank 1, growing downward from the top of free
@@ -482,7 +506,7 @@ RAM and chip RAM.</p>
 <h3 id="sys-to">SYS TO</h3>
 <p>SYS has a second form, SYS TO, with named arguments and two extra
 abilities (MEGA65 Book, p. B-256). Registers are set by name, with
-hexadecimal values in parentheses:</p>
+each value in parentheses:</p>
 <pre><code>SYS TO $1600, A(5), X($FF)</code></pre>
 <p>The O argument overrides the MAP offset for <code>$2000-$7FFF</code>,
 which lets SYS TO run code anywhere in the first 384KB rather than only
@@ -619,18 +643,20 @@ rather than in BASIC. A failed OPEN or LOAD may not raise a BASIC error
 at all. After any disk operation, the reserved variables <code>DS</code>
 and <code>DS$</code> hold the drive's status number and message:</p>
 <pre data-download="code/ch06/disk-errors.bas code/ch06/disk-errors.prg"><code>10 DOPEN#1,&quot;SCORES&quot;
-20 IF DS&lt;&gt;0 THEN PRINT DS$:STOP</code></pre>
-<p>A status below 20 means success. Checking DS after every important
+20 IF DS&gt;=20 THEN PRINT DS$:STOP</code></pre>
+<p>A status below 20 means success: the values below 20 are information,
+not errors, which is why line 20 tests for 20 or more and not for
+anything other than zero. Checking DS after every important
 disk operation is the single most effective way to make a BASIC program
 robust. Chapter 15 lists the drive's status codes.</p>
 <h3 id="example-a-robust-file-loader">Example: a robust file loader</h3>
 <p>TRAP and the disk status variables work together. This loader asks
 for a file name, reports BASIC errors and disk errors in plain words,
 and asks again rather than stopping:</p>
-<pre data-download="code/ch06/example-a-robust-file-loader.bas code/ch06/example-a-robust-file-loader.prg"><code>10 TRAP 900
+<pre data-download="code/ch06/example-a-robust-file-loader.bas code/ch06/example-a-robust-file-loader.prg"><code>10 TRAP 900 : MEM 2,0                 : REM RESERVE $42000-$43FFF
 20 INPUT &quot;FILE TO LOAD&quot;;F$
-30 BLOAD (F$), P($40000), R
-40 IF DS&lt;&gt;0 THEN PRINT &quot;DISK: &quot;;DS$ : GOTO 20
+30 BLOAD (F$), P($42000), R
+40 IF DS&gt;=20 THEN PRINT &quot;DISK: &quot;;DS$ : GOTO 20
 50 PRINT &quot;LOADED&quot; : END
 900 PRINT &quot;ERROR&quot;;ER;&quot;IN LINE&quot;;EL;&quot;: &quot;;ERR$(ER)
 910 RESUME 20</code></pre>
@@ -638,7 +664,12 @@ and asks again rather than stopping:</p>
 the BLOAD reference requires (MEGA65 Book, p. B-29). A missing file
 raises a BASIC FILE NOT FOUND error, which the TRAP handler at line 900
 reports, as it does for anything else BASIC rejects. Line 40 catches drive
-errors that still let the load finish.</p>
+errors that still let the load finish. The file goes to
+<code>$42000</code>, the second 8KB block of bank 4, which line 10
+reserves with MEM so that the graphics commands leave it alone. The
+first block, at <code>$40000</code>, would not do: in 80 by 50 text mode
+it holds the screen. A file longer than 8KB needs more blocks
+reserved.</p>
 <h3 id="example-finding-where-a-calculation-fails">Example: finding
 where a calculation fails</h3>
 <p>RESUME with a line number lets a program record how far it got before
@@ -670,7 +701,8 @@ routines</h3>
 <p>Suppose a machine-language routine at <code>$42000</code> sorts an
 integer array. BASIC loads it once, then passes the array's flat address
 in A, X, Y and Z:</p>
-<pre><code>10 BLOAD &quot;SORT&quot;, B4, P8192
+<pre><code>5 MEM 2,0                             : REM RESERVE $42000-$43FFF
+10 BLOAD &quot;SORT&quot;, B4, P8192
 20 DIM A%(99)
 30 REM ... FILL THE ARRAY ...
 40 P=POINTER(A%(0))
@@ -707,9 +739,12 @@ BASIC sees in the system bank (MEGA65 Book, p. B-285). The smallest
 possible USR routine is a single RTS: it leaves BASIC's floating-point
 accumulator untouched, so USR returns its argument unchanged. That is
 enough to show the mechanism:</p>
-<pre data-download="code/ch06/example-installing-a-usr-routine.bas code/ch06/example-installing-a-usr-routine.prg"><code>10 BANK 0 : POKE $1600, $60           : REM RTS AT $1600
-20 BANK 128 : WPOKE $02F8, $1600      : REM POINT THE USR VECTOR AT IT
+<pre data-download="code/ch06/example-installing-a-usr-routine.bas code/ch06/example-installing-a-usr-routine.prg"><code>10 POKE $1600, $60                    : REM RTS AT $1600
+20 WPOKE $02F8, $1600                 : REM POINT THE USR VECTOR AT IT
 30 PRINT USR(42)                      : REM SHOULD PRINT 42</code></pre>
+<p>No BANK command is needed: in the default BANK 128, both
+<code>$1600</code> and <code>$02F8</code> are RAM in bank 0. The next
+example relies on the same thing.</p>
 <p>A real USR routine reads its argument from the floating-point
 accumulator and leaves its result there, using BASIC's internal
 conversion routines, as Chapter 9 explains.</p>
@@ -742,7 +777,7 @@ BOOT                                  : REM RUN AUTOBOOT.C65</code></pre>
 <h2 id="summary">Summary</h2>
 <ul>
 <li><strong>Memory.</strong> Program text lives in bank 0 from
-<code>$2001</code>, scalar variables in bank 0, and arrays and string
+<code>$2001</code>, scalar variables in a small fixed area of bank 0, and arrays and string
 text in bank 1. Banks 4 and 5 serve the graphics system and can be
 reserved with MEM. Attic RAM is left free.</li>
 <li><strong>Program format.</strong> Lines are linked, numbered and

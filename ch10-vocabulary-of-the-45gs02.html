@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,7 +31,7 @@
 <h1
 id="programming-the-mega65--chapter-10-vocabulary-of-the-45gs02">Programming
 the MEGA65 — Chapter 10: Vocabulary of the 45GS02</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every instruction the 45GS02 executes,
 in alphabetical order. Each entry gives the operation, the flags it
@@ -59,6 +59,7 @@ abbreviations</h3>
 <th>Abbreviation</th>
 <th>Mode</th>
 <th>Example</th>
+<th>Bytes</th>
 </tr>
 </thead>
 <tbody>
@@ -66,92 +67,118 @@ abbreviations</h3>
 <td>impl</td>
 <td>Implied</td>
 <td><code>INX</code></td>
+<td>1</td>
 </tr>
 <tr class="even">
 <td>A</td>
 <td>Accumulator</td>
 <td><code>ASL A</code></td>
+<td>1</td>
 </tr>
 <tr class="odd">
 <td>imm</td>
 <td>Immediate byte</td>
 <td><code>LDA #$41</code></td>
+<td>2</td>
 </tr>
 <tr class="even">
 <td>imm16</td>
 <td>Immediate word</td>
 <td><code>PHW #$1234</code></td>
+<td>3</td>
 </tr>
 <tr class="odd">
 <td>bp</td>
 <td>Base page</td>
 <td><code>LDA $10</code></td>
+<td>2</td>
 </tr>
 <tr class="even">
 <td>bp,X / bp,Y</td>
 <td>Base page indexed</td>
 <td><code>LDA $10,X</code></td>
+<td>2</td>
 </tr>
 <tr class="odd">
 <td>abs</td>
 <td>Absolute</td>
 <td><code>LDA $D020</code></td>
+<td>3</td>
 </tr>
 <tr class="even">
 <td>abs,X / abs,Y</td>
 <td>Absolute indexed</td>
 <td><code>LDA $0400,X</code></td>
+<td>3</td>
 </tr>
 <tr class="odd">
 <td>(bp,X)</td>
 <td>Indexed indirect</td>
 <td><code>LDA ($10,X)</code></td>
+<td>2</td>
 </tr>
 <tr class="even">
 <td>(bp),Y</td>
 <td>Indirect indexed by Y</td>
 <td><code>LDA ($10),Y</code></td>
+<td>2</td>
 </tr>
 <tr class="odd">
 <td>(bp),Z</td>
 <td>Indirect indexed by Z</td>
 <td><code>LDA ($10),Z</code></td>
+<td>2</td>
 </tr>
 <tr class="even">
 <td>[bp],Z</td>
 <td>Flat indirect, 32-bit pointer</td>
 <td><code>LDA [$10],Z</code></td>
+<td>3</td>
 </tr>
 <tr class="odd">
 <td>(d,SP),Y</td>
 <td>Stack relative indirect</td>
 <td><code>LDA ($02,SP),Y</code></td>
+<td>2</td>
 </tr>
 <tr class="even">
 <td>(abs)</td>
 <td>Absolute indirect</td>
 <td><code>JMP ($0318)</code></td>
+<td>3</td>
 </tr>
 <tr class="odd">
 <td>(abs,X)</td>
 <td>Absolute indexed indirect</td>
 <td><code>JMP ($1000,X)</code></td>
+<td>3</td>
 </tr>
 <tr class="even">
 <td>rel</td>
 <td>8-bit relative</td>
 <td><code>BNE loop</code></td>
+<td>2</td>
 </tr>
 <tr class="odd">
 <td>rel16</td>
 <td>16-bit relative</td>
 <td><code>LBNE far</code></td>
+<td>3</td>
 </tr>
 </tbody>
 </table>
 <p>In the opcode columns, two-byte sequences such as
 <code>$EA $72</code> are prefixed instructions: the prefix byte comes
 first, then the opcode and its operand.</p>
+<p>The Bytes column gives the length of an instruction in each mode,
+opcode included, so the mode alone tells how long an instruction is. The
+flat mode's three bytes include its <code>$EA</code> prefix. The
+exceptions are the bit instructions: RMB and SMB are two bytes, and BBR
+and BBS three. A quad instruction is two bytes longer than the 8-bit
+instruction it is built from, for its <code>$42 $42</code> prefix. To
+go the other way, from a byte to its instruction, use the opcode map in
+<a href="appendices.html#appendix-d-45gs02-opcode-map">Appendix
+D</a>.</p>
 <h3 id="flags">Flags</h3>
 <p>The flags column lists the flags an instruction can change, using N,
 V, E, B, D, I, Z and C as in Chapter 7. A dash means no flags are
@@ -358,9 +385,6 @@ to test and an 8-bit relative branch target, as in
 unlike the 65C02, also copies bits 7 and 6 of the operand into N and V,
 just as the memory modes do (MEGA65 Book, BIT instruction entry;
 <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
-<p><strong>BSR</strong> is written <code>LBSR</code> in cc65 (<a
-href="https://cc65.github.io/doc/cpus.html">cc65 CPU reference</a>); the
-MEGA65 Book writes BSR.</p>
 <p><strong>BRK</strong> sets I. The CPU has no stored B flag: bit 4 is
 set only in the copy of P that BRK pushes, so a handler tells BRK from
 IRQ by testing that copy on the stack (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
@@ -370,7 +394,10 @@ two.</p>
 <p><strong>BSR</strong> pushes the return address like JSR, so a
 subroutine called with BSR returns with RTS or RTN. Because the target
 is relative, code built with BSR can run at any address without
-relocation.</p>
+relocation. cc65 writes the instruction
+<code>LBSR</code> (<a
+href="https://cc65.github.io/doc/cpus.html">cc65 CPU reference</a>); the
+MEGA65 Book writes BSR.</p>
 <h2 id="clc-to-eor">CLC to EOR</h2>
 <table>
 <thead>
@@ -715,9 +742,6 @@ a stray NOP before such an instruction changes its meaning.</p>
 </tbody>
 </table>
 <h3 id="notes-2">Notes</h3>
-<p><strong>PLP and RTI</strong> restore N, V, D, I, Z and C from the
-stack, but never E: only CLE and SEE change the stack mode (MEGA65 Book,
-PLP and RTI instruction entries; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
 <p><strong>INW</strong> increments a 16-bit value at a base page
 address, low byte first. It is the 45GS02's most common way to advance a
 pointer.</p>
@@ -732,14 +756,19 @@ in one instruction.</p>
 <p><strong>LDZ</strong> has no base page modes. To load Z from base
 page, use LDA and TAZ.</p>
 <p><strong>MAP</strong> reads its arguments from all four registers; see
-Chapters 5 and 8. It also gives the megabyte selector when X or Z holds
-<code>$0F</code>.</p>
+Chapters 5 and 8. It has a second job as the megabyte selector: when X
+holds <code>$0F</code>, A gives the megabyte for the lower half of the
+map, and when Z holds <code>$0F</code>, Y gives the megabyte for the
+upper half.</p>
 <p><strong>PHW</strong> pushes the low byte first, so the high byte
 ends up at the lower stack address. That is the reverse of how JSR
 leaves a return address, and it means a word pushed with PHW is not a
 ready-made little-endian pointer for stack-relative addressing (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026;
 <a href="https://github.com/lgblgblgb/xemu">Xemu</a>, <code>cpu65.c</code>). PHW abs pushes the 16-bit contents of the address, not the
 address itself.</p>
+<p><strong>PLP and RTI</strong> restore N, V, D, I, Z and C from the
+stack, but never E: only CLE and SEE change the stack mode (MEGA65 Book,
+PLP and RTI instruction entries; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
 <h2 id="rmb-to-stz">RMB to STZ</h2>
 <table>
 <thead>
@@ -874,6 +903,9 @@ address itself.</p>
 </tbody>
 </table>
 <h3 id="notes-3">Notes</h3>
+<p><strong>RTI</strong> restores the flags as PLP does, and like PLP it
+never changes E; see the note on PLP and RTI in the previous
+section.</p>
 <p><strong>RMB and SMB</strong> are two-byte instructions that change
 one bit without affecting the others or the flags. They are ideal for
 flag bytes shared between a main program and an interrupt handler, since
@@ -1156,6 +1188,13 @@ all; only LDQ does, which is why cc65 writes its modes with
 and Z is set only if all 32 bits are zero.</p>
 <p><strong>Every quad instruction that changes Q changes A, X, Y and
 Z.</strong> Save any of them that hold values you still need.</p>
+<p><strong>Three NEGs in a row</strong> are not three negations of A.
+The core treats <code>$42 $42 $42</code> as a 32-bit NEG that negates
+the whole of Q (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). The instruction tables this chapter follows
+have no entry for it, so it is something to know about rather than to
+rely on.</p>
 <h2 id="prefixes-and-encoding-notes">Prefixes and Encoding Notes</h2>
 <p>The 45GS02 adds its extensions without new opcodes. Instead it gives
 special meaning to sequences of existing one-byte instructions placed in
@@ -1206,10 +1245,12 @@ sequence.</p>
 <p><strong>Unintended prefixes.</strong> A NOP placed for timing or
 padding immediately before a <code>(bp),Z</code> instruction turns it
 into a flat access, and a NEG of A immediately followed by another NEG
-creates a quad prefix. Place padding NOPs elsewhere, and do not negate A
-twice in a row.</p>
+creates a quad prefix. A NEG placed directly before a quad instruction
+makes three in a row, which negates Q. Place padding NOPs elsewhere, do
+not negate A twice in a row, and do not end a calculation with NEG just
+before a quad instruction.</p>
 <h3 id="differences-from-the-65c02">Differences from the 65C02</h3>
-<p>Code written for the 65C02 mostly runs unchanged, but five
+<p>Code written for the 65C02 mostly runs unchanged, but these
 differences can catch it out:</p>
 <table>
 <thead>
@@ -1245,12 +1286,20 @@ differences can catch it out:</p>
 <td>STP on WDC parts</td>
 <td>PHZ</td>
 </tr>
+<tr class="even">
+<td>Opcodes the 65C02 leaves unused, such as <code>$02</code>,
+<code>$42</code> and <code>$5C</code></td>
+<td>No operation</td>
+<td>Instructions: CLE, NEG and MAP in these three cases</td>
+</tr>
 </tbody>
 </table>
 <p>With Z held at zero, the first two differences disappear. The third
-matters to 65C02 code that tests N or V after a BIT immediate. The last
-two matter only for code written for WDC's 65C02 variant, which the
-MEGA65 has never needed to run.</p>
+matters to 65C02 code that tests N or V after a BIT immediate. The WDC
+rows matter only for code written for WDC's 65C02 variant, which the
+MEGA65 has never needed to run, and the last row only for code that
+uses an unassigned opcode as padding: on the 45GS02 every byte value is
+an instruction.</p>
 <nav class="chapnav"><span><a href="ch09-mixing-basic-with-machine-language.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch11-mega65-rom-guide.html">Next &rarr;</a></span></nav>
 </body>
 </html>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,7 +31,8 @@ the MEGA65</title>
 <h1
 id="programming-the-mega65--chapter-8-ml-methods-specific-to-the-mega65">Programming
 the MEGA65 — Chapter 8: ML Methods Specific to the MEGA65</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch08/ch08.d81">ch08.d81</a> holds this chapter's 4 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 7 described the 45GS02 in isolation. Real programs run on a
 machine full of state that someone else set up: the KERNAL's memory map,
@@ -79,20 +80,34 @@ leaving all of bank 0 visible as RAM with I/O at <code>$D000</code>:</p>
         tay
         taz
         map             ; MAP: no offsets, nothing mapped
-        eom
 
-        lda #$47
+        lda #$47        ; no interrupt of any kind until EOM
         sta $d02f
         lda #$53
         sta $d02f       ; VIC-IV I/O personality
-
         lda #$00
         sta $d030       ; no C65 ROM banking
+
+        lda #&lt;nmi       ; the KERNAL is gone: the program's
+        sta $fffa       ; own handlers take the hardware
+        lda #&gt;nmi       ; vectors, now RAM in bank 0
+        sta $fffb
+        lda #&lt;irq
+        sta $fffe
+        lda #&gt;irq
+        sta $ffff
+        eom
+
+        lda #$00
         tab             ; base page = page 0
-        see             ; 8-bit stack in page 1
+        see             ; 8-bit stack
+        ldx #$ff
+        txs
+        ldy #$01
+        tys             ; stack pointer = $01FF
         cld
 
-        lda #65
+        lda #$41
         sta $00         ; full CPU speed
 
         lda #$7f
@@ -100,25 +115,39 @@ leaving all of bank 0 visible as RAM with I/O at <code>$D000</code>:</p>
         sta $dd0d       ; disable CIA 2 interrupts
         lda $dc0d       ; acknowledge any pending
         lda $dd0d</code></pre>
-<p>The order matters in three places:</p>
+<p>The order matters in four places:</p>
 <ol type="1">
 <li><strong>Interrupts first.</strong> SEI comes before any change,
 because the KERNAL's interrupt handler assumes the KERNAL's map. An
 interrupt arriving halfway through would run with the ROM switched
 out.</li>
+<li><strong>The dangerous part between MAP and EOM.</strong> SEI does
+not stop an NMI, which the RESTORE key raises at any moment. MAP does:
+the CPU takes no interrupt of any kind between MAP and EOM (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). Until the MAP, the KERNAL at
+<code>$E000-$FFFF</code> is still in place, because the KERNAL maps
+itself there with MAP and <code>$01</code> does not move it (MEGA65 ROM
+source, <code>system_map_default</code>). The MAP removes it, so the
+skeleton clears <code>$D030</code> and stores its own NMI and IRQ
+vectors before the EOM. An NMI then finds either the KERNAL's handler
+or the program's, never an empty vector.</li>
 <li><strong>Knock before <code>$D030</code>.</strong> The ROM-banking
 bits of <code>$D030</code> exist only in the VIC-III and VIC-IV
 personalities; in the VIC-II personality the address holds only the
-C128 2 MHz bit. So the knock must come first. MAP takes precedence over every other banking mechanism, but
-only for the 8KB blocks it maps (MEGA65 Book, p. K-7). The skeleton maps
-no blocks, so any ROM bits left set in <code>$D030</code> would still
-bring ROM into those areas; clearing <code>$D030</code> removes
-them.</li>
-<li><strong>All three banking mechanisms.</strong> Clearing MAP alone
-leaves <code>$01</code> and <code>$D030</code> in charge of every block
-MAP does not map. Only when all three are set does the program know
-exactly what it sees.</li>
+C128 2 MHz bit. So the knock must come first.</li>
+<li><strong>All three banking mechanisms.</strong> MAP takes precedence
+over every other banking mechanism, but only for the 8KB blocks it maps
+(MEGA65 Book, p. K-7). The skeleton maps no blocks, so
+<code>$01</code> and <code>$D030</code> are left in charge of all of
+them, and any ROM bits still set in <code>$D030</code> would bring ROM
+back into those areas. Only when all three are set does the program
+know exactly what it sees.</li>
 </ol>
+<p>The skeleton also loads the stack pointer. SEE alone makes the stack
+8 bits wide in whatever page the pointer's high byte names, so TXS and
+TYS put it at <code>$01FF</code>, where the KERNAL starts it (MEGA65 ROM
+source, <code>system.src</code>).</p>
 <p>The single MAP in the skeleton clears the offsets and block enables
 but not MAP's megabyte bytes, which only the two-MAP form described
 below changes. They are zero after reset and the KERNAL leaves them at
@@ -144,14 +173,15 @@ writes to <code>$20000-$3FFFF</code> are then silently ignored.
 <code>LDA #$00 : STA $D641</code> turns the protection back on (MEGA65
 Book, Hypervisor services appendix; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo <code>mem.asm</code>).</p>
 <p>After this the program owns the machine. The KERNAL is gone, so the
-hardware vectors at <code>$FFFA-$FFFF</code> are now plain RAM in bank
-0. The program must store its own NMI and IRQ vectors there before it
-executes CLI, as shown in the raster interrupt section below. The
+hardware vectors at <code>$FFFA-$FFFF</code> are plain RAM in bank 0,
+holding the addresses the skeleton stored there. The handlers
+themselves, at the labels <code>nmi</code> and <code>irq</code>, are in
+the raster interrupt section below, which gives the whole program. The
 RESTORE key raises an NMI, so even a program with no use for NMIs needs
 a vector pointing at an RTI.</p>
 <p>As a starting point, place this skeleton after a BASIC header at
-<code>$2001</code>, as described in Chapter 6, so the program loads and
-runs with RUN.</p>
+<code>$2001</code>, which Chapter 9 builds byte by byte, so the program
+loads and runs with RUN.</p>
 <h2 id="controlling-cpu-speed">Controlling CPU Speed</h2>
 <p>The MEGA65 inherited a speed control from each machine it is
 compatible with, and all of them still work. Two bits do most of the
@@ -248,7 +278,7 @@ slow program, but it also changes how disk loads behave, because the
 KERNAL controls speed during disk access in two different ways:</p>
 <ul>
 <li><strong>The internal drive and disk images.</strong> Both KERNALs
-hand these to the ROM's DOS, which doesn't use the IEC bus. In C64 mode
+hand these to the ROM's DOS, which does not use the IEC bus. In C64 mode
 the KERNAL sets FAST on the way in, so the DOS runs at 3.5 MHz while the
 rest of the KERNAL runs at 1 MHz (MEGA65 ROM source,
 <code>dos_in</code>). With CAPS LOCK down, both run at 40.5 MHz, so a
@@ -274,14 +304,12 @@ full speed while the bus is active, but only when bit 1 of
 <code>$D7F1</code> is set, and neither KERNAL sets it. Fast loaders that
 count cycles break for the same reason.</li>
 </ul>
-<p>Nor is 1 MHz an exact copy of a C64. At 1, 2 and 3.5 MHz each
-instruction takes the 6502's number of cycles, but the memory accesses
-inside it may fall on different cycles, and timing can differ by up to
-about 7 microseconds. That is harmless for nearly all software,
-including many fast loaders, but tricks that depend on the exact cycle
-of a write, such as VIC-II variable screen positioning, are unlikely to
-work (MEGA65 Book, p. K-5). Timing-critical code should synchronise to
-the raster rather than counting cycles, at any speed.</p>
+<p>Nor is 1 MHz an exact copy of a C64: the instructions take the
+6502's number of cycles, but not always with the same accesses on the
+same cycles, as <a
+href="ch07-45gs02-machine-language.html#timing">Timing</a> in Chapter 7
+explains. Timing-critical code should synchronise to the raster rather
+than counting cycles, at any speed.</p>
 <h2 id="practical-map-techniques">Practical MAP Techniques</h2>
 <p>Chapter 5 described MAP's registers. This section shows how to use it
 for the most common job: opening an 8KB window onto memory outside the
@@ -338,6 +366,12 @@ enabled by bit 6 of X:</p>
         ldz #$00        ; upper half unmapped
         map
         eom</code></pre>
+<p>This is the takeover form. Both MAPs load Y and Z with zero, which
+unmaps the upper half, and under the KERNAL that removes the KERNAL
+itself from <code>$E000-$FFFF</code>. A cooperative routine must give
+the upper half back its current values instead; <a
+href="#saving-and-restoring-the-map">Saving and restoring the map</a>
+below shows how.</p>
 <p>The megabyte selection persists until changed, so the second MAP sets
 the offset within megabyte <code>$80</code>. Only one EOM is needed,
 after the final MAP; interrupts stay blocked between the two. Moving the
@@ -365,11 +399,58 @@ page number in Y (MEGA65 Book, pp. 14-41, 14-42):</p>
 <p>A cooperative routine can use this to save the map it inherited,
 change it, and later restore it with the matching service, trap
 <code>$76</code>, hyppo_set_mapping, which loads the map from the same
-six-byte layout at page Y (MEGA65 Book, Appendix N). Flat addressing and
+six-byte layout at page Y (MEGA65 Book, Appendix N). The six bytes are
+the values of X, A, Z and Y that a MAP would need to recreate the two
+halves, in that order, then the lower and the upper megabyte (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo
+<code>dos.asm</code>). Flat addressing and
 DMA remain simpler when they suffice, since they leave the map alone,
 but MAP is no longer off-limits to code that must return cleanly to
 BASIC. A takeover program can still simply keep a copy of the values it
 last set.</p>
+<p>This routine is the cooperative form of the attic RAM window. Called
+with <code>SYS $1600</code>, it reads the first byte of attic RAM
+through a window at <code>$4000</code> and returns it in A, where RREG
+finds it:</p>
+<pre data-download="code/ch08/atticpeek.asm code/ch08/atticpeek.prg"><code>        * = $1600
+buf     = $1700         ; six bytes for the saved map
+window  = $4000         ; block 2 of the CPU's 64KB
+
+peek    sei             ; nothing else runs while the window is open
+        ldy #&gt;buf
+        lda #$74        ; get_mapping: save the map at $1700-$1705
+        sta $d640
+        clv
+
+        lda #$80        ; megabyte $80 for the lower half
+        ldx #$0f
+        ldy buf+3       ; upper half exactly as it was, so the
+        ldz buf+2       ; KERNAL and I/O stay in place
+        map
+        lda #$c0        ; lower offset $FC000, block 2 enabled:
+        ldx #$4f        ; $4000-$5FFF now shows $8000000-$8001FFF
+        map             ; Y and Z still hold the upper half
+        eom
+
+        lda window      ; the first byte of attic RAM
+        sta value
+
+        ldy #&gt;buf
+        lda #$76        ; set_mapping: put the saved map back
+        sta $d640
+        clv
+        ldz #$00
+        lda value       ; return the byte in A
+        cli
+        rts
+
+value   .byte 0</code></pre>
+<p>Both MAPs pass the saved upper half in Y and Z, so the KERNAL never
+leaves <code>$E000-$FFFF</code>, and set_mapping restores the lower half
+and its megabyte, which BASIC's own mapping depends on. Interrupts stay
+off in between, so no other code runs with a map it does not expect.
+From BASIC, <code>POKE $8000000,123 : SYS $1600 : RREG A : PRINT A</code>
+prints 123.</p>
 <h2 id="advanced-dma">Advanced DMA</h2>
 <p>Chapter 5 showed a single fill job. DMAgic fills memory at 40.5MB per
 second and copies at 20.25MB per second, against about 3.5MB and 1.7MB
@@ -378,7 +459,14 @@ movement is worth handing to it. This section covers the options that
 make it useful beyond simple blocks.</p>
 <p>All examples use enhanced jobs, started by writing the low byte of
 the list address to <code>$D705</code>, and the F018A list layout from
-Chapter 5: command, count, source, destination, modulo. Two details of
+Chapter 5: command, count, source, destination, modulo. The modulo
+bytes are zero in every list in this book. The F018 list format defines
+them, with a flag in each bank byte, to make a job wrap round within a
+limited area of memory, but on the MEGA65 they do nothing: the core
+reads the modulo bytes and the two flags and then never uses them (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>). The step options described below do the jobs
+modulo was meant for. Two details of
 the trigger registers matter. Writing the bank register
 <code>$D702</code> also clears the megabyte register <code>$D704</code>,
 so write <code>$D702</code> first and <code>$D704</code> after it. And
@@ -539,11 +627,37 @@ registers unchanged, so the C64 technique carries over.</p>
 </tbody>
 </table>
 <h3 id="a-split-screen-example">A split-screen example</h3>
-<p>This continues from the takeover skeleton earlier in the chapter,
-with interrupts disabled, CIA interrupts off and the KERNAL switched
-out. It installs its own vectors and changes the border colour at two
-raster lines, splitting the border into two colours:</p>
-<pre><code>        lda #&lt;nmi
+<p>This is a complete program: a BASIC header, the takeover skeleton
+from earlier in the chapter, and the raster code. After the skeleton,
+interrupts are disabled, the CIA interrupts are off and the hardware
+vectors point at the program's own handlers. The program then changes
+the border colour at two raster lines, splitting the border into two
+colours:</p>
+<pre data-download="code/ch08/split.asm code/ch08/split.prg"><code>        * = $2001
+        .word next      ; BASIC header: 10 BANK0:SYS$2012
+        .word 10
+        .byte $fe, $02  ; BANK
+        .text &quot;0:&quot;
+        .byte $9e       ; SYS
+        .text &quot;$2012&quot;
+        .byte 0
+next    .word 0
+
+start   sei             ; the takeover skeleton
+        lda #$35
+        sta $01
+        lda #$00
+        tax
+        tay
+        taz
+        map
+        lda #$47
+        sta $d02f
+        lda #$53
+        sta $d02f
+        lda #$00
+        sta $d030
+        lda #&lt;nmi
         sta $fffa
         lda #&gt;nmi
         sta $fffb
@@ -551,8 +665,24 @@ raster lines, splitting the border into two colours:</p>
         sta $fffe
         lda #&gt;irq
         sta $ffff
-
+        eom
         lda #$00
+        tab
+        see
+        ldx #$ff
+        txs
+        ldy #$01
+        tys
+        cld
+        lda #$41
+        sta $00
+        lda #$7f
+        sta $dc0d
+        sta $dd0d
+        lda $dc0d
+        lda $dd0d
+
+        lda #$00        ; the raster interrupt
         sta line        ; first interrupt at line 0
         sta $d012
         lda $d011
@@ -641,31 +771,124 @@ physical</td>
 reads back the same bit. There are
 roughly twice as many physical lines as VIC-II lines in the standard
 display, so a physical compare can split the screen between two VIC-II
-lines.</p>
+lines. This asks for the interrupt at physical line 300:</p>
+<pre><code>        lda #&lt;300
+        sta $d079       ; RASCMP, low byte
+        lda $d07a
+        and #$78        ; clear FNRSTCMP and the old high bits
+        ora #&gt;300       ; RASCMP, high bits
+        sta $d07a       ; compare in physical lines</code></pre>
+<p>The two kinds of compare share one register in the VIC-IV: a write to
+<code>$D012</code> or <code>$D011</code> replaces the value written to
+RASCMP, and the reverse. To go back to VIC-II lines, set bit 7 of
+<code>$D07A</code> and write <code>$D012</code> and <code>$D011</code>
+again (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
 <h3 id="cooperative-raster-interrupts">Cooperative raster
 interrupts</h3>
 <p>A program that keeps the KERNAL running can still use raster
 interrupts, by chaining into the KERNAL's handler instead of replacing
-the hardware vector. In C64 mode this works exactly as on a C64, through
-the vector at <code>$0314</code>, with the handler ending in a jump to
-the KERNAL's own handler so that keyboard scanning continues. Chapter 11
-gives the equivalent MEGA65-mode vector.</p>
+the hardware vector. The vector is CINV at <code>$0314</code> in both
+C64 mode and MEGA65 mode, and the handler ends in a jump to the KERNAL's
+own handler so that keyboard scanning continues (see <a
+href="ch11-mega65-rom-guide.html#chaining-into-the-irq">Chaining into
+the IRQ</a> in Chapter 11).</p>
+<p>In MEGA65 mode there is one thing to know first. The KERNAL's own
+50 or 60 Hz interrupt is not a CIA timer, as on the C64, but the VIC's
+raster interrupt, and its handler treats every raster interrupt as that
+tick: it scans the keyboard, blinks the cursor and advances the clock
+(MEGA65 ROM source, <code>ioinit</code>, <code>nirq</code>,
+<code>editor_irq</code>). A cooperative program therefore does not
+enable a raster interrupt of its own; it borrows the KERNAL's. It may
+move the compare line, since the KERNAL does not care where in the frame
+its tick falls. If it wants a second interrupt in each frame, it must
+finish that one itself, without the KERNAL, or the clock would run at
+double speed.</p>
+<p>The routine below splits the border as the takeover program does, but
+under BASIC. <code>SYS $1600</code> starts it and <code>SYS $1603</code>
+stops it. The interrupt at line 0 goes on to the KERNAL; the one at line
+<code>$90</code> acknowledges the VIC itself and returns. By the time
+the KERNAL jumps through CINV it has pushed A, X, Y, Z and B, in that
+order, and set B to zero, so the handler may use the registers freely,
+and its own exit pulls the five bytes in reverse before RTI (MEGA65 ROM
+source, <code>irq_kernel</code>):</p>
+<pre data-download="code/ch08/coraster.asm code/ch08/coraster.prg"><code>        * = $1600
+        jmp install     ; SYS $1600 starts the split
+                        ; SYS $1603 stops it
+remove  sei
+        lda oldirq
+        sta $0314
+        lda oldirq+1
+        sta $0315
+        cli
+        rts
+
+install sei
+        lda $0314       ; remember the KERNAL&#39;s handler
+        sta oldirq
+        lda $0315
+        sta oldirq+1
+        lda #&lt;raster
+        sta $0314
+        lda #&gt;raster
+        sta $0315
+        lda #$00
+        sta line        ; next interrupt at line 0
+        sta $d012
+        lda $d011
+        and #$7f        ; compare bit 8 = 0
+        sta $d011
+        cli
+        rts
+
+raster  lda $d019
+        and #$01
+        beq chain       ; not the raster: leave it to the KERNAL
+        lda line
+        bne lower
+        lda #$06        ; line 0: blue border
+        sta $d020
+        lda #$90
+        sta line
+        sta $d012       ; next interrupt at line $90
+chain   jmp (oldirq)    ; the KERNAL&#39;s 50/60 Hz work, once a frame
+
+lower   lda #$02        ; line $90: red border
+        sta $d020
+        lda #$00
+        sta line
+        sta $d012       ; next interrupt at line 0
+        lda #$01
+        sta $d019       ; acknowledge: the KERNAL never sees this one
+        pla             ; undo the KERNAL&#39;s pushes: B,
+        tab
+        plz             ; then Z, Y, X and A
+        ply
+        plx
+        pla
+        rti
+
+oldirq  .word 0
+line    .byte 0</code></pre>
+<p>The order of those pushes is the KERNAL's own business rather than a
+documented interface; it is the same in ROMs 920413 and 920423, the two
+checked for this book. A handler that only ever chains to the old vector
+does not depend on it. RUN/STOP-RESTORE puts the KERNAL's vector
+back.</p>
 <h2 id="loading-files-through-the-hypervisor">Loading Files Through the
 Hypervisor</h2>
 <p>The KERNAL loads files from disk drives and disk images. The
 Hypervisor can load files straight from the SD card's FAT32 file system,
 without a disk image, and it works even when a takeover program has
-switched the KERNAL out. It can also load directly into attic RAM; the
-KERNAL can too only from ROM 920398, through SETBNK's 28-bit form.</p>
-<p>All Hypervisor services follow the same convention: put the service
-number in A, write it to <code>$D640</code>, and follow with CLV. The
-CPU may or may not execute the byte after the trap when the service
-returns, which is why a harmless CLV goes there; NOP also works, but it
-can act as a prefix to the next instruction, so CLV is safer. On return,
-carry set means success; carry clear means failure, with the error code
-in A. Registers not used to return values are preserved, and the trap
-register exists only in the MEGA65 I/O personality (MEGA65 Book, pp.
-N-4, N-5). The Book documents Hyppo version 1.2.</p>
+switched the KERNAL out. It can also load directly into attic RAM,
+which the KERNAL can do only from ROM 920398, through SETBNK's 28-bit
+form.</p>
+<p>The calls follow the trap convention Chapter 5 introduced: the
+service number in A, a write to <code>$D640</code>, then CLV, with the
+carry set on return for success and clear for failure, when A holds the
+error code. A NOP would also do after the trap, but NOP can act as a
+prefix to the next instruction, so CLV is safer. Chapter 11 lists the
+services and their error codes.</p>
 <h3 id="the-services">The services</h3>
 <table>
 <thead>
@@ -695,12 +918,10 @@ RAM</td>
 </tr>
 </tbody>
 </table>
-<p>hyppo_setname has strict requirements: the name must start on a page
-boundary somewhere in <code>$0000-$7E00</code>, must be shorter than 63
-characters, and must end with a zero byte. Only Y is passed, the page
-number. The name is ASCII, and Hyppo does not convert from PETSCII; it
-also sets the Hypervisor's transfer area to that page as a side effect
-(MEGA65 Book, p. N-38).</p>
+<p>hyppo_setname takes only Y, the page number of the name, so the name
+must start on a page boundary. It is ASCII, not PETSCII, and ends with a
+zero byte; <a href="ch11-mega65-rom-guide.html#services-at-d640">Services
+at <code>$D640</code></a> in Chapter 11 gives the other limits.</p>
 <p>The load services load to <code>$00ZZYYXX</code> in chip memory or
 <code>$08ZZYYXX</code> in attic RAM, and can load files up to 16MB,
 wrapping around at the end of the 16MB range. The commonest failure is
@@ -708,7 +929,20 @@ error <code>$88</code>, file not found in the current directory (MEGA65
 Book, pp. N-27, N-28).</p>
 <h3 id="example-loading-level-data-into-bank-4">Example: loading level
 data into bank 4</h3>
-<pre><code>load    ldy #&gt;fname     ; page of the file name
+<p>This program tries to load LEVEL1.BIN from the SD card to
+<code>$40000</code>. It turns the border green if the file loaded and
+red if it did not, and returns to BASIC either way:</p>
+<pre data-download="code/ch08/hyppoload.asm code/ch08/hyppoload.prg"><code>        * = $2001
+        .word next      ; BASIC header: 10 BANK0:SYS$2012
+        .word 10
+        .byte $fe, $02  ; BANK
+        .text &quot;0:&quot;
+        .byte $9e       ; SYS
+        .text &quot;$2012&quot;
+        .byte 0
+next    .word 0
+
+load    ldy #&gt;fname     ; page of the file name
         lda #$2e        ; hyppo_setname
         sta $d640
         clv
@@ -721,18 +955,27 @@ data into bank 4</h3>
         sta $d640
         clv
         bcc error
+        lda #$05        ; green border: the file is in bank 4
+        bra done
+
+error   sta errcode     ; A holds the error code, e.g. $88 file not found
+        lda #$02        ; red border: it is not
+done    sta $d020
+        ldz #$00        ; BASIC and the KERNAL expect Z = 0
         rts
 
-error   ; A holds the error code, e.g. $88 file not found
-        rts
+errcode .byte 0
 
-        .align 256      ; the name must start a page (syntax varies)
+        .enc &quot;ascii&quot;    ; store the name as ASCII, not PETSCII
+        .cdef &quot; ~&quot;, 32
+        .align 256      ; the name must start a page
 fname   .text &quot;LEVEL1.BIN&quot;, 0</code></pre>
 <p>The Hypervisor ignores case when it matches names, but it needs
 ASCII codes. Many assemblers' text directives produce PETSCII, which
 swaps the cases: a PETSCII directive such as ACME's <code>!pet</code>
 turns capitals into codes <code>$C1-$DA</code>, which the Hypervisor
-will not match. Use a directive that stores text unconverted (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+will not match. Use a directive that stores text unconverted; the
+<code>.enc</code> and <code>.cdef</code> lines above do that in 64tass (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 Hyppo <code>dos.asm</code>).</p>
 <p>The file is loaded exactly as stored. A file saved as a PRG carries a
 two-byte load address at the front, and the load call places those two
@@ -873,7 +1116,8 @@ already does.</p></li>
 <li><strong>Two styles.</strong> Cooperative routines start from the SYS
 mapping and must restore everything they change. Takeover programs set
 <code>$01</code>, MAP, the I/O personality, <code>$D030</code>, B and
-the stack themselves, then install their own vectors. MAP takes
+the stack themselves, and install their own vectors between MAP and
+EOM, where no interrupt can arrive. MAP takes
 precedence over other banking, but only for the blocks it maps.</li>
 <li><strong>Speed.</strong> FAST in <code>$D031</code> and VFAST in
 <code>$D054</code> select 1, 3.5 or 40.5 MHz; writing <code>$41</code>
@@ -884,14 +1128,18 @@ timing.</li>
 <li><strong>MAP.</strong> A megabyte selector followed by an offset
 opens an 8KB window anywhere, including attic RAM. MAP cannot be read by
 an instruction, but Hypervisor trap <code>$74</code> copies it to
-memory, and Matrix Mode shows it.</li>
+memory and trap <code>$76</code> restores it, which lets a cooperative
+routine open a window and close it again; Matrix Mode shows the map
+too.</li>
 <li><strong>DMA.</strong> Megabyte options reach any memory, step
 options handle interleaved data, transparency makes a simple blitter,
 and chained jobs perform whole sequences from one trigger. Only copy and
-fill are implemented, and jobs cannot be interrupted, though audio DMA
-keeps playing.</li>
+fill are implemented, the modulo bytes do nothing, and jobs cannot be
+interrupted, though audio DMA keeps playing.</li>
 <li><strong>Raster interrupts.</strong> The VIC-II registers work
-unchanged, and the VIC-IV adds compares in physical lines. At 40.5 MHz
+unchanged, and the VIC-IV adds compares in physical lines. In MEGA65
+mode the KERNAL's own tick is the raster interrupt, so a cooperative
+program shares it through CINV. At 40.5 MHz
 jitter is rarely a problem. Handlers must preserve every register they
 use, including Z and B.</li>
 <li><strong>Hypervisor files.</strong> hyppo_setname takes a

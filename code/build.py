@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the downloadable programs for each chapter from its listings.
 
-Run from the repository root:  python3 code/build.py
+Run from the repository root:  python3 code/build.py [chNN ...]
 
 For every chapter it takes the complete programs out of the <pre><code>
 listings, writes them to code/chNN/ (BASIC as .bas text and tokenized
@@ -17,7 +17,7 @@ numbered, there is no "..." placeholder, the first line is 10 or lower
 and every line it jumps to exists. Assembly counts when it sets its
 origin with "* =". OVERRIDES handles everything else.
 """
-import glob, html, os, re, shutil, subprocess, tempfile
+import glob, html, os, re, shutil, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRE = re.compile(r'<pre(?: data-download="[^"]*")?><code>(.*?)</code></pre>', re.S)
@@ -32,6 +32,15 @@ SCRIPT = '  <script src="code.js" defer></script>\n'
 OVERRIDES = {
     # BASIC that calls a routine no listing loads, and a header with no code
     ("ch06-advanced-basic65.html", "sys", 0): {"skip": True},
+    ("ch07-45gs02-machine-language.html", "a-first-program", 2): {"name": "border"},
+    ("ch08-ml-methods-specific-to-the-mega65.html", "saving-and-restoring-the-map", 1): {"name": "atticpeek"},
+    ("ch08-ml-methods-specific-to-the-mega65.html", "a-split-screen-example", 0): {"name": "split"},
+    ("ch08-ml-methods-specific-to-the-mega65.html", "cooperative-raster-interrupts", 0): {"name": "coraster"},
+    ("ch08-ml-methods-specific-to-the-mega65.html", "example-loading-level-data-into-bank-4", 0): {"name": "hyppoload"},
+    ("ch09-mixing-basic-with-machine-language.html", "bload", 0): {"skip": True},
+    ("ch09-mixing-basic-with-machine-language.html", "strings", 0): {"name": "spaces"},
+    ("ch09-mixing-basic-with-machine-language.html", "the-cost-of-usr", 0): {"name": "bitcount"},
+    ("ch11-mega65-rom-guide.html", "example-saving-and-loading-a-file", 0): {"name": "kernalfile"},
     ("ch09-mixing-basic-with-machine-language.html", "a-basic-header", 0): {"skip": True},
     ("ch09-mixing-basic-with-machine-language.html", "building-it-byte-by-byte", 0): {"skip": True},
     ("ch09-mixing-basic-with-machine-language.html", "registers", 0): {"skip": True},
@@ -206,8 +215,20 @@ def build_chapter(path, tmp):
 
 
 def main():
+    args = sys.argv[1:]
+    if any(a.startswith("-") for a in args):
+        sys.exit(__doc__.strip() + "\n\nTo build only some chapters, name them:  "
+                 "python3 code/build.py ch07 ch12")
+    missing = [t for t in ("petcat", "c1541", "64tass") if not shutil.which(t)]
+    if missing:  # check before build_chapter deletes anything
+        sys.exit("build.py: not on the PATH: " + ", ".join(missing))
+    paths = sorted(glob.glob(os.path.join(ROOT, "ch[0-9][0-9]-*.html")))
+    if args:
+        paths = [p for p in paths if os.path.basename(p)[:4] in args]
+        if len(paths) != len(set(args)):
+            sys.exit("build.py: no such chapter among: " + " ".join(args))
     with tempfile.TemporaryDirectory() as tmp:
-        for path in sorted(glob.glob(os.path.join(ROOT, "ch[0-9][0-9]-*.html"))):
+        for path in paths:
             progs = build_chapter(path, tmp)
             print("%-48s %3d programs" % (os.path.basename(path), len(progs)))
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -29,8 +29,8 @@
 <nav class="chapnav"><span><a href="ch11-mega65-rom-guide.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch13-sound.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-12-graphics">Programming the
 MEGA65 — Chapter 12: Graphics</h1>
-<p>Oct 4, 2026 · Updated Nov 12, 2026 · @Craig Taylor</p>
-<p class="downloads">Disk image: <a href="code/ch12/ch12.d81">ch12.d81</a> holds this chapter's 11 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch12/ch12.d81">ch12.d81</a> holds this chapter's 25 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The VIC-IV is three video chips in one. It behaves as a VIC-II for
 C64 software, adds the C65's VIC-III features of 80 columns, bitplanes
@@ -39,27 +39,31 @@ Like its ancestors it has no frame buffer: it builds each line of the
 display as it is drawn, from screen memory, character data and colour
 RAM. That design is why character graphics remain central on the MEGA65,
 even though it can display far more than a C64.</p>
-<p>The native display is 720 by 576 pixels, and the chip has four
-banks of 256 palette entries: one for text and bitmap graphics, one for
-sprites, and an alternate bank that individual characters can select, so
-more than one palette's worth of colours can be on screen at once
-(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026).</p>
+<p>The VIC-IV sends a picture of 720 by 576 pixels to the display in
+PAL, and 720 by 480 in NTSC. It has four palette banks of 256 entries
+each, and a register chooses which bank text and bitmap graphics use,
+which one sprites use, and which one is the alternate that individual
+characters can select, so more than one palette's worth of colours can
+be on screen at once (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, <code>pixel_driver.vhdl</code>).</p>
 <p>This chapter works from the easiest methods to the most detailed:</p>
 <ul>
 <li>BASIC 65's graphics commands, which need no register knowledge</li>
 <li>The registers that place screens, character sets and colour RAM in
 memory</li>
-<li>Text modes, including the two-byte-per-character mode the MEGA65
-calls SEAM</li>
+<li>Text modes: screen sizes, scaling, smooth scrolling, attributes,
+and the two-byte-per-character mode the MEGA65 calls SEAM</li>
 <li>Full-colour and nybble-colour characters</li>
 <li>The palette</li>
 <li>Sprites</li>
 <li>The C64's display modes, fetched through the VIC-IV's pointers</li>
 <li>Bitplane graphics</li>
-<li>Raster techniques specific to the VIC-IV</li>
+<li>Machine-language routines that plot pixels and draw lines in each of
+these modes</li>
+<li>The Raster Rewrite Buffer, which draws characters over other
+characters at any horizontal position</li>
 <li>Software sprites built on the Raster Rewrite Buffer, and scaling
 their images</li>
-<li>Animation techniques, from colour cycling to double buffering</li>
+<li>Animation techniques, from colour cycling to page flipping</li>
 <li>How human perception shapes what works on screen</li>
 </ul>
 <p>The VIC-II registers at <code>$D000-$D02E</code> work as on the C64,
@@ -67,6 +71,11 @@ and the techniques in any C64 graphics reference still apply. This
 chapter concentrates on what is new. Most of the registers described
 here exist only in the VIC-IV personality, so a program starting in C64
 mode must perform the knock from Chapter 5 first.</p>
+<p>Where this chapter cites the core's source (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>) without
+naming a release, the fact was checked against the development branch
+as of October 2026. Where the release 0.97 core and the development
+core differ, the text says so. Statements about the Xemu emulator
+describe it as of October 2026.</p>
 <h2 id="graphics-from-basic-65">Graphics from BASIC 65</h2>
 <p>BASIC 65 has a full set of graphics commands, inherited from the
 C65's BASIC 10 and extended since. They draw on a bitplane screen held
@@ -122,7 +131,8 @@ draws, waits for a key, and returns to text:</p>
 40 CIRCLE 160,100,50
 50 GETKEY A$
 60 SCREEN CLOSE</code></pre>
-<p>Chapter 3 gives SCREEN's full syntax.</p>
+<p><a href="ch03-basic65-reference-guide.html">Chapter 3</a> describes
+each of these commands and gives SCREEN's full syntax.</p>
 <h3 id="when-to-go-further">When to go further</h3>
 <p>The graphics commands are ideal for charts, diagrams, title screens
 and games where drawing speed is not critical. For fast animation,
@@ -205,12 +215,35 @@ It is 16 bits wide, but colour RAM is 32KB, so the VIC-IV uses only its
 low 15 bits: an offset of <code>$8000</code> or more wraps round to the
 start of colour RAM (<a
 href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>, September 2026).</p>
+<code>viciv.vhdl</code>).</p>
 <p>LINESTEP and CHRCOUNT are separate because they answer different
 questions. CHRCOUNT says how many characters to draw; LINESTEP says how
 far apart rows are in memory. Setting LINESTEP larger than CHRCOUNT
 creates a screen wider than the display, which can then be scrolled
-horizontally by moving SCRNPTR.</p>
+horizontally by moving SCRNPTR (Figure 12.1). <a
+href="#smooth-scrolling">Smooth scrolling</a> has a program that does
+this.</p>
+<figure>
+<svg viewBox="0 0 640 264" role="img" aria-label="A map 160 characters wide in memory, with a window 81 characters wide drawn from it. SCRNPTR marks the top left corner of the window, CHRCOUNT is its width and LINESTEP is the width of the map." style="width:100%;height:auto;max-width:40em" font-family="inherit" font-size="14">
+<g fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="20" y="70" width="600" height="140"/>
+<rect x="140" y="70" width="304" height="140" fill="currentColor" fill-opacity="0.12"/>
+<path d="M20 44H620M20 37V51M620 37V51"/>
+<path d="M140 232H444M140 225V239M444 225V239"/>
+</g>
+<circle cx="140" cy="70" r="4.5" fill="currentColor"/>
+<g fill="currentColor" text-anchor="middle">
+<text x="320" y="30">LINESTEP = 160: bytes from the start of one row to the next</text>
+<text x="292" y="254">CHRCOUNT = 81: characters drawn from each row</text>
+<text x="292" y="135">the part of the map</text>
+<text x="292" y="155">on the screen</text>
+<text x="80" y="145">map</text>
+<text x="532" y="145">map</text>
+<text x="150" y="64" text-anchor="start">SCRNPTR</text>
+</g>
+</svg>
+<figcaption>Figure 12.1: LINESTEP is the distance in memory from one row to the next and CHRCOUNT the number of characters drawn from each row: here 160 and 81, as in the program in Smooth scrolling. Moving SCRNPTR, and COLPTR with it, slides the window across the map.</figcaption>
+</figure>
 <h3 id="mode-registers">Mode registers</h3>
 <table>
 <thead>
@@ -247,6 +280,13 @@ horizontally by moving SCRNPTR.</p>
 <td>400-line vertical resolution</td>
 </tr>
 <tr class="odd">
+<td><code>$D031</code></td>
+<td>0</td>
+<td>INT</td>
+<td>Interlaced video output; with V400, makes the Display Address
+Translator split a plane's lines into two fields</td>
+</tr>
+<tr class="odd">
 <td><code>$D054</code></td>
 <td>0</td>
 <td>CHR16</td>
@@ -266,6 +306,16 @@ horizontally by moving SCRNPTR.</p>
 </tr>
 </tbody>
 </table>
+<p>Three more bits change how the finished picture looks rather than
+what is drawn. PALEMU, bit 5 of <code>$D054</code>, imitates the CRTs
+that 8-bit graphics were designed for: it makes every second physical
+line much darker, like the scan lines of a PAL television, and dims
+alternate pixel columns slightly. SHDEMU, bit 6 of <code>$D053</code>,
+deepens that column dimming into a simulated shadow mask, and has an
+effect only while PALEMU is set. PALEMU is ignored with H1280, and with
+V400 except where a line is drawn twice. Separately, SMTH, bit 3 of
+<code>$D054</code>, smooths the picture horizontally with a running
+average of three pixels, softening hard pixel edges (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, <code>pal_simulation.vhdl</code>).</p>
 <h3 id="hot-registers">Hot registers</h3>
 <p>When a program writes to the C64-style registers that choose a screen
 or character set location, the VIC-IV calculates the equivalent address
@@ -345,8 +395,8 @@ knows. ESC X, ESC 4, ESC 8 and ESC 5 switch between them (<a
 href="ch02-getting-to-know-the-mega65.html#escape-sequences">Chapter
 2</a>), and WINDOW can only confine the editor to a smaller area of the
 current size. The VIC-IV itself has no fixed size. It draws as many rows
-and columns as a few registers tell it to, inside a display 800 pixels
-wide, so a program can have a 30-row screen, an 88-column one, or
+and columns as a few registers tell it to, on a raster line laid out
+as 800 pixel positions, 720 of which are displayed, so a program can have a 30-row screen, an 88-column one, or
 both:</p>
 <table>
 <thead>
@@ -413,12 +463,44 @@ modes each row of character pixels is drawn on two lines, so a character
 row is 16 lines high, and in the 50-row modes it is 8; either way the
 standard text area is 400 lines tall, from line 104 to line 504 in PAL.
 The horizontal registers count pixels of the 800-pixel line, and the two
-80-pixel side borders leave 640 for text. A write to SDBDRWD moves both
+80-pixel side borders leave 640 for text (Figure 12.2). Only 720 of
+the 800 positions reach the display. The 80 that do not are shared
+between the two ends of the line, so the outer part of each side border
+is never seen, and no more than 90 columns of 8-pixel characters can be
+visible (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>pixel_driver.vhdl</code>, <code>frame_generator.vhdl</code>). A write to SDBDRWD moves both
 side borders at once. The upper four bits of <code>$D049</code>,
 <code>$D04B</code>, <code>$D04D</code> and <code>$D04F</code> belong to
 sprite settings, and <code>$D05D</code> holds HOTREG in bit 7 (<a
 href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>viciv.vhdl</code>).</p>
+<figure>
+<svg viewBox="0 0 680 446" role="img" aria-label="The 800-pixel raster line and the 576 displayed lines of a PAL picture, with the 640 by 400 text area inside the borders. TEXTXPOS and SDBDRWD are both 80, TBDRPOS and TEXTYPOS 104, and BBDRPOS 504." style="width:100%;height:auto;max-width:40em" font-family="inherit" font-size="14">
+<g fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="140" y="50" width="480" height="346"/>
+<rect x="188" y="112" width="384" height="240" fill="currentColor" fill-opacity="0.12"/>
+<path d="M140 34H620M140 27V41M620 27V41"/>
+<path d="M164 414H596M164 407V421M596 407V421"/>
+<path d="M640 50V396M633 50H647M633 396H647"/>
+<path d="M140 80H188M140 74V86M188 74V86"/>
+<path d="M140 374H188M140 368V380M188 368V380"/>
+<path d="M128 112H188M128 352H188" stroke-dasharray="4 3"/>
+</g>
+<g fill="currentColor">
+<text x="380" y="20" text-anchor="middle">800 pixel positions on each raster line</text>
+<text x="380" y="436" text-anchor="middle">720 of them are displayed</text>
+<text x="660" y="223" text-anchor="middle" transform="rotate(-90 660 223)">576 lines displayed in PAL</text>
+<text x="196" y="85">TEXTXPOS = 80</text>
+<text x="196" y="379">SDBDRWD = 80</text>
+<text x="124" y="88" text-anchor="end">TBDRPOS = 104</text>
+<text x="124" y="105" text-anchor="end">TEXTYPOS = 104</text>
+<text x="124" y="357" text-anchor="end">BBDRPOS = 504</text>
+<text x="380" y="222" text-anchor="middle">text area, 640 by 400</text>
+<text x="380" y="242" text-anchor="middle">80 by 25 characters</text>
+<text x="596" y="85" text-anchor="end">border</text>
+</g>
+</svg>
+<figcaption>Figure 12.2: The standard 80 × 25 screen in PAL. The vertical registers are raster line numbers and the horizontal ones are positions on the 800-pixel line. Only 720 of the 800 positions are displayed; the figure shows them centred, which is approximate.</figcaption>
+</figure>
 <p>A bigger screen needs four things. First, HOTREG must be off: with it
 on, the next write to a hot register makes the VIC-IV recalculate the
 borders, the text position, the row count, LINESTEP and CHRCOUNT for one
@@ -448,7 +530,7 @@ below the standard text area.</p>
 90 CLRBIT $D05D,7 : REM HOTREG OFF
 100 WPOKE $D048,56 : WPOKE $D04A,536 : REM TOP AND BOTTOM BORDER
 110 WPOKE $D04E,56 : POKE $D07B,H-1 : REM TEXTYPOS, DISPROWS
-120 POKE $D05C,48 : WPOKE $D04C,48 : REM SIDE BORDER, TEXTXPOS
+120 POKE $D05C,48 : POKE $D04C,48 : REM SIDE BORDER, TEXTXPOS
 130 WPOKE $D058,W : POKE $D05E,W : REM LINESTEP, CHRCOUNT
 140 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,CO : REM SCRNPTR, COLPTR
 150 GETKEY K$
@@ -459,15 +541,16 @@ edges are easy to see. Thirty rows of 16 lines take 480 lines, from 56
 to 536, and 88 columns of 8 pixels take 704 pixels, leaving 48 for each
 side border. Lines 30 and 40 save the registers the program changes,
 and lines 160 and 170 restore them; restoring <code>$D05D</code> also
-turns HOTREG back on. The WPOKEs in lines 100 to 120 clear the sprite
+turns HOTREG back on. The WPOKEs in lines 100 and 110 clear the sprite
 bits in the upper half of <code>$D049</code>, <code>$D04B</code> and
-<code>$D04D</code>, which matters only to a program using those sprite
-features. In 80 × 50 mode, where a row is 8 lines high, the same 480
+<code>$D04F</code>, which matters only to a program using those sprite
+features; line 120 uses POKE for TEXTXPOS, which fits in one byte, and
+so leaves the sprite bits of <code>$D04D</code> alone. In 80 × 50 mode, where a row is 8 lines high, the same 480
 lines hold 60 rows (DISPROWS 59).</p>
 <p>The screen editor does not know about any of this. Its row and column
 counts are fixed by the four standard sizes, and it finds the character
 it is working on from SCRNPTR but always takes colour RAM addresses from
-<code>$FF80000</code>, ignoring COLPTR (MEGA65 ROM source,
+<code>$FF80000</code>, ignoring COLPTR (MEGA65 ROM source, <code>system.src</code>,
 <code>setup_line</code>). A program that stops with SCRNPTR still
 pointing at its own screen therefore finds READY, and anything typed
 after it, written into that screen at the editor's 80-column spacing.
@@ -487,8 +570,10 @@ the VIC-IV halves the value first, so 120 still gives the usual
 40-column characters and 240 gives 8-pixel ones (<a
 href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>viciv.vhdl</code>).</p>
-<p>CHRXSCL scales everything drawn through the Raster Rewrite Buffer
-described below: text, the VIC-II-style bitmap modes, and GOTOX
+<p>CHRXSCL scales everything drawn through the <a
+href="#the-raster-rewrite-buffer">Raster Rewrite Buffer</a>, the buffer
+in which the VIC-IV builds each line, described later in this chapter:
+text, the VIC-II-style bitmap modes, and GOTOX
 positions with them. Bitplanes and sprites are drawn separately and do
 not change. The hot registers do not reset CHRXSCL, so a program must
 put it back itself:</p>
@@ -497,7 +582,7 @@ put it back itself:</p>
 30 POKE $D05A,120 : REM NORMAL WIDTH</code></pre>
 <p>Characters 40 to 79 of each row are now drawn beyond the right
 border, so lowering CHRCOUNT to 40 at the same time saves the VIC-IV
-work without changing what is seen. When tested, Xemu did not display
+work without changing what is seen. When tested in October 2026, Xemu did not display
 CHRXSCL as the core describes, so check the result on a real
 MEGA65.</p>
 <p>The vertical counterpart, CHRYSCL at <code>$D05B</code>, sets how
@@ -510,14 +595,66 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>viciv.vhdl</code>).</p>
 <p>Doubling the number of lines per pixel row, plus one for the minus
 one, doubles the height of the text in either mode:</p>
-<pre><code>10 H=PEEK($D05B) : POKE $D05B,H*2+1 : REM DOUBLE-HEIGHT TEXT PIXELS
+<pre data-download="code/ch12/tall-text.bas code/ch12/tall-text.prg"><code>10 H=PEEK($D05B) : POKE $D05B,H*2+1 : REM DOUBLE-HEIGHT TEXT PIXELS
 20 GETKEY K$
 30 POKE $D05B,H : REM NORMAL HEIGHT</code></pre>
 <p>The text rows are now twice as tall, so only the top half of the
 screen fits between the borders; the rest is drawn below the bottom
 border, where it cannot be seen. As with CHRXSCL, the screen editor
-does not know, and it carries on as if the screen were unchanged. Xemu
-ignores CHRYSCL, so this too needs a real MEGA65.</p>
+does not know, and it carries on as if the screen were unchanged. Xemu,
+as of October 2026, ignores CHRYSCL, so this too needs a real MEGA65.</p>
+<h3 id="smooth-scrolling">Smooth scrolling</h3>
+<p>The VIC-IV scrolls more freely than the VIC-II. Coarse scrolling
+is a matter of changing SCRNPTR and COLPTR, which can point anywhere, so
+a map wider than the screen needs only a larger LINESTEP and a moving
+pointer (Figure 12.1). Fine scrolling uses the pixel-level text position registers,
+TEXTXPOS at <code>$D04C</code> and TEXTYPOS at <code>$D04E</code>,
+together with one extra character per row so the partly visible column
+at the edge is filled (<a
+href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).</p>
+<p>This program draws a landscape 160 columns wide at
+<code>$50000</code>, with its colours at offset <code>$2000</code> in
+colour RAM, and scrolls the 80-column screen across it, two pixels a
+frame, until it reaches the end or a key is pressed:</p>
+<pre data-download="code/ch12/smooth-scrolling.bas code/ch12/smooth-scrolling.prg"><code>10 REM SMOOTH SCROLLING OVER A 160-COLUMN MAP
+20 SA=$50000 : CO=$2000 : W=160
+30 EDMA 3,W*25,32,SA : EDMA 3,W*25,5,$FF80000+CO : REM SPACES, GREEN
+40 FOR X=0 TO W-1 : H=INT(9+6*SIN(X/8)+3*SIN(X/3))
+50 FOR Y=25-H TO 24 : POKE SA+Y*W+X,160 : NEXT Y
+60 IF MOD(X,10)=0 THEN POKE SA+X,48+MOD(X/10,10) : POKE $FF80000+CO+X,1
+70 NEXT X
+80 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT : T=PEEK($D04C)
+90 CLRBIT $D05D,7                     : REM HOTREG OFF
+100 WPOKE $D058,W : POKE $D05E,81      : REM LINESTEP, CHRCOUNT
+110 FOR P=0 TO (W-80)*8-1 STEP 2
+120 C=INT(P/8) : F=P AND 7
+130 VSYNC 255
+140 POKE $D04C,80-F                    : REM FINE: TEXTXPOS
+150 WPOKE $D060,C : POKE $D062,5       : REM COARSE: SCRNPTR
+160 WPOKE $D064,CO+C                   : REM AND COLPTR
+170 GET K$ : IF K$="" THEN NEXT P
+180 FOR I=0 TO 13 : POKE $D058+I,R(I) : NEXT : POKE $D04C,T
+190 SETBIT $D05D,7</code></pre>
+<p>P is the scroll position in pixels. Its whole characters, C, move
+SCRNPTR and COLPTR, and the pixels left over, F, move the text F pixels
+left of its usual start at 80 by lowering TEXTXPOS. The left side border
+covers whatever moves under it. CHRCOUNT is 81, one more than the screen
+shows, so the 81st character fills the gap that opens at the right as
+the text moves left, and LINESTEP is the map's width, 160, so each row
+of the screen is a window onto a row of the map. Only
+<code>$D04C</code> is written, not <code>$D04D</code>, whose upper bits
+belong to sprites.</p>
+<p>VSYNC 255 waits for a line below the text area on PAL and NTSC, so
+the registers change while nothing is being drawn and the screen never
+shows half of one position and half of the next. HOTREG is off
+throughout, as the registers it would recalculate are the ones the
+program is moving. Line 180 restores everything from
+<code>$D058</code> to <code>$D065</code>.</p>
+<p>Scrolling vertically works the same way with TEXTYPOS and one extra
+row: SCRNPTR and COLPTR move by LINESTEP bytes for each whole row.
+Parallax layers combine scrolling with the Raster Rewrite Buffer: each
+layer is a section of the row whose <a href="#gotox">GOTOX</a> position
+is offset by a different amount.</p>
 <h3 id="attributes">Attributes</h3>
 <p>In normal text mode, each character has one byte of screen memory,
 its screen code, and one byte of colour RAM. The low four bits of colour
@@ -552,7 +689,7 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <p>The screen editor's colour RAM starts at <code>$FF80000</code>, one
 byte per character, so a program can add attributes to text already on
 the screen by setting the upper bits of those bytes:</p>
-<pre><code>10 REM VIC-III TEXT ATTRIBUTES
+<pre data-download="code/ch12/attributes.bas code/ch12/attributes.prg"><code>10 REM VIC-III TEXT ATTRIBUTES
 20 PRINT CHR$(147); : CR=$FF80000
 30 FOR I=0 TO 6 : READ A$,V
 40 PRINT : PRINT "  ";A$ : Y=2*I+1
@@ -572,16 +709,13 @@ character now takes two bytes of screen memory and two bytes of colour
 RAM (<a
 href="https://retrocogs.mega65.com/2025/08/13/vic-iv-graphics-setting-up-fcm-and-ncm/">Retrocogs</a>).</p>
 <p>The extra screen byte extends the character number to 13 bits, so a
-screen can use up to 8,192 different characters instead of 256. The
-extra colour byte carries further per-character settings, and the second
-colour byte holds the colour itself. Among those settings, bit 7 of the
-first colour byte flips the character vertically and bit 6 flips it
-horizontally, so one character definition can be reused facing the other
-way (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>). Ordinary monochrome characters can
+screen can use up to 8,192 different characters instead of 256. Of the
+two colour bytes, the first carries per-character controls and the
+second holds the colour itself. Ordinary monochrome characters can
 then take their foreground from the first 32 palette entries, and the
 full-colour modes below reach the whole palette (<a
 href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
-Sanderson</a>).</p>
+Sanderson</a>). Figure 12.3 shows all four bytes.</p>
 <p>Because each character now takes two bytes, LINESTEP must be at
 least twice CHRCOUNT: 160 for an 80-column row. The screen editor's memory is not
 laid out for this, so SEAM programs move SCRNPTR to their own area.</p>
@@ -592,22 +726,27 @@ LINESTEP bytes after the start of this one. Rows ended this way can
 therefore have different lengths, and LINESTEP does not matter for them.
 That makes it easy to build a screen one line at a time: write each
 line's characters followed by <code>$FFFF</code>, and the next line
-follows on directly. This works in release cores as well as
-development. A program that only wants ordinary
-characters must never store <code>$FFFF</code> in screen memory, so
-character <code>$1FFF</code> cannot be combined with all of the high
-screen-byte bits set (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>, September 2026).</p>
-<p>The two colour bytes divide the work. The first holds the
-per-character controls: bit 7 flips the character vertically, bit 6
-horizontally, bit 4 makes the entry a GOTOX (see <a
-href="#gotox">GOTOX</a>), bit 3 makes it an NCM character, and bit 2
-extends the width trim described below. The second byte is the colour:
-its low nybble is the colour and its high nybble the VIC-III attributes,
-as in normal text mode (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>).</p>
+follows on directly. The marker is in the release 0.96 and 0.97 cores
+as well as the development core. It follows that <code>$FFFF</code>
+can never be shown as a character: it would be character
+<code>$1FFF</code> with a width trim of 7, described below
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
+<p>The first colour byte holds the per-character controls. Bit 7 flips
+the character vertically and bit 6 horizontally, so one character
+definition can be reused facing the other way. Bit 5 marks the
+character for alpha blending. Bit 4 makes the entry a GOTOX
+instruction instead of a character (see <a href="#gotox">GOTOX</a>),
+bit 3 makes it an NCM character (see <a
+href="#nybble-colour-mode">Nybble Colour Mode</a>), and bit 2 extends
+the width trim described below. Bits 1 and 0 are not
+used. The second byte is the colour: its low nybble is the colour and
+its high nybble the VIC-III attributes, as in normal text mode
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
+<p>Alpha blending is for anti-aliased text. It needs ALPHEN, bit 7 of
+<code>$D054</code>, which turns on the VIC-IV's compositor; the pixel
+values of a character with bit 5 set then give the strength of the
+character's colour against what is behind it, instead of choosing
+colours. This chapter does not use it (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
 <p>The high byte of the screen word does two jobs as well. Its low five
 bits are bits 12-8 of the character number, and its top three bits trim
 0 to 7 pixels from the right of the character, so the next character
@@ -618,11 +757,86 @@ characters 256 to 511 are the second half of the font: the lower-case
 set (MEGA65 ROM source, <code>system.src</code>; <a
 href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>viciv.vhdl</code>).</p>
+<figure>
+<svg viewBox="0 0 668 350" role="img" aria-label="The four bytes of a SEAM entry, bit by bit, with the meaning of each bit in a character entry and in a GOTOX entry." style="width:100%;height:auto;max-width:40em" font-family="inherit" font-size="14">
+<text x="632" y="16" text-anchor="middle" font-size="12" fill="currentColor">bit 0</text>
+<text x="564" y="16" text-anchor="middle" font-size="12" fill="currentColor">bit 1</text>
+<text x="496" y="16" text-anchor="middle" font-size="12" fill="currentColor">bit 2</text>
+<text x="428" y="16" text-anchor="middle" font-size="12" fill="currentColor">bit 3</text>
+<text x="360" y="16" text-anchor="middle" font-size="12" fill="currentColor">bit 4</text>
+<text x="292" y="16" text-anchor="middle" font-size="12" fill="currentColor">bit 5</text>
+<text x="224" y="16" text-anchor="middle" font-size="12" fill="currentColor">bit 6</text>
+<text x="156" y="16" text-anchor="middle" font-size="12" fill="currentColor">bit 7</text>
+<text x="2" y="40" font-size="13" font-weight="bold" fill="currentColor">Screen byte 0</text>
+<text x="116" y="62" text-anchor="end" font-size="12" fill="currentColor">character</text>
+<text x="116" y="86" text-anchor="end" font-size="12" fill="currentColor">GOTOX</text>
+<rect x="122" y="46" width="544" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="394" y="62" text-anchor="middle" font-size="11" fill="currentColor">character number, bits 7-0</text>
+<rect x="122" y="70" width="544" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="394" y="86" text-anchor="middle" font-size="11" fill="currentColor">X position, bits 7-0</text>
+<text x="2" y="120" font-size="13" font-weight="bold" fill="currentColor">Screen byte 1</text>
+<text x="116" y="142" text-anchor="end" font-size="12" fill="currentColor">character</text>
+<text x="116" y="166" text-anchor="end" font-size="12" fill="currentColor">GOTOX</text>
+<rect x="122" y="126" width="204" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="224" y="142" text-anchor="middle" font-size="11" fill="currentColor">width trim, 0-7 pixels</text>
+<rect x="326" y="126" width="340" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="496" y="142" text-anchor="middle" font-size="11" fill="currentColor">character number, bits 12-8</text>
+<rect x="122" y="150" width="204" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="224" y="166" text-anchor="middle" font-size="11" fill="currentColor">Y offset, 0-7 pixel rows</text>
+<rect x="326" y="150" width="68" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="360" y="166" text-anchor="middle" font-size="11" fill="currentColor">down</text>
+<rect x="394" y="150" width="136" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="462" y="166" text-anchor="middle" font-size="11" fill="currentColor">not used</text>
+<rect x="530" y="150" width="136" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="598" y="166" text-anchor="middle" font-size="11" fill="currentColor">X position, bits 9-8</text>
+<text x="2" y="200" font-size="13" font-weight="bold" fill="currentColor">Colour byte 0</text>
+<text x="116" y="222" text-anchor="end" font-size="12" fill="currentColor">character</text>
+<text x="116" y="246" text-anchor="end" font-size="12" fill="currentColor">GOTOX</text>
+<rect x="122" y="206" width="68" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="156" y="222" text-anchor="middle" font-size="11" fill="currentColor">flip vertical</text>
+<rect x="190" y="206" width="68" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="224" y="222" text-anchor="middle" font-size="11" fill="currentColor">flip horiz.</text>
+<rect x="258" y="206" width="68" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="292" y="222" text-anchor="middle" font-size="11" fill="currentColor">alpha</text>
+<rect x="326" y="206" width="68" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="360" y="222" text-anchor="middle" font-size="11" fill="currentColor">0</text>
+<rect x="394" y="206" width="68" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="428" y="222" text-anchor="middle" font-size="11" fill="currentColor">NCM</text>
+<rect x="462" y="206" width="68" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="496" y="222" text-anchor="middle" font-size="11" fill="currentColor">trim bit 3</text>
+<rect x="530" y="206" width="136" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="598" y="222" text-anchor="middle" font-size="11" fill="currentColor">not used</text>
+<rect x="122" y="230" width="68" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="156" y="246" text-anchor="middle" font-size="11" fill="currentColor">transparent</text>
+<rect x="190" y="230" width="68" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="224" y="246" text-anchor="middle" font-size="11" fill="currentColor">background</text>
+<rect x="258" y="230" width="68" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="292" y="246" text-anchor="middle" font-size="11" fill="currentColor">&#8211;</text>
+<rect x="326" y="230" width="68" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="360" y="246" text-anchor="middle" font-size="11" fill="currentColor">1</text>
+<rect x="394" y="230" width="68" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="428" y="246" text-anchor="middle" font-size="11" fill="currentColor">ROWMASK</text>
+<rect x="462" y="230" width="68" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="496" y="246" text-anchor="middle" font-size="11" fill="currentColor">foreground</text>
+<rect x="530" y="230" width="136" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="598" y="246" text-anchor="middle" font-size="11" fill="currentColor">&#8211;</text>
+<text x="2" y="280" font-size="13" font-weight="bold" fill="currentColor">Colour byte 1</text>
+<text x="116" y="302" text-anchor="end" font-size="12" fill="currentColor">character</text>
+<text x="116" y="326" text-anchor="end" font-size="12" fill="currentColor">GOTOX</text>
+<rect x="122" y="286" width="272" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="258" y="302" text-anchor="middle" font-size="11" fill="currentColor">attributes, or colour bits 7-4</text>
+<rect x="394" y="286" width="272" height="24" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="530" y="302" text-anchor="middle" font-size="11" fill="currentColor">colour, bits 3-0</text>
+<rect x="122" y="310" width="544" height="24" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="394" y="326" text-anchor="middle" font-size="11" fill="currentColor">row mask, used when ROWMASK is set</text>
+</svg>
+<figcaption>Figure 12.3: One SEAM entry: two bytes of screen memory and two of colour RAM. Bit 4 of colour byte 0 decides whether the entry is a character (upper rows) or a GOTOX instruction (shaded rows), which is described in GOTOX.</figcaption>
+</figure>
 <h3 id="a-seam-screen">A SEAM screen</h3>
 <p>This program builds a 40-column SEAM screen at <code>$50000</code>,
 with its colours at offset <code>$2000</code> in colour RAM, and shows
 each of these features on its own row:</p>
-<pre><code>10 REM SEAM: 16-BIT CHARACTERS, FLIPS, TRIMS AND ROW ENDS
+<pre data-download="code/ch12/seam.bas code/ch12/seam.prg"><code>10 REM SEAM: 16-BIT CHARACTERS, FLIPS, TRIMS AND ROW ENDS
 20 SA=$50000 : CA=$FF82000 : A=0
 30 FOR I=0 TO 999 : WPOKE SA+I*2,32 : NEXT : EDMA 3,2000,0,CA : REM SPACES
 40 K=1 : S$="A SEAM SCREEN, ONE ROW AT A TIME" : GOSUB 1000 : GOSUB 1100
@@ -641,7 +855,7 @@ each of these features on its own row:</p>
 170 S$="ROWS OF ANY LENGTH" : GOSUB 1000 : GOSUB 1100
 180 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
 190 TX=WPEEK($D04C) : HR=PEEK($D05D)
-200 CLRBIT $D05D,7 : CLRBIT $D031,7 : WPOKE $D04C,80
+200 CLRBIT $D05D,7 : CLRBIT $D031,7 : POKE $D04C,80
 210 SETBIT $D054,0 : WPOKE $D058,80 : POKE $D05E,40
 220 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
 230 GETKEY K$
@@ -683,11 +897,11 @@ pressed.</p>
 <p>The program can use the <code>$FFFF</code> end-of-row marker instead
 of fixed-length rows. Change one line, so that ending a row writes the
 marker instead of skipping to the next 80-byte boundary:</p>
-<pre><code>1110 WPOKE SA+A,$FFFF : A=A+2 : RETURN</code></pre>
+<pre data-download="code/ch12/seam-rows.bas code/ch12/seam-rows.prg"><code>1110 WPOKE SA+A,$FFFF : A=A+2 : RETURN</code></pre>
 <p>Each row now takes only as many bytes as it has characters, plus 2,
 and the next row starts straight after it. The display looks the same,
 but the screen is packed into 364 bytes instead of 1,040. Note that the
-blank rows are now a single marker each. Xemu does not emulate the
+blank rows are now a single marker each. Xemu, as of October 2026, does not emulate the
 marker: it draws nothing for it and carries on along the row, so the
 rows run together there. Try this version on a real MEGA65.</p>
 <p>In SEAM, screen memory is written with WPOKE, low byte first. A
@@ -701,6 +915,13 @@ VIC-IV can give a character one byte per pixel, choosing every pixel's
 colour directly from the palette. This is Full Colour Mode, or FCM.
 Nybble Colour Mode, NCM, is a lighter variant using four bits per pixel.
 Both require SEAM.</p>
+<p>Four words are used with fixed meanings from here on. A
+<em>character</em> is one entry of screen memory and colour RAM, and
+what it draws. A <em>glyph</em> is the pixel data a character points
+at, 64 bytes in FCM and NCM, and its glyph number is that data's
+address divided by 64. A <em>tile</em> is a glyph used as a repeated
+piece of a background or map. A <em>cell</em> is one position of the
+screen grid: 8 by 8 pixels, or 16 by 8 for an NCM character.</p>
 <h3 id="full-colour-mode">Full Colour Mode</h3>
 <p>In FCM each character is 8 by 8 pixels and takes 64 bytes, one per
 pixel. A pixel value of <code>$00</code> shows the background colour,
@@ -742,9 +963,11 @@ this way:</p>
 <p>The usual choice is FCLRHI alone. Values below 256 remain ordinary
 characters from the character set at CHARPTR, so text and full-colour
 graphics share the screen, while values from 256 up point at FCM data
-from <code>$4000</code> upward. FCLRLO would make the first 16KB of
-memory the only place for full-colour data, at the cost of losing the
-normal font, so it is rarely useful (<a
+from <code>$4000</code> upward. FCLRLO makes values 0 to 255
+full-colour too, with their data in the first 16KB of memory,
+<code>$0000-$3FFF</code>. That takes away the normal font and puts
+graphics data where the system keeps its own variables, so it is rarely
+useful (<a
 href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
 Sanderson</a>).</p>
 <p>A full 80 by 25 screen of unique FCM characters needs 2,000 × 64 =
@@ -755,7 +978,7 @@ animating still means changing only screen memory.</p>
 <p>This program defines two full-colour glyphs at <code>$40000</code>,
 covers a 40-column SEAM screen with them, and puts a line of ordinary
 text above them:</p>
-<pre><code>10 REM FULL-COLOUR CHARACTERS NEXT TO TEXT
+<pre data-download="code/ch12/fcm.bas code/ch12/fcm.prg"><code>10 REM FULL-COLOUR CHARACTERS NEXT TO TEXT
 20 SA=$50000 : CA=$FF82000 : GD=$40000 : W=80
 30 FOR Y=0 TO 7 : FOR X=0 TO 7
 40 POKE GD+Y*8+X,16+((X+Y) AND 15)         : REM GLYPH $1000: RAINBOW
@@ -771,7 +994,7 @@ text above them:</p>
 140 WPOKE SA+(I+3)*2,C : NEXT I
 150 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
 160 TX=WPEEK($D04C) : HR=PEEK($D05D) : D1=PEEK($D031)
-170 CLRBIT $D05D,7 : POKE $D031,D1 AND $5F : WPOKE $D04C,80
+170 CLRBIT $D05D,7 : POKE $D031,D1 AND $5F : POKE $D04C,80
 180 POKE $D054,PEEK($D054) OR 5           : REM CHR16 + FCLRHI
 190 WPOKE $D058,W : POKE $D05E,40
 200 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
@@ -789,30 +1012,35 @@ alternates the two glyphs across rows 2 to 24 and gives each column a
 different colour, 16 to 31, for the rings. Lines 120 to 140 write the
 title with screen codes below 256, which FCLRHI leaves as ordinary
 characters from the font.</p>
-<p>Line 170 clears ATTR as well as H640. With the attributes on, the
-colour byte's high nybble would be read as attributes, and the rings
-could only use entries 0 to 15 (or 16 to 31 through bold). With them
-off, the whole byte is the colour. Line 180 sets CHR16 and FCLRHI
-together, 1 + 4 = 5, and line 220 clears them again.</p>
+<p>Line 170 clears ATTR as well as H640, so that the whole colour byte
+is the colour of the rings; <a
+href="#setting-up-fcm-in-machine-language">the next section</a> explains
+why. Line 180 sets CHR16 and FCLRHI together, 1 + 4 = 5, and line 220
+clears them again.</p>
 <h3 id="setting-up-fcm-in-machine-language">Setting up FCM in machine
 language</h3>
 <pre><code>        lda #%00000001
         tsb $d054       ; CHR16: SEAM on
         lda #%00000100
         tsb $d054       ; FCLRHI: FCM for values 256 and up
-        lda #&lt;160
+                lda #&lt;80
         sta $d058
-        lda #&gt;160
-        sta $d059       ; LINESTEP = 80 characters x 2 bytes</code></pre>
+        lda #&gt;80
+        sta $d059       ; LINESTEP = 40 characters x 2 bytes
+        lda #40
+        sta $d05e       ; CHRCOUNT</code></pre>
 <p>Then point SCRNPTR at a free area, fill it with 16-bit values from
 <code>$0100</code> upward, and place the character data at the matching
-addresses. These are the same steps as lines 180 to 200 of the program
-above, and the rest of its setup translates the same way.</p>
+addresses. These are the same steps as lines 180 and 190 of the program
+above, for the same 40-column screen; an 80-column screen needs a
+LINESTEP of 160 and a CHRCOUNT of 80. The rest of the program's setup
+translates the same way.</p>
 <p>The attribute bits still apply in SEAM, in the high nybble of the
-second colour byte. In FCM they cut the colour that <code>$FF</code>
-pixels show to the first 16 palette entries and can make characters
-blink or underline; in NCM the same bits select the sub-palette, so they
-must not also trigger blinking or underlining (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026). Clear ATTR, bit 5 of <code>$D031</code>, to suppress the
+second colour byte. In FCM, with the attributes on, that nybble is read
+as attributes and not as part of the colour: they cut the colour that <code>$FF</code>
+pixels show to the first 16 palette entries (or entries 16 to 31
+through bold) and can make characters blink or underline; in NCM the same bits select the sub-palette, so they
+must not also trigger blinking or underlining (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>). Clear ATTR, bit 5 of <code>$D031</code>, to suppress the
 attributes system-wide (<a
 href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
 Sanderson</a>). Because <code>$D031</code> is a hot register, either
@@ -822,7 +1050,7 @@ VIC-IV pointers.</p>
 <p>NCM is not a separate screen mode but a property of individual SEAM
 characters, selected by bit 3 of the first byte of the character's
 colour RAM entry. Setting that bit makes the character a 4-bit
-full-colour character whatever FCLRLO and FCLRHI say (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026; <a
+full-colour character whatever FCLRLO and FCLRHI say (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>; <a
 href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
 Sanderson</a>). Each byte of character data then holds two pixels of
 four bits each, and three details follow from that:</p>
@@ -839,7 +1067,7 @@ the character's colour value supplies the upper four bits of each
 pixel's palette index, and the pixel's nybble supplies the lower four. A
 nybble of <code>$0</code> is the background colour, as <code>$00</code> is
 in FCM, and a nybble of <code>$F</code> shows the character's full
-colour value (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026).</li>
+colour value (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</li>
 </ul>
 <p>Because NCM characters are twice as wide, a row of them needs half as
 many characters to fill the screen. A full row of NCM characters is 40
@@ -850,7 +1078,7 @@ sign that a VIC-IV row is not a fixed grid of cells.</p>
 <p>This program draws one NCM glyph, a pill shape 16 pixels wide in 14
 bands of colour, and fills ten rows with it, alternating between two
 colour groups, then mixes it with text on one row:</p>
-<pre><code>10 REM NYBBLE-COLOUR CHARACTERS
+<pre data-download="code/ch12/ncm.bas code/ch12/ncm.prg"><code>10 REM NYBBLE-COLOUR CHARACTERS
 20 SA=$50000 : CA=$FF82000 : GD=$40000 : W=80
 30 FOR Y=0 TO 7 : FOR X=0 TO 15
 40 U=(X-7.5)/8 : V=(Y-3.5)/4 : N=0 : IF U*U+V*V&lt;1 THEN N=1+INT(X*13/15)
@@ -866,7 +1094,7 @@ colour groups, then mixes it with text on one row:</p>
 140 A=A+2 : NEXT I : T$="AND TEXT" : GOSUB 300
 150 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
 160 TX=WPEEK($D04C) : HR=PEEK($D05D) : D1=PEEK($D031)
-170 CLRBIT $D05D,7 : POKE $D031,D1 AND $5F : WPOKE $D04C,80
+170 CLRBIT $D05D,7 : POKE $D031,D1 AND $5F : POKE $D04C,80
 180 SETBIT $D054,0 : WPOKE $D058,W : POKE $D05E,40
 190 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
 200 GETKEY K$
@@ -927,7 +1155,8 @@ nybble of the colour component is stored in the low four bits of the
 register, and the low nybble in the high four bits (<a
 href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
 Sanderson</a>). A red value of <code>$A5</code> is therefore written as
-<code>$5A</code>. Converting at the point of storage keeps source data
+<code>$5A</code>; the core's own register descriptions call this
+"reversed nybl order" (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>). Converting at the point of storage keeps source data
 readable:</p>
 <pre data-download="code/ch12/palette-registers.bas code/ch12/palette-registers.prg"><code>10 C=1 : R=255 : G=128 : B=0          : REM ENTRY 1 = ORANGE
 20 POKE $D100+C, ((R AND 15)&lt;&lt;4) OR (R&gt;&gt;4)
@@ -966,7 +1195,7 @@ registers edit (bits 7-6), which bank text and bitmap graphics use (bits
 1-0) that a character selects with the bold and reverse attributes.
 Text and bitplanes share a bank; sprites can use a different one, which
 allows more than 256 different colours on screen at once without
-changing the palette mid-frame (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>, September 2026).</p>
+changing the palette mid-frame (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
 <p>Development cores add BOLDISALT, bit 4 of <code>$D053</code>. When it
 is set, the bold attribute alone selects the alternate palette, without
 reverse, and bold no longer adds 16 to the colour. It is not in release
@@ -977,7 +1206,7 @@ bank in use, and the bank being edited, is bank 3 (MEGA65 ROM source,
 <code>system.src</code>). This program copies the first 32 entries of
 bank 3 into bank 2 as a photographic negative, makes bank 2 the
 alternate bank, and highlights some text with bold and reverse:</p>
-<pre><code>10 REM A NEGATIVE ALTERNATE PALETTE FOR BOLD + REVERSE TEXT
+<pre data-download="code/ch12/alt-palette.bas code/ch12/alt-palette.prg"><code>10 REM A NEGATIVE ALTERNATE PALETTE FOR BOLD + REVERSE TEXT
 20 P=PEEK($D070) : DIM R(31),G(31),B(31)
 30 FOR C=0 TO 31 : R(C)=PEEK($D100+C) : G(C)=PEEK($D200+C)
 40 B(C)=PEEK($D300+C) : NEXT C
@@ -1008,13 +1237,12 @@ the rest of the screen. Line 150 restores <code>$D070</code> when a key
 is pressed; bank 2 keeps its new colours, which nothing else uses.</p>
 <h3 id="palette-effects">Palette effects</h3>
 <p>Because the display reads the palette as it draws, changing an entry
-changes every pixel of that colour instantly. This makes some effects
-nearly free: fading a screen means adjusting a few dozen palette entries
-rather than rewriting graphics, and colour cycling, the classic
-technique for animating water, fire or conveyor belts, means rotating a
-range of entries each frame. Changing palette entries from a raster
-interrupt partway down the screen gives a different set of colours above
-and below the split.</p>
+changes every pixel of that colour instantly. Fading a screen means
+adjusting a few dozen palette entries rather than rewriting graphics,
+and changing entries from a raster interrupt partway down the screen
+gives a different set of colours above and below the split. Rotating a
+range of entries every frame is colour cycling, which has a program of
+its own in <a href="#colour-cycling">Colour cycling</a>.</p>
 <h2 id="sprites">Sprites</h2>
 <p>The VIC-IV keeps the VIC-II's eight hardware sprites and every one of
 their C64 registers, so <code>$D000-$D02E</code> sprite code works
@@ -1068,7 +1296,7 @@ pointer <code>$40100</code> ÷ 64 = <code>$1004</code> (<a href="https://github.
 <p>SPRPTR16 shares <code>$D06E</code> with bits 16 and up of the list's
 address, so one write sets both: <code>$84</code> puts the list in bank
 4 and turns on 16-bit pointers.</p>
-<h3 id="new-sprite-features">Sprite registers</h3>
+<h3 id="new-sprite-features"><span id="sprite-registers"></span>Sprite registers</h3>
 <p>The VIC-IV's sprite additions are controlled by these registers.
 Where a register has one bit per sprite, bit <em>n</em> is sprite
 <em>n</em>.</p>
@@ -1244,7 +1472,7 @@ height, while the X and Y expansion bits in <code>$D01D</code> and
 <p>This program draws a 16 by 32 pixel sprite in five colours, puts it
 in bank 4 where only a 16-bit pointer can reach it, and moves it across
 the screen until a key is pressed:</p>
-<pre><code>10 REM 16-COLOUR SPRITE WITH A 16-BIT POINTER
+<pre data-download="code/ch12/16-colour-sprite.bas code/ch12/16-colour-sprite.prg"><code>10 REM 16-COLOUR SPRITE WITH A 16-BIT POINTER
 20 PL=$40000 : SD=$40100 : H=32       : REM POINTER LIST, DATA, HEIGHT
 30 DIM CL(4) : FOR I=0 TO 4 : READ CL(I) : NEXT I
 40 DATA 1,7,8,10,2
@@ -1374,7 +1602,7 @@ invalid modes, and the VIC-IV draws them black, as the VIC-II did.</p>
 <p>This program draws a sine wave on a 640 by 200 hi-res bitmap at
 <code>$40000</code>, a size the VIC-II could not show, with its colours
 at <code>$44000</code>:</p>
-<pre><code>10 REM A 640 X 200 VIC-II-STYLE BITMAP IN BANK 4
+<pre data-download="code/ch12/80-column-bitmap.bas code/ch12/80-column-bitmap.prg"><code>10 REM A 640 X 200 VIC-II-STYLE BITMAP IN BANK 4
 20 BM=$40000 : SC=$44000
 30 EDMA 3,16000,0,BM : EDMA 3,2000,$16,SC : REM WHITE ON BLUE
 50 FOR X=0 TO 639 : Y=100-INT(90*SIN(X/50)) : GOSUB 200 : Y=100 : GOSUB 200 : NEXT X
@@ -1514,7 +1742,7 @@ bank.</p>
 does it directly, to show what the registers do. It fills four planes
 in banks 4 and 5 with diagonal bands of all 16 colours, shows them, and
 inverts plane 3 when a key is pressed:</p>
-<pre><code>10 REM 16-COLOUR BITPLANE SCREEN, SET UP BY HAND
+<pre data-download="code/ch12/bitplanes.bas code/ch12/bitplanes.prg"><code>10 REM 16-COLOUR BITPLANE SCREEN, SET UP BY HAND
 20 DIM A(3) : A(0)=$40000 : A(1)=$50000 : A(2)=$42000 : A(3)=$52000
 30 FOR R=0 TO 24 : FOR CX=0 TO 39
 40 C=(INT(CX/2)+R) AND 15 : O=R*320+CX*8
@@ -1559,8 +1787,24 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>viciv.vhdl</code>, <code>gs4510.vhdl</code>). With the program
 above running, this sets the top left 8 pixels of plane 0:</p>
 <pre><code>POKE $D03C,0 : POKE $D03D,0 : POKE $D040,255</code></pre>
-<p>Xemu does not emulate the translator, on the grounds that older cores
-did not have it, so try this on a real MEGA65.</p>
+<p>Xemu, as of October 2026, does not emulate the translator, so try
+this on a real MEGA65.</p>
+<p>On a 400-line screen, set INT, bit 0 of <code>$D031</code>, as well
+as V400. The display takes each plane's even-numbered lines from the
+block in bits 7-5 of the plane's register and its odd-numbered lines
+from bits 3-1, but the translator follows that split only when V400 and
+INT are both set. Then bit 0 of the line number picks the field and the
+rest of the line number counts lines within it, so each field is an
+ordinary 200-line plane, inside the translator's 8KB reach. With V400
+alone the translator treats every line as part of the bits 7-5 block,
+which does not match the display, and about halfway down the screen its
+offsets pass 8KB and wrap to the top of the block. INT also changes the
+video signal: the core sends interlaced frames, alternating the odd and
+even fields, instead of its usual progressive picture, and on the
+15&nbsp;kHz composite-sync output it does so whenever V400 is set (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, <code>gs4510.vhdl</code>,
+<code>pixel_driver.vhdl</code>).</p>
 <h3 id="memory">Memory</h3>
 <p>Each bitplane of a 320 by 200 screen takes 8,000 bytes, and memory
 grows with each step up in size or depth:</p>
@@ -1610,1196 +1854,6 @@ repeated tiles share one copy of their data, while bitplanes store every
 pixel individually. Bitplanes suit drawing programs, line graphics and
 images with no repetition; characters suit games, scrolling and user
 interfaces.</p>
-<h2 id="raster-techniques">Raster Techniques</h2>
-<p>Chapter 8 showed raster interrupts with the VIC-II registers. On the
-MEGA65 they power the same effects as on the C64, such as split screens,
-colour bars and sprite multiplexing, and at 40.5 MHz there is far more
-time to do work between interrupts. The VIC-IV also offers something the
-C64 never had: a way to draw characters on top of other characters, at
-any horizontal position, without using sprites.</p>
-<h3 id="the-raster-rewrite-buffer">The Raster Rewrite Buffer</h3>
-<p>The VIC-IV builds each line of the display in an internal buffer
-before sending it to the screen. The bytes of a row in screen and colour
-memory act as a list of drawing instructions: fetch this character,
-paint its pixels, move right by its width. Usually each instruction
-draws a character. A special instruction instead moves the drawing
-position, and because it can move backwards, later characters can be
-drawn over earlier ones. That buffer is called the Raster Rewrite
-Buffer, or RRB, and it is the basis of layered, parallax and many-object
-graphics on the MEGA65 (<a
-href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
-Sanderson</a>).</p>
-<h3 id="gotox">GOTOX</h3>
-<p>The position-moving instruction is called GOTOX. It occupies one
-character slot in SEAM, two bytes of screen memory and two of colour
-memory, and is marked by bit 4 of its first colour byte:</p>
-<table>
-<thead>
-<tr class="header">
-<th>Byte</th>
-<th>Bits</th>
-<th>Meaning in a GOTOX entry</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Colour byte 0</td>
-<td>4</td>
-<td>GOTOX flag: this entry is an instruction, not a character</td>
-</tr>
-<tr class="even">
-<td>Colour byte 0</td>
-<td>7</td>
-<td>Transparency: colour 0 in following characters does not overwrite
-the buffer</td>
-</tr>
-<tr class="odd">
-<td>Screen byte 0</td>
-<td>7-0</td>
-<td>New X position, bits 7-0, in pixels from the left border</td>
-</tr>
-<tr class="even">
-<td>Screen byte 1</td>
-<td>1-0</td>
-<td>New X position, bits 9-8</td>
-</tr>
-<tr class="odd">
-<td>Screen byte 1</td>
-<td>7-5</td>
-<td>Y offset of 0 to 7 pixels for the following characters, drawing each one that many rows higher</td>
-</tr>
-<tr class="even">
-<td>Screen byte 1</td>
-<td>4</td>
-<td>Subtract the Y offset instead, drawing the following characters lower (core 0.97 and later)</td>
-</tr>
-<tr class="odd">
-<td>Colour byte 0</td>
-<td>3</td>
-<td>ROWMASK: draw the following characters only on the pixel rows whose bits are set in colour byte 1</td>
-</tr>
-<tr class="even">
-<td>Colour byte 1</td>
-<td>7-0</td>
-<td>The row mask, one bit per pixel row, used when ROWMASK is set</td>
-</tr>
-<tr class="odd">
-<td>Colour byte 0</td>
-<td>6</td>
-<td>Treat the following characters as background, for sprite priority</td>
-</tr>
-<tr class="even">
-<td>Colour byte 0</td>
-<td>2</td>
-<td>Treat the following characters as foreground, for sprite priority</td>
-</tr>
-</tbody>
-</table>
-<p>To draw a soldier on a patch of flowers, a row contains three
-entries: the flower character, a GOTOX back to the flower's X position
-with transparency set, and the soldier character. The soldier's colour-0
-pixels let the flowers show through. Transparency stays on for the rest
-of the row, or until another GOTOX changes it (<a
-href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
-Sanderson</a>).</p>
-<p>The Y offset and the row mask together let an object move vertically
-by single pixels within a character row: offset its character, and mask
-off the rows that would otherwise spill into the row above or below. The
-offset, row mask and priority settings, like transparency, last for the
-rest of the row or until the next GOTOX (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>,
-release 0.97). On release 0.97 cores, a GOTOX with ROWMASK set whose row
-mask has bits 5 and 6 both set also switches the following characters to
-the alternate palette, as bold and reverse do; development cores fix
-this (<a href="https://github.com/MEGA65/mega65-core/pull/928">mega65-core PR #928</a>).</p>
-<h3 id="organising-layers">Organising layers</h3>
-<p>Three ways of arranging a row are common:</p>
-<ol type="1">
-<li><strong>Stacks per position.</strong> At each place on the row, draw
-every layer's character with a GOTOX between them. Compact, but changing
-one object means rebuilding the row.</li>
-<li><strong>Full layers.</strong> Draw a whole row of background, GOTOX
-to 0 with transparency, a whole row of the next layer, and so on. Simple
-to address, since every layer has a fixed offset, but sparse foreground
-layers waste memory on empty characters.</li>
-<li><strong>Background plus draw list.</strong> Draw the full
-background, then a list of GOTOX and character pairs for the objects on
-that row. Economical, at the cost of rebuilding each row's list when
-objects move.</li>
-</ol>
-<p>Whichever is used, the row must end with a GOTOX to the right border
-followed by a character, or the VIC-IV treats the last drawing position
-as the end of the line and leaves the rest of it blank (<a
-href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
-Sanderson</a>).</p>
-<h3 id="sizing-rows">Sizing rows</h3>
-<p>GOTOX entries use character slots, so CHRCOUNT must cover every
-character and every GOTOX in the busiest row, and LINESTEP must be at
-least twice CHRCOUNT in SEAM. Making LINESTEP a power of two, such as
-128 rather than the minimum 124, wastes a few bytes but makes row
-addresses quick to compute in machine language.</p>
-<h3 id="time-limits">Time limits</h3>
-<p>The VIC-IV has only so long to fill the buffer for each line. Its
-"double buffering", which prepares one line while drawing the previous
-one, should be left on by keeping NORRDEL, bit 7 of <code>$D051</code>,
-clear. At 200 lines, the time available can be doubled by setting V400,
-setting CHRYSCL at <code>$D05B</code> to 0, setting DBLRR, bit 6 of
-<code>$D051</code>, and moving TEXTYPOS at <code>$D04E</code> up by two
-pixels. In one test, twelve rows of 20 NCM characters handled 11 full
-layers before lines started to go missing (<a
-href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
-Sanderson</a>).</p>
-<p>The limits differ slightly between real hardware and the Xemu
-emulator, so test RRB-heavy code on both. Bit 5 of <code>$D60F</code>,
-REALHW, reads 1 on a real MEGA65 and 0 in Xemu, if a program needs to
-adjust.</p>
-<h3 id="the-cycle-budget">The cycle budget</h3>
-<p>The VIC-IV builds each line while the line before it is on the
-screen, clocked at 81 MHz, three times the 27 MHz rate at which pixels go
-to the display. A PAL line is 864 pixels long and an NTSC line 858, so
-there are about 2,590 cycles per line in PAL and 2,570 in NTSC to fetch
-and draw everything on the next line. When the characters are done, the
-sprite data for the line is fetched in the same time, so sprites take a
-share too. With DBLRR set, a line is built only every second raster
-line, which doubles the time (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>, <code>frame_generator.vhdl</code>,
-<code>pixel_driver.vhdl</code>).</p>
-<p>Drawing a character into the buffer takes one cycle per pixel, whether
-the pixel is transparent or not: 8 cycles for an ordinary or FCM
-character and 16 for a 16-pixel-wide NCM character. The VIC-IV draws one
-character while it fetches the next, so the total per character is not
-simply fetch plus draw (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>). Working estimates, worked out by MEGA65
-game developers, reviewed by the core's designer and checked against a
-game close to the limit, are:</p>
-<table>
-<thead>
-<tr class="header">
-<th>Entry</th>
-<th>Cycles (estimate)</th>
-<th>Per line, about</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Monochrome character</td>
-<td>11</td>
-<td>230</td>
-</tr>
-<tr class="even">
-<td>Multicolour character, single-width pixels</td>
-<td>12</td>
-<td>210</td>
-</tr>
-<tr class="odd">
-<td>FCM character</td>
-<td>18</td>
-<td>140</td>
-</tr>
-<tr class="even">
-<td>NCM character</td>
-<td>26</td>
-<td>98</td>
-</tr>
-<tr class="odd">
-<td>GOTOX</td>
-<td>2</td>
-<td>—</td>
-</tr>
-</tbody>
-</table>
-<p>The last column assumes about 2,550 cycles for the whole line (<a
-href="https://files.mega65.org/html/main.php?ar=647eb223-aa17-4c23-97d2-34917f808291">MEGA65
-Filehost, "RRB Time Calculations"</a>). The figures are for planning,
-not guarantees: add up the busiest row, leave a margin for sprites, and
-test. By this reckoning a 40-column row of FCM characters with a second
-full FCM layer and two GOTOX entries needs about 1,450 cycles and fits
-easily, while five full layers of 20 NCM characters need about 2,600 and
-do not fit without DBLRR.</p>
-<h3 id="running-out-of-time">Running out of time</h3>
-<p>By default the VIC-IV never abandons a line it has not finished. It
-carries on into the time meant for the next line, which then is not
-built properly, so lines go missing or are garbled, as in the test
-above. Setting NORRBWRAP, bit 3 of <code>$D07C</code>, makes the VIC-IV
-stop a late line when the next one is due to start, so only the
-unfinished part of that line is lost (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>).</p>
-<p>The same bit controls wrap-around. The drawing position is 10 bits
-wide, so normally drawing past position 1023 continues at 0, the first
-pixel of the text area. A GOTOX to 1024 − <em>n</em> therefore puts a
-character <em>n</em> pixels to the left of the first column, with only
-its right-hand part visible, which lets objects slide in from the left
-edge. With NORRBWRAP set, drawing stops at the end of the buffer instead
-(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>).</p>
-<h3 id="an-rrb-demo-in-basic">An RRB demo in BASIC</h3>
-<p>This program draws a checked pattern on a 40-column SEAM screen and
-moves three balls across it, each on its own row, using no sprites.
-Every row has 44 entries: 40 pattern characters, a GOTOX with
-transparency, the ball (or a space), a GOTOX to 320, the right edge in
-40-column mode, and one more character after it. So CHRCOUNT is 44 and
-LINESTEP 88.</p>
-<pre data-download="code/ch12/an-rrb-demo-in-basic.bas code/ch12/an-rrb-demo-in-basic.prg"><code>10 REM RRB DEMO: BALLS OVER A PATTERN
-20 SA=$50000 : CA=$FF82000 : W=88
-30 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
-40 TX=WPEEK($D04C) : HR=PEEK($D05D)
-50 FOR Y=0 TO 24 : A=Y*W
-60 FOR E=0 TO 39 : WPOKE SA+A+E*2,102 : WPOKE CA+A+E*2,$0B00 : NEXT
-70 WPOKE SA+A+80,0 : WPOKE CA+A+80,$0090 : REM GOTOX 0, TRANSPARENT
-80 WPOKE SA+A+82,32 : WPOKE CA+A+82,$0100 : REM OBJECT (A SPACE)
-90 WPOKE SA+A+84,320 : WPOKE CA+A+84,$0010 : REM GOTOX 320
-100 WPOKE SA+A+86,32 : WPOKE CA+A+86,$0100 : NEXT
-110 FOR Y=6 TO 18 STEP 6 : WPOKE SA+Y*W+82,81 : NEXT : REM BALLS
-120 CLRBIT $D05D,7 : CLRBIT $D031,7 : WPOKE $D04C,80
-130 SETBIT $D054,0 : WPOKE $D058,W : POKE $D05E,44
-140 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
-150 FOR X=0 TO 312
-160 WPOKE SA+6*W+80,X : WPOKE SA+12*W+80,312-X
-170 WPOKE SA+18*W+80,MOD(X*3,313) : SLEEP 0.02 : NEXT
-180 SETBIT $D031,7 : CLRBIT $D054,0
-190 FOR I=0 TO 13 : POKE $D058+I,R(I) : NEXT
-200 WPOKE $D04C,TX : POKE $D05D,HR</code></pre>
-<p>Lines 50 to 100 build the rows. Screen and colour words are written
-low byte first, so <code>$0090</code> puts <code>$90</code> in the first
-colour byte: the GOTOX flag (<code>$10</code>) and transparency
-(<code>$80</code>). <code>$0B00</code> leaves the first colour byte
-clear and puts colour 11, dark grey, in the second, and
-<code>$0100</code> makes the ball white. Screen code 102 is the checked
-character and 81 the ball. Lines 120 to 140 clear HOTREG, switch to 40
-columns, turn on SEAM and point SCRNPTR and COLPTR at the new screen and
-its colours, which are at offset <code>$2000</code> in colour RAM.</p>
-<p>Moving a ball needs one WPOKE: the X position in its row's first
-GOTOX, in 40-column pixels from 0 to 319. Because transparency is on,
-the pattern shows through the corners of the ball. Nothing is copied or
-erased as the balls move, which is what makes the RRB cheap for many
-objects. Lines 180 to 200 put the screen back, including HOTREG, so the
-program ends at an ordinary READY prompt.</p>
-<h3 id="smooth-scrolling">Smooth scrolling</h3>
-<p>The VIC-IV also scrolls more freely than the VIC-II. Coarse scrolling
-is a matter of changing SCRNPTR and COLPTR, which can point anywhere, so
-a map wider than the screen needs only a larger LINESTEP and a moving
-pointer. Fine scrolling uses the pixel-level text position registers,
-TEXTXPOS at <code>$D04C</code> and TEXTYPOS at <code>$D04E</code>,
-together with one extra character per row so the partly visible column
-at the edge is filled (<a
-href="https://retrocogs.mega65.com/2022/10/04/scrolling-the-vic-iv-screen/">Retrocogs</a>).</p>
-<p>This program draws a landscape 160 columns wide at
-<code>$50000</code>, with its colours at offset <code>$2000</code> in
-colour RAM, and scrolls the 80-column screen across it, two pixels a
-frame, until it reaches the end or a key is pressed:</p>
-<pre><code>10 REM SMOOTH SCROLLING OVER A 160-COLUMN MAP
-20 SA=$50000 : CO=$2000 : W=160
-30 EDMA 3,W*25,32,SA : EDMA 3,W*25,5,$FF80000+CO : REM SPACES, GREEN
-40 FOR X=0 TO W-1 : H=INT(9+6*SIN(X/8)+3*SIN(X/3))
-50 FOR Y=25-H TO 24 : POKE SA+Y*W+X,160 : NEXT Y
-60 IF MOD(X,10)=0 THEN POKE SA+X,48+MOD(X/10,10) : POKE $FF80000+CO+X,1
-70 NEXT X
-80 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT : T=PEEK($D04C)
-90 CLRBIT $D05D,7                     : REM HOTREG OFF
-100 WPOKE $D058,W : POKE $D05E,81      : REM LINESTEP, CHRCOUNT
-110 FOR P=0 TO (W-80)*8-1 STEP 2
-120 C=INT(P/8) : F=P AND 7
-130 VSYNC 255
-140 POKE $D04C,80-F                    : REM FINE: TEXTXPOS
-150 WPOKE $D060,C : POKE $D062,5       : REM COARSE: SCRNPTR
-160 WPOKE $D064,CO+C                   : REM AND COLPTR
-170 GET K$ : IF K$="" THEN NEXT P
-180 FOR I=0 TO 13 : POKE $D058+I,R(I) : NEXT : POKE $D04C,T
-190 SETBIT $D05D,7</code></pre>
-<p>P is the scroll position in pixels. Its whole characters, C, move
-SCRNPTR and COLPTR, and the pixels left over, F, move the text F pixels
-left of its usual start at 80 by lowering TEXTXPOS. The left side border
-covers whatever moves under it. CHRCOUNT is 81, one more than the screen
-shows, so the 81st character fills the gap that opens at the right as
-the text moves left, and LINESTEP is the map's width, 160, so each row
-of the screen is a window onto a row of the map. Only
-<code>$D04C</code> is written, not <code>$D04D</code>, whose upper bits
-belong to sprites.</p>
-<p>VSYNC 255 waits for a line below the text area on PAL and NTSC, so
-the registers change while nothing is being drawn and the screen never
-shows half of one position and half of the next. HOTREG is off
-throughout, as the registers it would recalculate are the ones the
-program is moving. Line 180 restores everything from
-<code>$D058</code> to <code>$D065</code>.</p>
-<p>Scrolling vertically works the same way with TEXTYPOS and one extra
-row: SCRNPTR and COLPTR move by LINESTEP bytes for each whole row.
-Parallax layers combine scrolling with the RRB: each layer is a section
-of the row whose GOTOX position is offset by a different amount.</p>
-<h2 id="rrb-objects">RRB Objects</h2>
-<p>The ball demo above is a software sprite in miniature: a shape drawn
-into the Raster Rewrite Buffer at any X position, over a background that
-is never disturbed. This section turns that idea into a small object
-library, first in BASIC and then in machine language, which moves
-multi-character full-colour objects freely in both directions. It ends
-with ways to scale an object's image.</p>
-<p>The programs in this section are on the chapter's disk image, <a
-href="code/ch12/ch12.d81">ch12.d81</a>, as RRB OBJECTS, RRB OBJECTS ML,
-RRB ZOOM and RRB SCALE, alongside the machine-language routine RRBOBJ,
-so the BLOAD in RRB OBJECTS ML finds it. The downloads for the listings
-that only add or change lines are the complete, merged programs. The
-BASIC text files suit reading and Xemu's <code>-importbas</code>
-option; the PRG files and the disk image run on a MEGA65 as they
-are.</p>
-<h3 id="hardware-sprites-or-rrb-objects">Hardware sprites or RRB
-objects</h3>
-<table>
-<thead>
-<tr class="header">
-<th></th>
-<th>Hardware sprites</th>
-<th>RRB objects</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Number</td>
-<td>Eight, or more with a raster-interrupt multiplexer</td>
-<td>As many as each row's cycle budget allows</td>
-</tr>
-<tr class="even">
-<td>Colours</td>
-<td>Up to 15 plus transparent, from a 16-entry palette group</td>
-<td>Up to 255 plus transparent in FCM, from the whole palette</td>
-</tr>
-<tr class="odd">
-<td>Size</td>
-<td>Up to 64 pixels wide, depending on mode</td>
-<td>Any number of characters</td>
-</tr>
-<tr class="even">
-<td>Image data</td>
-<td>Sprite pointers</td>
-<td>Glyph numbers in screen memory, so animation is a change of
-number</td>
-</tr>
-<tr class="odd">
-<td>Moving one</td>
-<td>Write its position registers</td>
-<td>Rewrite a few screen words on the rows it covers</td>
-</tr>
-<tr class="even">
-<td>Drawn over</td>
-<td>Everything, or behind the text layer</td>
-<td>Whatever came earlier in the row</td>
-</tr>
-</tbody>
-</table>
-<p>The two mix freely: hardware sprites are drawn after the RRB has
-built the line, so a player sprite can still move over a screen full of
-RRB objects.</p>
-<h3 id="planning-the-library">Planning the library</h3>
-<p>The library uses the "background plus draw list" arrangement from
-<a href="#organising-layers">Organising layers</a>, simplified so
-that each object owns a fixed slot in every row. A row of the 40-column
-SEAM screen has 54 entries:</p>
-<table>
-<thead>
-<tr class="header">
-<th>Entries</th>
-<th>Byte offset</th>
-<th>Contents</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>0-39</td>
-<td>0-79</td>
-<td>Background characters</td>
-</tr>
-<tr class="even">
-<td>40-42</td>
-<td>80-85</td>
-<td>Object 0: a GOTOX with transparency, then its left and right
-glyphs</td>
-</tr>
-<tr class="odd">
-<td>43-51</td>
-<td>86-103</td>
-<td>Objects 1 to 3, the same way</td>
-</tr>
-<tr class="even">
-<td>52-53</td>
-<td>104-107</td>
-<td>GOTOX 320 and one character, to end the row</td>
-</tr>
-</tbody>
-</table>
-<p>CHRCOUNT is therefore 54. The 108 bytes of a row are spaced 128
-apart, so LINESTEP is 128, which makes a row address a simple shift in
-machine language. On rows an object does not touch, its two glyphs are
-a blank, so the slot draws nothing. Later slots are drawn over earlier
-ones, so the slot order is the priority order.</p>
-<p>Every slot costs time on every row, used or not. By the estimates in
-<a href="#the-cycle-budget">The cycle budget</a>, a slot of one GOTOX
-and two FCM characters is about 38 cycles, and the 40 monochrome
-background characters about 440. Four objects bring a row to about 600
-cycles of the 2,550 available, so slots for about fifty objects of this
-size would fit before sprites need their share. Beyond a handful of
-objects, games build a short list for each row instead, holding only
-the objects that touch it.</p>
-<h3 id="storing-the-images">Storing the images</h3>
-<p>An object is 16 by 16 pixels: two strips, each one FCM character
-wide and two characters tall. The glyphs of a strip are stored one after
-the other, with a blank glyph before and after, so one image takes seven
-glyphs:</p>
-<pre><code>glyph   +0     +1      +2      +3     +4      +5      +6
-        blank  left    left    blank  right   right   blank
-               top     bottom         top     bottom</code></pre>
-<p>Because FCM glyphs are 64 bytes and each pixel row is 8 bytes,
-consecutive glyphs form one continuous strip 8 pixels wide: pixel
-(<em>x</em>, <em>y</em>) of a strip is at its first glyph's address +
-8<em>y</em> + <em>x</em>, across the boundary between glyphs. The
-blanks are what the vertical positioning below reads when it runs off
-either end of a strip. The library keeps two blank glyphs at
-<code>$40000</code> and <code>$40040</code> (glyph numbers
-<code>$1000</code> and <code>$1001</code>), uses <code>$1001</code> to
-switch a slot off, and puts the first image at glyph
-<code>$1002</code>, address <code>$40080</code>. FCLRHI is on, so the
-background's screen codes below 256 still come from the normal
-character set.</p>
-<h3 id="vertical-positioning">Vertical positioning</h3>
-<p>The Y offset in a GOTOX entry, screen byte 1 bits 7-5, moves the
-following characters up to 7 pixels; setting bit 4 as well moves them
-down instead (<a href="#gotox">GOTOX</a>). It works by changing which
-bytes of glyph data the VIC-IV fetches: it adds the offset to, or
-subtracts it from, the glyph's pixel-row address, so the rows it
-needs from beyond the glyph come from the glyph before or after it in
-memory. That is why the offset applies only to FCM and NCM characters,
-whose data is found by glyph number, and why the strips have blanks at
-each end (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>, October 2026).</p>
-<p>To put an object at pixel row <em>Y</em>, take character row
-<em>R</em> = INT(<em>Y</em>/8) and <em>D</em> = <em>Y</em> − 8<em>R</em>.
-The object covers rows <em>R</em>, <em>R</em>+1 and <em>R</em>+2. In
-row <em>R</em>+<em>J</em> its slot holds a GOTOX to the object's X
-position with a downward offset of <em>D</em>, then glyph
-<em>J</em> of each strip:</p>
-<ul>
-<li>Row <em>R</em> shows the blank on its first <em>D</em> pixel rows
-and the top <em>8 − D</em> rows of the top glyphs below that.</li>
-<li>Row <em>R</em>+1 shows the bottom <em>D</em> rows of the top glyphs,
-then the top of the bottom glyphs.</li>
-<li>Row <em>R</em>+2 shows the bottom of the bottom glyphs, then the
-blank.</li>
-</ul>
-<p>When <em>D</em> is 0 the third row is all blank, but writing it
-anyway keeps the code simple. The downward offset needs core 0.97 or
-later. On earlier cores, when <em>D</em> is not 0, the same result
-comes from the upward offset, 8 − <em>D</em>, with each row using the
-glyph before.</p>
-<p>The screen word of the GOTOX is then
-<em>X</em> + <code>$1000</code> + <em>D</em> × <code>$2000</code>: X
-in bits 9-0, the downward flag in bit 12 and the offset in bits 15-13.
-Its colour word stays <code>$0090</code>, GOTOX plus transparency.</p>
-<h3 id="objects-from-basic">Objects from BASIC</h3>
-<p>This program builds the screen, draws a ball into the image, and
-bounces four copies of it around over a checked background. The
-subroutine at line 1000 is the library: it blanks an object's slot in
-the rows it used last time and writes it into the rows it covers
-now.</p>
-<pre data-download="code/ch12/rrb-objects.bas code/ch12/rrb-objects.prg"><code>10 REM RRB OBJECTS: FOUR 16X16 FCM BALLS
-20 SA=$50000 : CA=$FF82000 : LS=128 : BL=$1001 : IM=$1002 : GA=IM*64
-30 DIM R(13),X(3),Y(3),DX(3),DY(3),OW(3),IG(3)
-40 FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
-50 TX=WPEEK($D04C) : HR=PEEK($D05D)
-60 EDMA 3,576,0,$40000 : REM CLEAR TWO BLANKS AND THE IMAGE
-70 FOR PY=0 TO 15 : FOR PX=0 TO 15 : C=0
-80 IF (PX-7.5)^2+(PY-7.5)^2&lt;56 THEN C=2 : IF (PX-5)^2+(PY-5)^2&lt;5 THEN C=1
-90 POKE GA+(1+INT(PX/8)*3)*64+PY*8+MOD(PX,8),C : NEXT : NEXT
-100 FOR Y=0 TO 24 : A=Y*LS
-110 FOR E=0 TO 39 : WPOKE SA+A+E*2,102 : WPOKE CA+A+E*2,$0B00 : NEXT
-120 FOR N=0 TO 3 : P=A+80+N*6
-130 WPOKE SA+P,0 : WPOKE CA+P,$0090 : REM GOTOX 0, TRANSPARENT
-140 WPOKE SA+P+2,BL : WPOKE SA+P+4,BL : WPOKE CA+P+2,0 : WPOKE CA+P+4,0 : NEXT
-150 WPOKE SA+A+104,320 : WPOKE CA+A+104,$0010 : REM GOTOX 320
-160 WPOKE SA+A+106,32 : WPOKE CA+A+106,$0100 : NEXT
-170 CLRBIT $D05D,7 : CLRBIT $D031,7 : WPOKE $D04C,80
-180 SETBIT $D054,0 : SETBIT $D054,2 : WPOKE $D058,LS : POKE $D05E,54
-190 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
-200 FOR N=0 TO 3 : X(N)=30+N*80 : Y(N)=10+N*40 : DX(N)=N+1 : DY(N)=4-N
-210 OW(N)=99 : IG(N)=IM : NEXT
-220 FOR T=1 TO 600
-230 FOR N=0 TO 3 : X(N)=X(N)+DX(N) : Y(N)=Y(N)+DY(N)
-240 IF X(N)&lt;0 OR X(N)&gt;304 THEN DX(N)=-DX(N) : X(N)=X(N)+2*DX(N)
-250 IF Y(N)&lt;0 OR Y(N)&gt;184 THEN DY(N)=-DY(N) : Y(N)=Y(N)+2*DY(N)
-260 GOSUB 1000 : NEXT
-270 SLEEP 0.02 : NEXT
-280 SETBIT $D031,7 : CLRBIT $D054,0 : CLRBIT $D054,2
-290 FOR I=0 TO 13 : POKE $D058+I,R(I) : NEXT
-300 WPOKE $D04C,TX : POKE $D05D,HR : END
-1000 REM DRAW OBJECT N AT X(N),Y(N)
-1010 P=80+N*6 : IF OW(N)=99 THEN 1040
-1020 FOR J=0 TO 2 : RW=OW(N)+J : IF RW&gt;=0 AND RW&lt;25 THEN A=SA+RW*LS+P : WPOKE A+2,BL : WPOKE A+4,BL
-1030 NEXT
-1040 RW=INT(Y(N)/8) : D=Y(N)-RW*8 : OW(N)=RW : XP=X(N) : IF XP&lt;0 THEN XP=XP+1024
-1050 G=XP+$1000+D*$2000 : REM GOTOX XP, CHARACTERS D PIXELS LOWER
-1060 FOR J=0 TO 2 : RW=OW(N)+J : IF RW&gt;=0 AND RW&lt;25 THEN A=SA+RW*LS+P : WPOKE A,G : WPOKE A+2,IG(N)+1+J : WPOKE A+4,IG(N)+4+J
-1070 NEXT : RETURN</code></pre>
-<p>Lines 70 to 90 draw the ball pixel by pixel into the two strips, in
-red (2) with a white (1) highlight; pixel value 0 is transparent. Lines
-100 to 160 build each row as in the table above. The glyph entries have
-a colour word of 0, since FCM pixels choose their own colours. Lines 170
-to 190 set up the screen as in the earlier demo, with FCLRHI added and
-54 entries per row. Lines 280 to 300 put everything back.</p>
-<p>The subroutine needs only X(N), Y(N) and IG(N), the image's first
-glyph. The array OW remembers the row each object was drawn at last,
-with 99 meaning never. Because each object has its own image number,
-animation is a matter of pointing IG(N) at another seven-glyph image
-before the next call.</p>
-<h3 id="clipping-at-the-edges">Clipping at the edges</h3>
-<p>The subroutine accepts X from −15 to 319 and Y from −15 to 199, and
-the hardware clips the rest. On the right, anything past pixel 319 is
-drawn under the border. On the left, a negative X becomes a GOTOX to
-1024 + <em>X</em>, which wraps round to the left edge (<a
-href="#running-out-of-time">Running out of time</a>); NORRBWRAP must be
-clear. At the top and bottom, rows outside 0-24 are simply not written,
-and the offset arithmetic still puts the visible part in the right
-place, because INT rounds a negative Y down.</p>
-<p>A character can also be made narrower. In an ordinary SEAM character
-entry, not a GOTOX, screen byte 1 bits 7-5 trim 0 to 7 pixels from its
-right-hand side, and for 16-pixel NCM characters bit 2 of colour byte 0
-supplies a fourth bit, for up to 15. An object whose width is not a
-multiple of 8 can end with a trimmed glyph, and the characters after it
-start where it ends (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>, October 2026).</p>
-<h3 id="the-update-in-machine-language">The update in machine
-language</h3>
-<p>The BASIC subroutine is clear but slow, and an object can be drawn
-half-moved if the raster passes while it runs. This routine does the
-same work for all four objects in a tiny fraction of a frame, using the same
-screen. It lives in the area BASIC leaves free at <code>$1600</code>
-(<a href="ch09-mixing-basic-with-machine-language.html">Chapter
-9</a>), with a table of object positions at the start, and uses the top
-of a private base page at <code>$1700</code> for its pointers.</p>
-<pre data-download="code/ch12/rrbobj.asm code/ch12/rrbobj.prg"><code>; RRB object update: four 16x16 FCM objects on the screen
-; at $50000 built by the BASIC program, 128 bytes per row
-        * = $1600
-objx    .word 0, 0, 0, 0        ; $1600: X, 0-319 or 1009-1023
-objimg  .word 0, 0, 0, 0        ; $1608: first glyph of each image
-objy    .byte 0, 0, 0, 0        ; $1610: Y, 0-199
-oldrow  .byte $ff, $ff, $ff, $ff ; $1614: row last drawn, $FF = none
-slot    .byte 80, 86, 92, 98    ; $1618: slot offset within a row
-
-ptr     = $f0           ; four-byte flat pointer, base page $17
-crow    = $f4
-count   = $f5
-gxlo    = $f6           ; GOTOX screen word
-gxhi    = $f7
-glo     = $f8           ; glyph of the left strip
-ghi     = $f9
-blank   = $1001         ; empty glyph, with another before it
-
-        * = $1620
-update  lda #$17
-        tab             ; private base page at $1700
-        ldx #3
-uloop   jsr clear       ; take object X off its old rows
-        jsr draw        ; and put it on its new ones
-        dex
-        bpl uloop
-        lda #$00
-        tab             ; base page 0 again for BASIC
-        ldz #$00
-        rts
-
-rowptr  sta crow        ; A = character row, X = object
-        lsr a
-        sta ptr+1       ; row * 128, high byte
-        lda #$00
-        ror a           ; row * 128, low byte: $00 or $80
-        ora slot,x      ; slot offsets are below 128: no carry
-        sta ptr
-        lda #$05
-        sta ptr+2       ; bank 5
-        lda #$00
-        sta ptr+3
-        lda #3
-        sta count       ; an object covers three rows
-        rts
-
-nextrow lda ptr         ; add 128 to the pointer
-        eor #$80
-        sta ptr
-        bmi samepg      ; bit 7 now set: no carry
-        inc ptr+1
-samepg  inc crow
-        rts
-
-clear   lda oldrow,x
-        cmp #$ff
-        beq cdone       ; never drawn
-        jsr rowptr
-cloop   lda crow
-        cmp #25
-        bcs cdone       ; below the last row
-        lda #&lt;blank
-        ldz #2
-        sta [ptr],z     ; left glyph, low byte
-        ldz #4
-        sta [ptr],z     ; right glyph, low byte
-        lda #&gt;blank
-        ldz #3
-        sta [ptr],z
-        ldz #5
-        sta [ptr],z
-        jsr nextrow
-        dec count
-        bne cloop
-cdone   rts
-
-draw    lda objy,x
-        lsr a
-        lsr a
-        lsr a           ; character row = Y / 8
-        sta oldrow,x
-        jsr rowptr
-        lda objy,x
-        asl a
-        asl a
-        asl a
-        asl a
-        asl a           ; Y AND 7 into bits 7-5
-        ora #$10        ; bit 4: move the characters down
-        sta gxhi
-        txa
-        asl a
-        tay             ; Y register = 2 * object, for word tables
-        lda objx+1,y
-        and #$03
-        ora gxhi        ; X bits 9-8 into bits 1-0
-        sta gxhi
-        lda objx,y
-        sta gxlo
-        lda objimg,y
-        sta glo
-        lda objimg+1,y
-        sta ghi
-        inw glo         ; skip the blank: left strip, top glyph
-dloop   lda crow
-        cmp #25
-        bcs ddone
-        ldz #0
-        lda gxlo
-        sta [ptr],z     ; GOTOX
-        inz
-        lda gxhi
-        sta [ptr],z
-        inz
-        lda glo
-        sta [ptr],z     ; left strip glyph
-        inz
-        lda ghi
-        sta [ptr],z
-        inz
-        clc
-        lda glo
-        adc #3
-        sta [ptr],z     ; right strip glyph, three glyphs on
-        inz
-        lda ghi
-        adc #0
-        sta [ptr],z
-        inw glo         ; next glyph down the strip
-        jsr nextrow
-        dec count
-        bne dloop
-ddone   rts</code></pre>
-<p>ROWPTR works out the flat address of an object's slot. With 128 bytes
-per row, the row number shifted right once is the high byte and the bit
-shifted out becomes bit 7 of the low byte, so no multiplication is
-needed. NEXTROW adds 128 the same way. DRAW builds the GOTOX word from
-the low three bits of Y and the ten bits of X, then writes the GOTOX and
-both glyph numbers for each of the three rows. Only screen memory
-changes; the colour words set up by BASIC never do. INW is used for the
-glyph number because it carries into the high byte.</p>
-<h3 id="calling-it-from-basic">Calling it from BASIC</h3>
-<p>Assemble the routine to a file called RRBOBJ (with 64tass, for
-example, <code>64tass --m45gs02 -a rrbobj.asm -o rrbobj.prg</code>),
-or use the ready-assembled <code>rrbobj.prg</code> download, and make three changes
-to the BASIC program. Line 15 loads the routine, line 215 fills in each
-object's image and marks it as never drawn, and lines 260 and 270
-replace the call to the BASIC subroutine with POKEs into the table and
-one SYS per frame:</p>
-<pre data-download="code/ch12/rrb-objects-ml.bas code/ch12/rrb-objects-ml.prg"><code>15 BLOAD &quot;RRBOBJ&quot;,B0,P5632
-215 FOR N=0 TO 3 : WPOKE $1608+N*2,IG(N) : POKE $1614+N,255 : NEXT
-260 WPOKE $1600+N*2,X(N) : POKE $1610+N,Y(N) : NEXT
-270 SYS $1620 : SLEEP 0.02 : NEXT</code></pre>
-<p>The machine-language version takes Y from 0 to 199 only; above that
-it would need the negative-row handling of the BASIC subroutine. For X,
-values from 1009 to 1023 put the object partly off the left edge. A
-game written entirely in machine language would call UPDATE from a
-raster interrupt below the last text row, so the screen never shows an
-object half-moved.</p>
-<h3 id="texture-scaling">Texture scaling</h3>
-<p>The VIC-IV has no scale setting for individual characters. In SEAM,
-the screen and colour bytes of a character select its glyph, flips,
-width trim, NCM and attributes, but nothing that changes its size (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>, October 2026). There are two ways round
-this: scale the whole display, or scale the image data.</p>
-<h4 id="scaling-the-whole-display">Scaling the whole display</h4>
-<p>CHRXSCL and CHRYSCL, described in <a
-href="#scaling-characters">Scaling characters</a>, stretch everything
-the RRB draws. GOTOX positions are pixels of the buffer, so they scale
-with it, and objects stay in place over the background as the scene
-zooms. Adding one line to the object program makes the whole scene
-grow to double width, from the left edge, every 60 frames:</p>
-<pre data-download="code/ch12/rrb-zoom.bas code/ch12/rrb-zoom.prg"><code>265 POKE $D05A,120-MOD(T,60)</code></pre>
-<p>Line 290 already restores CHRXSCL, because it is one of the
-registers saved from <code>$D058</code>. The VIC-IV applies CHRXSCL as
-it sends each line to the screen, so a raster interrupt can change it
-partway down to give different bands different widths, as in a
-perspective road or floor (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>). Check the result on a real MEGA65, for the
-reason given in <a href="#scaling-characters">Scaling
-characters</a>.</p>
-<h4 id="scaling-an-object-with-dma">Scaling an object with DMA</h4>
-<p>To change the size of one object, redraw its glyphs at the new size.
-DMAgic does this with fractional steps (<a
-href="ch08-ml-methods-specific-to-the-mega65.html#transparency-and-line-drawing">Chapter
-8</a>). Options <code>$82</code> and <code>$83</code> set the source
-step in 256ths of a byte and whole bytes, and DMAgic keeps the
-fraction as it goes, so a step of 2.0 reads every second byte and 0.5
-reads each byte twice. Options <code>$84</code> and <code>$85</code> do
-the same for the destination. Every option goes back to its default
-when the last job of a list finishes (<a
-href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>gs4510.vhdl</code>, October 2026).</p>
-<p>The strip layout makes this simple. A pixel column of a strip is a
-run of bytes 8 apart, so one DMA job with a destination step of 8 writes
-a whole column. If the source texture is stored column by column, each
-column a run of consecutive bytes, the source step is texture height ÷
-new height: one job scales one column vertically. Choosing which
-texture column feeds each new column scales it horizontally. This is
-how a raycasting game draws its walls. It works for FCM, where each
-byte is a pixel; NCM packs two pixels into a byte and would need a
-different layout.</p>
-<p>These lines add a 32 × 32 texture to the object program and
-redraw object 0 every frame at a size from 1 to 16 pixels, centred in
-its 16 × 16 image. Object 0 gets an image of its own at glyph
-<code>$1009</code>, straight after the ball's seven glyphs, so the
-other three balls are unchanged:</p>
-<pre data-download="code/ch12/rrb-scale.bas code/ch12/rrb-scale.prg"><code>212 IG(0)=IM+7 : GB=IG(0)*64 : S=16 : SS=-1 : GOSUB 400 : GOSUB 500
-266 S=S+SS : IF S&lt;2 OR S&gt;15 THEN SS=-SS
-267 GOSUB 500
-400 REM TEXTURE AND DMA LIST, ONCE
-410 FOR PX=0 TO 31 : FOR PY=0 TO 31 : C=0
-420 IF (PX-15.5)^2+(PY-15.5)^2&lt;240 THEN C=5+8*MOD(INT(PX/4)+INT(PY/4),2)
-430 POKE $42000+PX*32+PY,C : NEXT : NEXT
-440 FOR I=0 TO 18 : READ B : POKE $5F000+I,B : NEXT
-450 DATA 10,130,0,131,0,133,8,0,0,0,0,0,32,4,0,0,4,0,0
-460 RETURN
-500 REM SCALE THE TEXTURE INTO IMAGE IG(0) AT S X S PIXELS
-510 EDMA 3,448,0,GB : O=INT((16-S)/2) : V=INT(8192/S)
-520 POKE $5F002,MOD(V,256) : POKE $5F004,INT(V/256) : WPOKE $5F009,S
-530 FOR PX=0 TO S-1 : Q=PX+O
-540 WPOKE $5F00B,$2000+INT(PX*32/S)*32
-550 WPOKE $5F00E,GB-$40000+(1+INT(Q/8)*3)*64+O*8+MOD(Q,8)
-560 POKE $D702,5 : POKE $D704,0 : POKE $D701,$F0 : POKE $D705,0 : NEXT
-570 RETURN</code></pre>
-<p>Lines 410 to 430 draw a green chequered disc into the texture at
-<code>$42000</code>, one 32-byte column at a time. Lines 440 and 450
-place a DMA list in bank 5, at <code>$5F000</code>:</p>
-<table>
-<thead>
-<tr class="header">
-<th>Offset</th>
-<th>Bytes</th>
-<th>Meaning</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>0</td>
-<td><code>$0A</code></td>
-<td>F018A list format</td>
-</tr>
-<tr class="even">
-<td>1-4</td>
-<td><code>$82</code> <em>lo</em> <code>$83</code> <em>hi</em></td>
-<td>Source step, set by line 520</td>
-</tr>
-<tr class="odd">
-<td>5-6</td>
-<td><code>$85</code> <code>$08</code></td>
-<td>Destination step: 8 bytes, one pixel row</td>
-</tr>
-<tr class="even">
-<td>7</td>
-<td><code>$00</code></td>
-<td>End of options</td>
-</tr>
-<tr class="odd">
-<td>8</td>
-<td><code>$00</code></td>
-<td>Command: copy</td>
-</tr>
-<tr class="even">
-<td>9-10</td>
-<td>count</td>
-<td>New height, set by line 520</td>
-</tr>
-<tr class="odd">
-<td>11-13</td>
-<td>source</td>
-<td>Texture column, bank 4, set by line 540</td>
-</tr>
-<tr class="even">
-<td>14-16</td>
-<td>destination</td>
-<td>Image column, bank 4, set by line 550</td>
-</tr>
-<tr class="odd">
-<td>17-18</td>
-<td>modulo</td>
-<td>Unused</td>
-</tr>
-</tbody>
-</table>
-<p>Line 510 clears the image and works out the margin O and the source
-step V, which is 32 ÷ S in 256ths: 8192 ÷ S. Rounding V down keeps the
-last row read inside the column. Each pass of the loop picks a texture
-column, points the job at it and at one column of the image, and starts
-the job. Line 560 writes the list's bank before its megabyte and the
-low byte last, which starts it, as in <a
-href="ch08-ml-methods-specific-to-the-mega65.html#advanced-dma">Chapter
-8</a>.</p>
-<p>Shrinking needs no extra code, but enlarging does: an image bigger
-than the texture shows each texture pixel two or more times, and the
-object must have strips enough to hold it. Because the image is
-rewritten while it is on screen, object 0 may flicker. A program that
-minds keeps two images for the object, scales into the one not being
-shown, and then switches IG(0).</p>
-<h4 id="scaling-from-machine-language">Scaling from machine
-language</h4>
-<p>In machine language the list is the same, written with labels. This
-is one column scaled from 32 to 16 pixels, with a source step of exactly
-2:</p>
-<pre><code>column  .byte $0a       ; F018A format
-        .byte $82, $00  ; source step: 0/256 ...
-        .byte $83, $02  ; ... plus 2 whole bytes
-        .byte $85, $08  ; destination step: one pixel row
-        .byte $00       ; end of options
-        .byte $00       ; command: copy
-        .word 16        ; new height
-        .word $2000     ; texture column 0 at $42000
-        .byte $04
-        .word $00c0     ; left strip: image at $40080, + 64
-        .byte $04
-        .word $0000     ; modulo, unused
-
-        lda #$00
-        sta $d702       ; list in bank 0
-        sta $d704       ; megabyte 0, written after $D702
-        lda #&gt;column
-        sta $d701
-        lda #&lt;column
-        sta $d705       ; start the enhanced job</code></pre>
-<p>A routine that scales a whole object patches the count, source and
-destination for each column, or builds one chained job per column and
-starts them all with one trigger. In a chain, each job still begins
-with its own option list, even if that is only the <code>$00</code> that
-ends it, and the steps set by the first job carry over until the chain
-ends.</p>
-<h3 id="going-further">Going further</h3>
-<ul>
-<li><strong>More objects.</strong> Replace the fixed slots with a list
-per row, rebuilt each frame from the objects that touch that row, so
-rows without objects cost nothing extra.</li>
-<li><strong>Bigger objects.</strong> Add strips, and a row for each
-extra glyph of height. The arithmetic is unchanged: strip <em>s</em>,
-glyph <em>j</em> of an image whose strips are <em>h</em> glyphs tall is
-glyph 1 + <em>s</em>(<em>h</em> + 1) + <em>j</em>.</li>
-<li><strong>NCM objects.</strong> NCM glyphs are 16 pixels wide and use
-half the memory per pixel of FCM, and the Y offset works on them too.
-They cost more cycles per glyph (<a href="#the-cycle-budget">The cycle
-budget</a>).</li>
-<li><strong>Frame timing.</strong> Run the update from a raster
-interrupt, as in <a
-href="ch08-ml-methods-specific-to-the-mega65.html#raster-interrupts">Chapter
-8</a>, so that objects move once per frame and never tear.</li>
-</ul>
-<h2 id="animation">Animation</h2>
-<p>Animation is a sequence of frames, and everything on the MEGA65's
-display can change between one frame and the next: palette entries,
-character data, screen words, sprite pointers and positions, and the
-pointers that say where the screen is. The skill is in choosing the
-cheapest change that gives the effect. Rewriting pixels is the most
-expensive of these, and on the VIC-IV it is rarely needed.</p>
-<h3 id="one-change-per-frame">One change per frame</h3>
-<p>A PAL display shows 50 frames a second and an NTSC one 60. Changes
-should be made while the VIC-IV is not drawing the part of the screen
-they affect, which in practice means once a frame, in the lines below
-the text area. From BASIC, VSYNC waits for such a line; machine language
-uses a raster interrupt (Chapter 8). A change made while that area is
-being drawn shows half old and half new for one frame, which is called
-tearing.</p>
-<p>Movement looks smooth when it advances by the same amount every
-frame. Speeds that are not a whole number of pixels per frame are kept
-as fixed-point numbers: hold X in 1/256ths of a pixel as a 16-bit value,
-add the speed every frame, and draw at the high byte. A speed of 384
-(1.5 pixels) then moves 1, 2, 1, 2 pixels on successive frames, which
-the eye sees as an even 1.5. Because NTSC has 20% more frames a second,
-the same per-frame speeds run 20% faster there. A program that cares
-reads bit 7 of <code>$D06F</code>, which is set in NTSC mode, and scales
-its speeds (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
-<h3 id="what-to-change">What to change</h3>
-<table>
-<thead>
-<tr class="header">
-<th>Technique</th>
-<th>What changes</th>
-<th>Good for</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Colour cycling</td>
-<td>A few palette entries</td>
-<td>Water, fire, flowing light, fades; the whole screen at once</td>
-</tr>
-<tr class="even">
-<td>Character redefinition</td>
-<td>One glyph's data</td>
-<td>Every copy of a tile at once: waves, conveyor belts, blinking
-lights</td>
-</tr>
-<tr class="odd">
-<td>Glyph swapping</td>
-<td>One screen word per cell</td>
-<td>Animating one tile, or an <a href="#rrb-objects">RRB object</a>,
-by pointing at another image</td>
-</tr>
-<tr class="even">
-<td>Sprite frames</td>
-<td>One sprite pointer</td>
-<td>Walking, spinning and exploding sprites</td>
-</tr>
-<tr class="odd">
-<td>Movement</td>
-<td>Position registers or GOTOX words</td>
-<td>Sprites and RRB objects</td>
-</tr>
-<tr class="even">
-<td>Scrolling and page flipping</td>
-<td>SCRNPTR, COLPTR, TEXTXPOS and TEXTYPOS</td>
-<td>Moving the whole screen; showing a finished frame</td>
-</tr>
-<tr class="odd">
-<td>Redrawing</td>
-<td>Bitmap or bitplane pixels</td>
-<td>Line drawings, and anything with no repetition</td>
-</tr>
-</tbody>
-</table>
-<p>The first six cost a handful of register or memory writes per frame,
-whatever the size of the thing that changes. A sprite's frames, for
-example, are separate images in memory, and showing the next one is a
-single pointer write: with the 16-bit pointers of the <a
-href="#a-16-colour-sprite">16-colour sprite program</a>, where each
-256-byte image takes four 64-byte blocks, frame F of a sequence starting
-at pointer P is pointer P + 4 × F. Glyph swapping works the same way for
-FCM and NCM characters, whose screen words are image addresses ÷ 64.</p>
-<h3 id="colour-cycling">Colour cycling</h3>
-<p>This program fills the screen with diagonal bands in palette entries
-16 to 31, then rotates those 16 entries one place every frame, so the
-bands flow across the screen although screen memory never changes:</p>
-<pre><code>10 REM COLOUR CYCLING: A RAINBOW THAT FLOWS
-20 DIM R(15),G(15),B(15)
-30 FOR I=0 TO 15 : R(I)=PEEK($D110+I) : G(I)=PEEK($D210+I)
-40 B(I)=PEEK($D310+I) : NEXT I
-50 PRINT CHR$(147); : SC=$0800 : CR=$FF80000
-60 FOR Y=0 TO 24 : FOR X=0 TO 79 : A=Y*80+X
-70 POKE SC+A,160 : POKE CR+A,64+(INT((X+Y*2)/3) AND 15) : NEXT X,Y
-80 T=0
-90 VSYNC 255 : T=MOD(T+1,16)
-100 FOR I=0 TO 15 : J=(I+T) AND 15
-110 POKE $D110+I,R(J) : POKE $D210+I,G(J) : POKE $D310+I,B(J) : NEXT I
-120 GET K$ : IF K$="" THEN 90
-130 PALETTE RESTORE : PRINT CHR$(147);</code></pre>
-<p>Lines 20 to 40 keep a copy of the 16 entries. Line 70 puts a reverse
-space (screen code 160) in every cell, with the bold attribute, 64, so
-colour <em>c</em> shows entry 16 + <em>c</em>, the KERNAL's spectrum
-(see <a href="#attributes">Attributes</a>). Each frame, line 110 loads
-entry 16 + I with the colour that started at entry 16 + (I + T) AND 15.
-That is 48 palette writes a frame for a picture of 2,000 cells. PALETTE
-RESTORE puts the system colours back at the end.</p>
-<h3 id="double-buffering">Double buffering</h3>
-<p>When a frame has to be drawn rather than adjusted, drawing it on the
-visible screen lets the viewer see it half-finished. Double buffering
-draws each frame in a second screen that is not being shown, then
-switches SCRNPTR to it during the vertical blank, and draws the next
-frame in the one that was showing before. The switch is three register
-writes, so it always completes in time, however long the drawing
-took.</p>
-<pre><code>10 REM DOUBLE BUFFERING: DRAW OUT OF SIGHT, THEN SWITCH
-20 D=1 : B=0 : X=0 : Y=0 : DX=1 : DY=1
-30 EDMA 3,2000,1,$FF80000              : REM WHITE TEXT COLOUR
-40 HR=PEEK($D05D) : P0=WPEEK($D060) : P2=PEEK($D062)
-50 CLRBIT $D05D,7
-60 O=0 : IF D THEN O=B*2048             : REM BUFFER TO DRAW IN
-70 A=$50000+O : EDMA 3,2000,32,A        : REM CLEAR IT
-80 FOR R=0 TO 7 : EDMA 3,16,160,A+(Y+R)*80+X : NEXT R
-90 VSYNC 255 : WPOKE $D060,O : POKE $D062,5 : REM SHOW IT
-100 IF D THEN B=1-B
-110 X=X+DX : IF X=0 OR X=64 THEN DX=-DX
-120 Y=Y+DY : IF Y=0 OR Y=17 THEN DY=-DY
-130 GET K$ : IF K$=" " THEN D=1-D
-140 IF K$="" OR K$=" " THEN 60
-150 WPOKE $D060,P0 : POKE $D062,P2 : POKE $D05D,HR : PRINT CHR$(147);</code></pre>
-<p>The two screens are at <code>$50000</code> and <code>$50800</code>,
-2,048 bytes apart. Each frame, lines 70 and 80 clear the hidden one and
-draw a 16 × 8 block of reverse spaces in it, and line 90 waits for the
-bottom border and shows it. Both screens share the editor's colour RAM,
-which line 30 sets to white. Pressing the space bar toggles D, and with
-D at 0 the program clears and draws the screen it is showing. The block
-then flickers, or appears torn, whenever the display reaches it between
-the clear and the redraw. Any other key ends the program.</p>
-<p>The cost of double buffering is the memory for a second screen; on
-the MEGA65 that is rarely a problem. The same technique works for
-bitmaps and bitplanes by switching CHARPTR or the plane addresses
-instead.</p>
-<h2 id="perception">Perception</h2>
-<p>The display is only half of the system; the other half is the
-viewer's eye and brain. Several of the techniques in this chapter work
-because of how people see, and knowing why helps in choosing between
-them.</p>
-<h3 id="seeing-motion">Seeing motion</h3>
-<p>A sequence of still frames looks like continuous motion because the
-brain fills in the movement between them. It does this best when the
-steps are regular. An object that moves 2 pixels every frame looks
-smoother than one that moves 4 pixels every other frame, although both
-cover the same distance, and an occasional missed frame shows as a
-visible jerk even at 50 frames a second. That is why the timing advice
-in <a href="#one-change-per-frame">One change per frame</a> matters more
-than raw speed: a game that always finishes its work within a frame
-looks better than a faster one that sometimes does not.</p>
-<p>The same filling-in makes colour cycling work. When the colour of
-each band shifts one place along every frame, the eye sees bands moving,
-although every cell on the screen stays where it is.</p>
-<h3 id="brightness-first">Brightness first</h3>
-<p>The eye resolves fine detail in brightness much better than in
-colour. Text and outlines are readable when they differ in brightness
-from what is behind them, and can be hard to read when they differ only
-in hue, such as red on green of similar brightness. The usual measure
-of brightness for display colours is luma, from ITU-R BT.601:</p>
-<pre><code>Y = 0.299 R + 0.587 G + 0.114 B</code></pre>
-<p>Green counts for most of it and blue very little, so pure blue (luma
-29) is much darker than pure green (150), and yellow (226) is almost as
-bright as white. Sorting a palette by luma is the first step in
-building shading ramps for sprites and FCM tiles: each step of the ramp
-should be brighter than the last, whatever its hue.</p>
-<h3 id="light-is-not-linear">Light is not linear</h3>
-<p>The values in the palette registers do not give proportional amounts
-of light. Every display follows a gamma curve, in which light rises
-more steeply than the value. On a modern monitor calibrated to the sRGB
-standard (IEC 61966-2-1), a value of 128 out of 255 gives only about 22%
-of the light of 255, and about 186 is needed for half. Televisions use
-steeper curves: about 192 gives half on a modern set following ITU-R
-BT.1886, and about 200 on the PAL televisions of the C64's day, whose
-nominal gamma was 2.8. The exact figure depends on the display; the
-shape of the curve does not. Two things follow:</p>
-<ul>
-<li><strong>Fades and shading ramps</strong> can step the palette
-values by equal amounts. The gamma curve is close to the way the eye
-judges brightness, so equal steps in value look roughly even. Equal
-steps in light would not: they would seem to stay bright and then drop
-away near the end.</li>
-<li><strong>Mixing</strong> two colours in the eye, as in the next
-section, gives the average of their light, not of their values.</li>
-</ul>
-<h3 id="mixing-colours">Mixing colours</h3>
-<p>Two colours can be made to look like a third in two ways. Spatial
-mixing, or dithering, puts them in alternate pixels, close enough that
-the eye merges them; at 640 pixels across the pixels are fine enough to
-merge at a normal viewing distance. Temporal mixing alternates them on
-the same pixels in alternate frames. With 256 palette entries chosen
-from 16 million colours, the MEGA65 seldom needs either for its own
-sake, but they matter in the modes with few colours per cell: VIC-II
-bitmaps, NCM characters and 16-colour sprites.</p>
-<p>This is not the colour blending that C64 programmers relied on. A
-PAL composite signal carries too little colour detail to keep adjacent
-pixels apart, and a PAL television averages the colour of neighbouring
-lines, so on a C64 two colours were mixed before the picture ever left
-the screen, and tricks such as alternating lines of two colours made a
-third. The MEGA65's HDMI and VGA outputs are digital and analogue RGB,
-which keep every pixel separate, so on the MEGA65 the mixing happens
-only in the eye.</p>
-<p>This program shows four bands on a 640 × 200 bitmap (see <a
-href="#an-80-column-bitmap">An 80-column bitmap</a>). The first is a
-checkerboard of red and yellow pixels. The second alternates between red
-and yellow every frame. The third is a solid orange with a green value
-of 128, the average of the two colours' values, and the fourth a solid
-orange with a green value of 186, the average of their light:</p>
-<pre><code>10 REM THREE WAYS TO MIX RED AND YELLOW
-20 BM=$40000 : SC=$44000
-30 EDMA 3,16000,0,BM : EDMA 3,2000,0,SC        : REM ALL BLACK
-40 FOR R=2 TO 5 : FOR Y=0 TO 7 : V=$AA : IF Y AND 1 THEN V=$55
-50 FOR C=10 TO 69 : POKE BM+R*640+C*8+Y,V : NEXT C,Y
-60 EDMA 3,60,$27,SC+R*80+10 : NEXT R            : REM DITHER
-70 FOR R=8 TO 11 : EDMA 3,60,$FF,SC+R*80+10 : NEXT : REM FLICKER
-80 FOR R=14 TO 17 : EDMA 3,60,$EE,SC+R*80+10 : NEXT : REM VALUE 128
-90 FOR R=20 TO 23 : EDMA 3,60,$DD,SC+R*80+10 : NEXT : REM VALUE 186
-100 POKE $D10D,$FF,$FF,$FF : POKE $D20D,$AB,$08,$00 : POKE $D30D,0,0,0
-110 HR=PEEK($D05D) : D1=PEEK($D011) : DIM P(13)
-120 FOR I=0 TO 13 : P(I)=PEEK($D058+I) : NEXT
-130 C0=PEEK($D068) : C1=PEEK($D069) : C2=PEEK($D06A)
-140 CLRBIT $D05D,7 : POKE $D068,0,0,4 : WPOKE $D060,$4000 : POKE $D062,4
-150 SETBIT $D011,5
-160 POKE $D10F,$FF : G=0                        : REM ENTRY 15: RED
-170 VSYNC 255 : G=255-G : POKE $D20F,G          : REM RED, THEN YELLOW
-180 GET K$ : IF K$="" THEN 170
-190 POKE $D011,D1 : FOR I=0 TO 13 : POKE $D058+I,P(I) : NEXT
-200 POKE $D068,C0,C1,C2 : POKE $D05D,HR : PALETTE RESTORE</code></pre>
-<p>Line 40 makes each cell's bitmap a checkerboard, <code>$AA</code> and
-<code>$55</code> on alternate lines, and line 60 colours those cells
-red on yellow, <code>$27</code>. The other bands have an empty bitmap and
-take their colour from the background nybble: entry 15 for the flicker
-band, and entries 14 and 13, which line 100 sets to the two oranges.
-The green values are written nybble-swapped, <code>$08</code> for 128
-and <code>$AB</code> for 186. Line 170 switches entry 15's green between
-0 and 255 every frame, which turns it from red to yellow and back.</p>
-<p>On a display that shows each pixel unchanged, the checkerboard
-looks closer to the fourth band than to the third, as the gamma curve
-predicts. Most displays do not show the MEGA65's 720 × 576 picture
-unchanged, though: a monitor or television scales it to its own
-resolution, and so does the MEGA65's optional 720p upscaler (UPSCALE,
-bit 5 of <code>$D053</code>). Scalers usually average the stored values
-of neighbouring pixels rather than their light, which pulls a fine
-checkerboard towards the third band, so compare the bands on your own
-display (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>).</p>
-<p>The flickering band
-shows the weakness of temporal mixing on a 50 Hz display: each colour
-appears 25 times a second, and the eye notices flicker at that rate,
-most of all when the two colours differ in brightness, as red and yellow
-do. It works better for two colours of similar luma, where only the hue
-alternates. Any key restores the screen and the palette.</p>
-<h3 id="where-the-eye-goes">Where the eye goes</h3>
-<p>Attention goes first to movement, then to the strongest contrast,
-and the eye sees fine detail only near the point it is looking at. A
-game can spend its colours and its raster time where the player is
-looking: the player's sprite, the objects near it, and the score when it
-changes. Static backgrounds, borders and status lines can be simpler and
-darker without the viewer noticing. Scrolling layers at different
-speeds, as in the parallax described in <a
-href="#smooth-scrolling">Smooth scrolling</a>, gives a strong sense of
-depth for the same reason: the brain reads the slower layer as further
-away.</p>
-<p>Finally, the MEGA65 can imitate the look of the CRTs that 8-bit
-graphics were designed for. PALEMU, bit 5 of <code>$D054</code>, makes every
-second physical line much darker, like the scan lines of a PAL
-television, and dims alternate pixel columns slightly, like a CRT's
-mask. It is ignored with H1280, and with V400 except where a line is
-drawn twice. Separately, SMTH, bit 3 of <code>$D054</code>, smooths the
-picture horizontally with a running average of three pixels, softening
-hard pixel edges (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
-<code>viciv.vhdl</code>, <code>pal_simulation.vhdl</code>).</p>
 <h2 id="plotting-pixels-and-drawing-lines">Plotting Pixels and Drawing
 Lines</h2>
 <p>On bitplane screens opened by BASIC 65, DOT plots a pixel and LINE
@@ -2812,7 +1866,15 @@ address from scratch, using the hardware multiplier from Chapter 5 for
 the row and the Q register from Chapter 7 for the 32-bit sum, then
 writes through a flat <code>[ptr],Z</code> pointer so the bitmap can be
 anywhere in memory. A faster version would precompute a table of row
-addresses.</p>
+addresses. The listings use the official mnemonic ADCQ, which 64tass
+writes as <code>adq</code> (Chapter 7).</p>
+<p>A "quilt" is a SEAM screen whose screen memory is filled row by row
+with ascending character values, as in Dan Sanderson's full-screen FCM
+example, so that the character data forms a bitmap in cell order (<a
+href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
+Sanderson</a>). For FCM or NCM data at <code>$40000</code>, the screen
+values run from <code>$1000</code> upward; for a monochrome quilt, they
+run upward from the character at CHARPTR.</p>
 <h3 id="address-formulas">Address formulas</h3>
 <p>All of these modes store the screen in 8-line cell rows, so each
 formula has the same shape: a cell-row offset, plus an offset within the
@@ -2865,23 +1927,14 @@ FCM:      (y/8)*rowbytes + (x/8)*64 + (y AND 7)*8 + (x AND 7)
 
 NCM:      (y/8)*rowbytes + (x/16)*64 + (y AND 7)*8 + (x AND 15)/2
           low nybble for even x, high nybble for odd x</code></pre>
-<p>Bitplanes use the same cell order as the C64 bitmap: the address of a
-320-wide bitplane byte is
-<code>INT(Y/8)*320 + (Y AND 7) + INT(X/8)*8</code> plus the plane's
-start (<a
+<p>Bitplanes use the same cell order as the C64 bitmap, so the 1-bit
+formula gives the offset of a byte within each plane (<a
 href="https://c65gs.blogspot.com/2017/12/preparin-to-implement-vic-iii-dat.html">MEGA65
 blog</a>). At 640 wide, rowbytes doubles. In the 400-line modes, lines
 alternate between the two address fields of each plane (<a
 href="#bitplanes">Bitplanes</a>), so line Y is line INT(Y/2) of one
 200-line half: plot it with that line number and with bmbase set to
 whichever half holds the lines with Y's parity.</p>
-<p>A "quilt" is a SEAM screen whose screen memory is filled row by row
-with ascending character values, as in Dan Sanderson's full-screen FCM
-example, so that the character data forms a bitmap in cell order (<a
-href="https://dansanderson.com/mega65/every-pixel-a-color/">Dan
-Sanderson</a>). For FCM or NCM data at <code>$40000</code>, the screen
-values run from <code>$1000</code> upward; for a monochrome quilt, they
-run upward from the character at CHARPTR.</p>
 <h3 id="shared-variables-and-row-address">Shared variables and row
 address</h3>
 <p>The routines share these variables. <code>ptr</code> and the line
@@ -2935,6 +1988,16 @@ base page, as in Chapter 9, avoids conflicts with the KERNAL.</p>
 <td>tmp</td>
 <td>1</td>
 <td>Scratch</td>
+</tr>
+<tr class="odd">
+<td>cbits</td>
+<td>1</td>
+<td>plotbp only: the colour bits not yet plotted</td>
+</tr>
+<tr class="even">
+<td>plane</td>
+<td>1</td>
+<td>plotbp only: the number of the plane being plotted</td>
 </tr>
 </tbody>
 </table>
@@ -2996,10 +2059,12 @@ clr1    lda bit1,x
 
 bit1    .byte $80, $40, $20, $10, $08, $04, $02, $01</code></pre>
 <p>For a bitplane screen, plot once per plane, passing each bit of the
-colour in turn and each plane's address as bmbase:</p>
+colour in turn and each plane's address as bmbase. The constant nplanes
+is the number of planes, and planes is a table of their addresses:</p>
 <pre><code>; plotbp: plot colour in pcol on nplanes bitplanes
 ; planes: table of 4-byte plane addresses
 plotbp  lda pcol
+        pha             ; keep the colour for the caller
         sta cbits
         lda #0
         sta plane
@@ -3021,11 +2086,14 @@ copy    lda planes,y
         lsr cbits
         inc plane
         lda plane
-        cmp #nplanes
+                cmp #nplanes
         bne bploop
+        pla
+        sta pcol        ; the colour, as it was on entry
         rts</code></pre>
-<p>plotbp uses pcol as working space, so reload pcol before each
-call.</p>
+<p>plotbp uses pcol as working space for plot1, and puts the colour
+back before it returns, so the line routine below can call it through
+plotvec in the same way as the other plot routines.</p>
 <h3 id="2-bits-per-pixel-multicolour-bitmap">2 bits per pixel:
 multicolour bitmap</h3>
 <p>Multicolour pixels are twice as wide, so x runs from 0 to 159 and
@@ -3294,6 +2362,1212 @@ why the line variables live in the base page.</p>
 a caller must not expect any register to survive. They also leave the
 hardware multiplier holding their last result, which matters only to
 code that uses the multiplier itself from an interrupt.</p>
+<h2 id="raster-techniques">The Raster Rewrite Buffer</h2>
+<p>Raster interrupts, shown in <a
+href="ch08-ml-methods-specific-to-the-mega65.html#raster-interrupts">Chapter
+8</a>, power the same effects on the MEGA65 as on the C64, such as split
+screens, colour bars and sprite multiplexing, and at 40.5 MHz (<a
+href="ch05-mega65-architecture.html#speed">Chapter 5</a>) there is far
+more time to do work between them. This section is about something the
+C64 never had: a way to draw characters on top of other characters, at
+any horizontal position, without using sprites.</p>
+<h3 id="the-raster-rewrite-buffer">How the buffer works</h3>
+<p>The VIC-IV builds each line of the display in an internal buffer
+before sending it to the screen. The bytes of a row in screen and colour
+memory act as a list of drawing instructions: fetch this character,
+paint its pixels, move right by its width. Usually each instruction
+draws a character. A special instruction instead moves the drawing
+position, and because it can move backwards, later characters can be
+drawn over earlier ones. That buffer is called the Raster Rewrite
+Buffer, or RRB, and it is the basis of layered, parallax and many-object
+graphics on the MEGA65 (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<h3 id="gotox">GOTOX</h3>
+<p>The position-moving instruction is called GOTOX. It occupies one
+character slot in SEAM, two bytes of screen memory and two of colour
+memory, and is marked by bit 4 of its first colour byte. Figure 12.3
+shows the same bits beside those of a character entry:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Byte</th>
+<th>Bits</th>
+<th>Meaning in a GOTOX entry</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Screen byte 0</td>
+<td>7-0</td>
+<td>New X position, bits 7-0, in pixels from the first pixel of the text area</td>
+</tr>
+<tr class="even">
+<td>Screen byte 1</td>
+<td>7-5</td>
+<td>Y offset of 0 to 7 pixel rows for the following FCM and NCM characters, which shows each one that many rows higher</td>
+</tr>
+<tr class="odd">
+<td>Screen byte 1</td>
+<td>4</td>
+<td>Subtract the Y offset instead, showing the following characters lower (core 0.97 and later)</td>
+</tr>
+<tr class="even">
+<td>Screen byte 1</td>
+<td>1-0</td>
+<td>New X position, bits 9-8</td>
+</tr>
+<tr class="odd">
+<td>Colour byte 0</td>
+<td>7</td>
+<td>Transparency: colour 0 in following characters does not overwrite the buffer</td>
+</tr>
+<tr class="even">
+<td>Colour byte 0</td>
+<td>6</td>
+<td>Treat the following characters as background, for sprite priority</td>
+</tr>
+<tr class="odd">
+<td>Colour byte 0</td>
+<td>4</td>
+<td>GOTOX flag: this entry is an instruction, not a character</td>
+</tr>
+<tr class="even">
+<td>Colour byte 0</td>
+<td>3</td>
+<td>ROWMASK: draw the following characters only on the pixel rows whose bits are set in colour byte 1</td>
+</tr>
+<tr class="odd">
+<td>Colour byte 0</td>
+<td>2</td>
+<td>Treat the following characters as foreground, for sprite priority</td>
+</tr>
+<tr class="even">
+<td>Colour byte 1</td>
+<td>7-0</td>
+<td>The row mask, one bit per pixel row, used when ROWMASK is set</td>
+</tr>
+</tbody>
+</table>
+<p>To draw a soldier on a patch of flowers, a row contains three
+entries: the flower character, a GOTOX back to the flower's X position
+with transparency set, and the soldier character. The soldier's colour-0
+pixels let the flowers show through. Transparency stays on for the rest
+of the row, or until another GOTOX changes it (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<p>The Y offset does not move anything on the screen. It changes which
+bytes of glyph data the VIC-IV fetches: the offset is added to the
+address of the pixel row being fetched, or subtracted from it when bit 4
+is set. The characters stay in their own character row and show their
+data shifted up or down by 0 to 7 pixel rows, and the rows that would
+come from beyond the glyph are taken from the glyph after or before it
+in memory. Only FCM and NCM characters, whose data is found by glyph
+number, are affected. An object can therefore be placed vertically to
+the pixel if its glyphs are stored one after another with a blank glyph
+at each end, as <a href="#vertical-positioning">Vertical positioning</a>
+shows.</p>
+<p>The row mask blanks pixel rows of the character row itself: with
+ROWMASK set, the following characters are drawn only on the rows whose
+mask bits are set. It can hide the rows where a neighbouring glyph's
+data would otherwise show, when there is no blank glyph to do that, or
+cut an object off at a horizontal edge. The offset, row mask and
+priority settings, like transparency, last for the rest of the row or
+until the next GOTOX (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>). On release 0.97 cores, a GOTOX with ROWMASK set whose row
+mask has bits 5 and 6 both set also switches the following characters to
+the alternate palette, as bold and reverse do; development cores fix
+this (<a href="https://github.com/MEGA65/mega65-core/pull/928">mega65-core PR #928</a>).</p>
+<h3 id="organising-layers">Organising layers</h3>
+<p>Three ways of arranging a row are common:</p>
+<ol type="1">
+<li><strong>Stacks per position.</strong> At each place on the row, draw
+every layer's character with a GOTOX between them. Compact, but changing
+one object means rebuilding the row.</li>
+<li><strong>Full layers.</strong> Draw a whole row of background, GOTOX
+to 0 with transparency, a whole row of the next layer, and so on. Simple
+to address, since every layer has a fixed offset, but sparse foreground
+layers waste memory on empty characters.</li>
+<li><strong>Background plus draw list.</strong> Draw the full
+background, then a list of GOTOX and character pairs for the objects on
+that row. Economical, at the cost of rebuilding each row's list when
+objects move.</li>
+</ol>
+<p>Whichever is used, the row must end with a GOTOX to the right border
+followed by a character, or the VIC-IV treats the last drawing position
+as the end of the line and leaves the rest of it blank (<a
+href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan
+Sanderson</a>).</p>
+<h3 id="sizing-rows">Sizing rows</h3>
+<p>GOTOX entries use character slots, so CHRCOUNT must cover every
+character and every GOTOX in the busiest row, and LINESTEP must be at
+least twice CHRCOUNT in SEAM. Making LINESTEP a power of two, such as
+128 where 108 would do, as the object library later in this chapter
+does, wastes a few bytes but makes row addresses quick to compute in
+machine language.</p>
+<h3 id="the-cycle-budget">Time limits and the cycle budget</h3>
+
+
+<p><span id="time-limits"></span>The VIC-IV builds each line while the line before it is on the
+screen, clocked at 81 MHz, three times the 27 MHz rate at which pixels go
+to the display. A PAL line is 864 pixels long and an NTSC line 858, so
+there are about 2,590 cycles per line in PAL and 2,570 in NTSC to fetch
+and draw everything on the next line. When the characters are done, the
+sprite data for the line is fetched in the same time, so sprites take a
+share too (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>, <code>frame_generator.vhdl</code>,
+<code>pixel_driver.vhdl</code>).</p>
+<p>Two bits of <code>$D051</code> control this. Preparing one line
+while the previous one is displayed is what the core's register
+description calls raster rewrite double buffering. It is on while
+NORRDEL, bit 7, is clear, and should be left on; it is not the
+two-screen technique of <a href="#double-buffering">Page flipping</a>.
+DBLRR, bit 6, builds a line only every second raster line, which
+doubles the time and limits the display to 200 lines. To use it on a
+200-line screen, set V400, set CHRYSCL at <code>$D05B</code> to 0, set
+DBLRR, and move TEXTYPOS at <code>$D04E</code> up by two pixels
+(<a href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan Sanderson</a>; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
+<p>Drawing a character into the buffer takes one cycle per pixel, whether
+the pixel is transparent or not: 8 cycles for an ordinary or FCM
+character and 16 for a 16-pixel-wide NCM character. The VIC-IV draws one
+character while it fetches the next, so the total per character is not
+simply fetch plus draw (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>). Working estimates, worked out by MEGA65
+game developers, reviewed by the core's designer and checked against a
+game close to the limit, are:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Entry</th>
+<th>Cycles (estimate)</th>
+<th>Per line, about</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Monochrome character</td>
+<td>11</td>
+<td>230</td>
+</tr>
+<tr class="even">
+<td>Multicolour character, single-width pixels</td>
+<td>12</td>
+<td>210</td>
+</tr>
+<tr class="odd">
+<td>FCM character</td>
+<td>18</td>
+<td>140</td>
+</tr>
+<tr class="even">
+<td>NCM character</td>
+<td>26</td>
+<td>98</td>
+</tr>
+<tr class="odd">
+<td>GOTOX</td>
+<td>2</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>The last column assumes about 2,550 cycles for the whole line (<a
+href="https://files.mega65.org/html/main.php?ar=647eb223-aa17-4c23-97d2-34917f808291">MEGA65
+Filehost, "RRB Time Calculations"</a>). The figures are for planning,
+not guarantees: add up the busiest row, leave a margin for sprites, and
+test. By this reckoning a 40-column row of FCM characters with a second
+full FCM layer and two GOTOX entries needs about 1,450 cycles and fits
+easily, while five full layers of 20 NCM characters need about 2,600 and
+do not fit without DBLRR.</p>
+<p>Measured results can be better than these estimates. In one test,
+twelve rows of 20 NCM characters handled 11 full layers, and lines
+started to go missing at 12 (<a href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan Sanderson</a>). That is 220 NCM characters on a
+line, where the table allows about 98, or 196 with DBLRR. The article
+describes the DBLRR settings above for its 200-line screen, but does
+not say whether they were on for this test, or which video mode and
+core it used, so the two figures cannot be compared exactly. Plan with
+the table and treat anything beyond it as a bonus to be tested.</p>
+<p>The limits differ slightly between real hardware and the Xemu
+emulator, so test RRB-heavy code on both. Bit 5 of <code>$D60F</code>,
+REALHW, reads 1 on a real MEGA65 and 0 in Xemu, if a program needs to
+adjust.</p>
+<p><span id="running-out-of-time"></span>By default the VIC-IV never abandons a line it has not finished. It
+carries on into the time meant for the next line, which then is not
+built properly, so lines go missing or are garbled, as in the test
+above. Setting NORRBWRAP, bit 3 of <code>$D07C</code>, makes the VIC-IV
+stop a late line when the next one is due to start, so only the
+unfinished part of that line is lost. NORRBWRAP is in the development
+core only: in release 0.97 and earlier, bit 3 is reserved and the
+default behaviour always applies (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<p>The same bit controls wrap-around. The drawing position is 10 bits
+wide, so normally drawing past position 1023 continues at 0, the first
+pixel of the text area. A GOTOX to 1024 − <em>n</em> therefore puts a
+character <em>n</em> pixels to the left of the first column, with only
+its right-hand part visible, which lets objects slide in from the left
+edge. With NORRBWRAP set, drawing stops at the end of the buffer instead
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<h3 id="an-rrb-demo-in-basic">An RRB demo in BASIC</h3>
+<p>This program draws a checked pattern on a 40-column SEAM screen and
+moves three balls across it, each on its own row, using no sprites.
+Every row has 44 entries: 40 pattern characters, a GOTOX with
+transparency, the ball (or a space), a GOTOX to 320, the right edge in
+40-column mode, and one more character after it (Figure 12.4). So
+CHRCOUNT is 44 and LINESTEP 88.</p>
+<figure>
+<svg viewBox="0 0 640 226" role="img" aria-label="A row of screen memory as a list of 44 entries: 40 pattern characters, a GOTOX to position X with transparency, the ball, a GOTOX to 320 and a space. Below it, the resulting line: the pattern from 0 to 320 with the ball drawn over it at X." style="width:100%;height:auto;max-width:40em" font-family="inherit" font-size="14">
+<rect x="20" y="34" width="236" height="58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="138" y="52" text-anchor="middle" font-size="12" fill="currentColor">entries 0-39</text>
+<text x="138" y="70" text-anchor="middle" font-size="12" fill="currentColor">40 pattern characters</text>
+<rect x="264" y="34" width="86" height="58" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="307" y="52" text-anchor="middle" font-size="12" fill="currentColor">entry 40</text>
+<text x="307" y="70" text-anchor="middle" font-size="12" fill="currentColor">GOTOX X,</text>
+<rect x="358" y="34" width="86" height="58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="401" y="52" text-anchor="middle" font-size="12" fill="currentColor">entry 41</text>
+<text x="401" y="70" text-anchor="middle" font-size="12" fill="currentColor">ball</text>
+<rect x="452" y="34" width="86" height="58" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<text x="495" y="52" text-anchor="middle" font-size="12" fill="currentColor">entry 42</text>
+<text x="495" y="70" text-anchor="middle" font-size="12" fill="currentColor">GOTOX 320</text>
+<rect x="546" y="34" width="86" height="58" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="589" y="52" text-anchor="middle" font-size="12" fill="currentColor">entry 43</text>
+<text x="589" y="70" text-anchor="middle" font-size="12" fill="currentColor">space</text>
+<text x="307" y="85" text-anchor="middle" font-size="12" fill="currentColor">transparent</text>
+<text x="20" y="22" fill="currentColor">Screen memory for one row, in order</text>
+<text x="20" y="140" fill="currentColor">The line the VIC-IV builds from it</text>
+<rect x="20" y="152" width="600" height="30" fill="currentColor" fill-opacity="0.12" stroke="currentColor" stroke-width="1.5"/>
+<path d="M35 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M50 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M65 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M80 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M95 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M110 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M125 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M140 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M155 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M170 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M185 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M200 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M215 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M230 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M245 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M260 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M275 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M290 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M305 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M320 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M335 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M350 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M365 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M380 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M395 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M410 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M425 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M440 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M455 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M470 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M485 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M500 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M515 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M530 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M545 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M560 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M575 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M590 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<path d="M605 152V182" stroke="currentColor" stroke-width="0.5" stroke-opacity="0.5"/>
+<circle cx="252.5" cy="167" r="7.5" fill="currentColor"/>
+<path d="M401 92L256 156" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
+<path d="M245 190V200M20 190V200M620 190V200" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<text x="20" y="216" fill="currentColor">0</text>
+<text x="245" y="216" text-anchor="middle" fill="currentColor">X</text>
+<text x="620" y="216" text-anchor="end" fill="currentColor">320</text>
+</svg>
+<figcaption>Figure 12.4: One row of the RRB demo as a list of instructions. The first 40 entries draw the pattern from position 0 to 320; the GOTOX in entry 40 moves the drawing position back to X, so the ball in entry 41 is drawn over the pattern; entries 42 and 43 end the row at the right edge.</figcaption>
+</figure>
+<pre data-download="code/ch12/an-rrb-demo-in-basic.bas code/ch12/an-rrb-demo-in-basic.prg"><code>10 REM RRB DEMO: BALLS OVER A PATTERN
+20 SA=$50000 : CA=$FF82000 : W=88
+30 DIM R(13) : FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
+40 TX=WPEEK($D04C) : HR=PEEK($D05D)
+50 FOR Y=0 TO 24 : A=Y*W
+60 FOR E=0 TO 39 : WPOKE SA+A+E*2,102 : WPOKE CA+A+E*2,$0B00 : NEXT
+70 WPOKE SA+A+80,0 : WPOKE CA+A+80,$0090 : REM GOTOX 0, TRANSPARENT
+80 WPOKE SA+A+82,32 : WPOKE CA+A+82,$0100 : REM OBJECT (A SPACE)
+90 WPOKE SA+A+84,320 : WPOKE CA+A+84,$0010 : REM GOTOX 320
+100 WPOKE SA+A+86,32 : WPOKE CA+A+86,$0100 : NEXT
+110 FOR Y=6 TO 18 STEP 6 : WPOKE SA+Y*W+82,81 : NEXT : REM BALLS
+120 CLRBIT $D05D,7 : CLRBIT $D031,7 : POKE $D04C,80
+130 SETBIT $D054,0 : WPOKE $D058,W : POKE $D05E,44
+140 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
+150 FOR X=0 TO 312
+160 WPOKE SA+6*W+80,X : WPOKE SA+12*W+80,312-X
+170 WPOKE SA+18*W+80,MOD(X*3,313) : SLEEP 0.02 : NEXT
+180 SETBIT $D031,7 : CLRBIT $D054,0
+190 FOR I=0 TO 13 : POKE $D058+I,R(I) : NEXT
+200 WPOKE $D04C,TX : POKE $D05D,HR</code></pre>
+<p>Lines 50 to 100 build the rows. Screen and colour words are written
+low byte first, so <code>$0090</code> puts <code>$90</code> in the first
+colour byte: the GOTOX flag (<code>$10</code>) and transparency
+(<code>$80</code>). <code>$0B00</code> leaves the first colour byte
+clear and puts colour 11, dark grey, in the second, and
+<code>$0100</code> makes the ball white. Screen code 102 is the checked
+character and 81 the ball. Lines 120 to 140 clear HOTREG, switch to 40
+columns, turn on SEAM and point SCRNPTR and COLPTR at the new screen and
+its colours, which are at offset <code>$2000</code> in colour RAM.</p>
+<p>Moving a ball needs one WPOKE: the X position in its row's first
+GOTOX, in 40-column pixels from 0 to 319. Because transparency is on,
+the pattern shows through the corners of the ball. Nothing is copied or
+erased as the balls move, which is what makes the RRB cheap for many
+objects. Lines 180 to 200 put the screen back, including HOTREG, so the
+program ends at an ordinary READY prompt.</p>
+<h2 id="rrb-objects">RRB Objects</h2>
+<p>The ball demo above is a software sprite in miniature: a shape drawn
+into the Raster Rewrite Buffer at any X position, over a background that
+is never disturbed. This section turns that idea into a small object
+library, first in BASIC and then in machine language, which moves
+multi-character full-colour objects freely in both directions. It ends
+with ways to scale an object's image.</p>
+<p>The programs in this section are on the chapter's disk image, <a
+href="code/ch12/ch12.d81">ch12.d81</a>, as RRB OBJECTS, RRB OBJECTS ML,
+RRB ZOOM and RRB SCALE, alongside the machine-language routine RRBOBJ,
+so the BLOAD in RRB OBJECTS ML finds it. The downloads for the listings
+that only add or change lines are the complete, merged programs. The
+BASIC text files suit reading and Xemu's <code>-importbas</code>
+option; the PRG files and the disk image run on a MEGA65 as they
+are.</p>
+<h3 id="hardware-sprites-or-rrb-objects">Hardware sprites or RRB
+objects</h3>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>Hardware sprites</th>
+<th>RRB objects</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Number</td>
+<td>Eight, or more with a raster-interrupt multiplexer</td>
+<td>As many as each row's cycle budget allows</td>
+</tr>
+<tr class="even">
+<td>Colours</td>
+<td>Up to 15 plus transparent, from a 16-entry palette group</td>
+<td>Up to 255 plus transparent in FCM, from the whole palette</td>
+</tr>
+<tr class="odd">
+<td>Size</td>
+<td>Up to 64 pixels wide, depending on mode</td>
+<td>Any number of characters</td>
+</tr>
+<tr class="even">
+<td>Image data</td>
+<td>Sprite pointers</td>
+<td>Glyph numbers in screen memory, so animation is a change of
+number</td>
+</tr>
+<tr class="odd">
+<td>Moving one</td>
+<td>Write its position registers</td>
+<td>Rewrite a few screen words on the rows it covers</td>
+</tr>
+<tr class="even">
+<td>Drawn over</td>
+<td>Everything, or behind the text layer</td>
+<td>Whatever came earlier in the row</td>
+</tr>
+</tbody>
+</table>
+<p>The two mix freely: hardware sprites are drawn after the RRB has
+built the line, so a player sprite can still move over a screen full of
+RRB objects (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
+<h3 id="planning-the-library">Planning the library</h3>
+<p>The library uses the "background plus draw list" arrangement from
+<a href="#organising-layers">Organising layers</a>, simplified so
+that each object owns a fixed slot in every row. A row of the 40-column
+SEAM screen has 54 entries:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Entries</th>
+<th>Byte offset</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0-39</td>
+<td>0-79</td>
+<td>Background characters</td>
+</tr>
+<tr class="even">
+<td>40-42</td>
+<td>80-85</td>
+<td>Object 0: a GOTOX with transparency, then its left and right
+glyphs</td>
+</tr>
+<tr class="odd">
+<td>43-51</td>
+<td>86-103</td>
+<td>Objects 1 to 3, the same way</td>
+</tr>
+<tr class="even">
+<td>52-53</td>
+<td>104-107</td>
+<td>GOTOX 320 and one character, to end the row</td>
+</tr>
+</tbody>
+</table>
+<p>CHRCOUNT is therefore 54. The 108 bytes of a row are spaced 128
+apart, so LINESTEP is 128, which makes a row address a simple shift in
+machine language. On rows an object does not touch, its two glyphs are
+a blank, so the slot draws nothing. Later slots are drawn over earlier
+ones, so the slot order is the priority order.</p>
+<p>Every slot costs time on every row, used or not. By the estimates in
+<a href="#the-cycle-budget">Time limits and the cycle budget</a>, a slot of one GOTOX
+and two FCM characters is about 38 cycles, and the 40 monochrome
+background characters about 440. Four objects bring a row to about 600
+cycles of the 2,550 available, so slots for about fifty objects of this
+size would fit before sprites need their share. Beyond a handful of
+objects, games build a short list for each row instead, holding only
+the objects that touch it.</p>
+<h3 id="storing-the-images">Storing the images</h3>
+<p>An object is 16 by 16 pixels: two strips, each one FCM character
+wide and two characters tall. The glyphs of a strip are stored one after
+the other, with a blank glyph before and after, so one image takes seven
+glyphs:</p>
+<pre><code>glyph   +0     +1      +2      +3     +4      +5      +6
+        blank  left    left    blank  right   right   blank
+               top     bottom         top     bottom</code></pre>
+<p>Because FCM glyphs are 64 bytes and each pixel row is 8 bytes,
+consecutive glyphs form one continuous strip 8 pixels wide: pixel
+(<em>x</em>, <em>y</em>) of a strip is at its first glyph's address +
+8<em>y</em> + <em>x</em>, across the boundary between glyphs. The
+blanks are what the vertical positioning below reads when it runs off
+either end of a strip. The library keeps two blank glyphs at
+<code>$40000</code> and <code>$40040</code> (glyph numbers
+<code>$1000</code> and <code>$1001</code>), uses <code>$1001</code> to
+switch a slot off, and puts the first image at glyph
+<code>$1002</code>, address <code>$40080</code>. FCLRHI is on, so the
+background's screen codes below 256 still come from the normal
+character set.</p>
+<h3 id="vertical-positioning">Vertical positioning</h3>
+<p>The Y offset in a GOTOX entry, screen byte 1 bits 7-5, shifts the
+data of the following FCM or NCM characters by up to 7 pixel rows:
+upward, or downward when bit 4 is set as well. As <a
+href="#gotox">GOTOX</a> explains, the rows it needs from beyond a glyph
+come from the glyph before or after it in memory, which is why the
+strips have blanks at each end (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
+<p>To put an object at pixel row <em>Y</em>, take character row
+<em>R</em> = INT(<em>Y</em>/8) and <em>D</em> = <em>Y</em> − 8<em>R</em>.
+The object covers rows <em>R</em>, <em>R</em>+1 and <em>R</em>+2. In
+row <em>R</em>+<em>J</em> its slot holds a GOTOX to the object's X
+position with a downward offset of <em>D</em>, then glyph
+<em>J</em> of each strip:</p>
+<ul>
+<li>Row <em>R</em> shows the blank on its first <em>D</em> pixel rows
+and the top <em>8 − D</em> rows of the top glyphs below that.</li>
+<li>Row <em>R</em>+1 shows the bottom <em>D</em> rows of the top glyphs,
+then the top of the bottom glyphs.</li>
+<li>Row <em>R</em>+2 shows the bottom of the bottom glyphs, then the
+blank.</li>
+</ul>
+<p>When <em>D</em> is 0 the third row is all blank, but writing it
+anyway keeps the code simple. The downward offset needs core 0.97 or
+later. On earlier cores, when <em>D</em> is not 0, the same result
+comes from the upward offset, 8 − <em>D</em>, with each row using the
+glyph before.</p>
+<p>The screen word of the GOTOX is then
+<em>X</em> + <code>$1000</code> + <em>D</em> × <code>$2000</code>: X
+in bits 9-0, the downward flag in bit 12 and the offset in bits 15-13.
+Its colour word stays <code>$0090</code>, GOTOX plus transparency.</p>
+<h3 id="objects-from-basic">Objects from BASIC</h3>
+<p>This program builds the screen, draws a ball into the image, and
+bounces four copies of it around over a checked background. The
+subroutine at line 1000 is the library: it blanks an object's slot in
+the rows it used last time and writes it into the rows it covers
+now.</p>
+<pre data-download="code/ch12/rrb-objects.bas code/ch12/rrb-objects.prg"><code>10 REM RRB OBJECTS: FOUR 16X16 FCM BALLS
+20 SA=$50000 : CA=$FF82000 : LS=128 : BL=$1001 : IM=$1002 : GA=IM*64
+30 DIM R(13),X(3),Y(3),DX(3),DY(3),OW(3),IG(3)
+40 FOR I=0 TO 13 : R(I)=PEEK($D058+I) : NEXT
+50 TX=WPEEK($D04C) : HR=PEEK($D05D)
+60 EDMA 3,576,0,$40000 : REM CLEAR TWO BLANKS AND THE IMAGE
+70 FOR PY=0 TO 15 : FOR PX=0 TO 15 : C=0
+80 IF (PX-7.5)^2+(PY-7.5)^2&lt;56 THEN C=2 : IF (PX-5)^2+(PY-5)^2&lt;5 THEN C=1
+90 POKE GA+(1+INT(PX/8)*3)*64+PY*8+MOD(PX,8),C : NEXT : NEXT
+100 FOR Y=0 TO 24 : A=Y*LS
+110 FOR E=0 TO 39 : WPOKE SA+A+E*2,102 : WPOKE CA+A+E*2,$0B00 : NEXT
+120 FOR N=0 TO 3 : P=A+80+N*6
+130 WPOKE SA+P,0 : WPOKE CA+P,$0090 : REM GOTOX 0, TRANSPARENT
+140 WPOKE SA+P+2,BL : WPOKE SA+P+4,BL : WPOKE CA+P+2,0 : WPOKE CA+P+4,0 : NEXT
+150 WPOKE SA+A+104,320 : WPOKE CA+A+104,$0010 : REM GOTOX 320
+160 WPOKE SA+A+106,32 : WPOKE CA+A+106,$0100 : NEXT
+170 CLRBIT $D05D,7 : CLRBIT $D031,7 : POKE $D04C,80
+180 SETBIT $D054,0 : SETBIT $D054,2 : WPOKE $D058,LS : POKE $D05E,54
+190 WPOKE $D060,0 : POKE $D062,5 : WPOKE $D064,$2000
+200 FOR N=0 TO 3 : X(N)=30+N*80 : Y(N)=10+N*40 : DX(N)=N+1 : DY(N)=4-N
+210 OW(N)=99 : IG(N)=IM : NEXT
+220 FOR T=1 TO 600
+230 FOR N=0 TO 3 : X(N)=X(N)+DX(N) : Y(N)=Y(N)+DY(N)
+240 IF X(N)&lt;0 OR X(N)&gt;304 THEN DX(N)=-DX(N) : X(N)=X(N)+2*DX(N)
+250 IF Y(N)&lt;0 OR Y(N)&gt;184 THEN DY(N)=-DY(N) : Y(N)=Y(N)+2*DY(N)
+260 GOSUB 1000 : NEXT
+270 SLEEP 0.02 : NEXT
+280 SETBIT $D031,7 : CLRBIT $D054,0 : CLRBIT $D054,2
+290 FOR I=0 TO 13 : POKE $D058+I,R(I) : NEXT
+300 WPOKE $D04C,TX : POKE $D05D,HR : END
+1000 REM DRAW OBJECT N AT X(N),Y(N)
+1010 P=80+N*6 : IF OW(N)=99 THEN 1040
+1020 FOR J=0 TO 2 : RW=OW(N)+J : IF RW&gt;=0 AND RW&lt;25 THEN A=SA+RW*LS+P : WPOKE A+2,BL : WPOKE A+4,BL
+1030 NEXT
+1040 RW=INT(Y(N)/8) : D=Y(N)-RW*8 : OW(N)=RW : XP=X(N) : IF XP&lt;0 THEN XP=XP+1024
+1050 G=XP+$1000+D*$2000 : REM GOTOX XP, CHARACTERS D PIXELS LOWER
+1060 FOR J=0 TO 2 : RW=OW(N)+J : IF RW&gt;=0 AND RW&lt;25 THEN A=SA+RW*LS+P : WPOKE A,G : WPOKE A+2,IG(N)+1+J : WPOKE A+4,IG(N)+4+J
+1070 NEXT : RETURN</code></pre>
+<p>Lines 70 to 90 draw the ball pixel by pixel into the two strips, in
+red (2) with a white (1) highlight; pixel value 0 is transparent. Lines
+100 to 160 build each row as in the table above. The glyph entries have
+a colour word of 0, since FCM pixels choose their own colours. Lines 170
+to 190 set up the screen as in the earlier demo, with FCLRHI added and
+54 entries per row. Lines 280 to 300 put everything back.</p>
+<p>The subroutine needs only X(N), Y(N) and IG(N), the image's first
+glyph. The array OW remembers the row each object was drawn at last,
+with 99 meaning never. Because each object has its own image number,
+animation is a matter of pointing IG(N) at another seven-glyph image
+before the next call.</p>
+<h3 id="clipping-at-the-edges">Clipping at the edges</h3>
+<p>The subroutine accepts X from −15 to 319 and Y from −15 to 199, and
+the hardware clips the rest. On the right, anything past pixel 319 is
+drawn under the border. On the left, a negative X becomes a GOTOX to
+1024 + <em>X</em>, which wraps round to the left edge (<a
+href="#running-out-of-time">Time limits and the cycle budget</a>); on a
+development core, NORRBWRAP must be clear. At the top and bottom, rows outside 0-24 are simply not written,
+and the offset arithmetic still puts the visible part in the right
+place, because INT rounds a negative Y down.</p>
+<p>A character can also be made narrower. In an ordinary SEAM character
+entry, not a GOTOX, screen byte 1 bits 7-5 trim 0 to 7 pixels from its
+right-hand side, and for 16-pixel NCM characters bit 2 of colour byte 0
+supplies a fourth bit, for up to 15. An object whose width is not a
+multiple of 8 can end with a trimmed glyph, and the characters after it
+start where it ends (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<h3 id="the-update-in-machine-language">The update in machine
+language</h3>
+<p>The BASIC subroutine is clear but slow, and an object can be drawn
+half-moved if the raster passes while it runs. This routine does the
+same work for all four objects in a tiny fraction of a frame, using the same
+screen. It lives in the area BASIC leaves free at <code>$1600</code>
+(<a href="ch09-mixing-basic-with-machine-language.html">Chapter
+9</a>), with a table of object positions at the start, and uses the top
+of a private base page at <code>$1700</code> for its pointers.</p>
+<pre data-download="code/ch12/rrbobj.asm code/ch12/rrbobj.prg"><code>; RRB object update: four 16x16 FCM objects on the screen
+; at $50000 built by the BASIC program, 128 bytes per row
+        * = $1600
+objx    .word 0, 0, 0, 0        ; $1600: X, 0-319 or 1009-1023
+objimg  .word 0, 0, 0, 0        ; $1608: first glyph of each image
+objy    .byte 0, 0, 0, 0        ; $1610: Y, 0-199
+oldrow  .byte $ff, $ff, $ff, $ff ; $1614: row last drawn, $FF = none
+slot    .byte 80, 86, 92, 98    ; $1618: slot offset within a row
+
+ptr     = $f0           ; four-byte flat pointer, base page $17
+crow    = $f4
+count   = $f5
+gxlo    = $f6           ; GOTOX screen word
+gxhi    = $f7
+glo     = $f8           ; glyph of the left strip
+ghi     = $f9
+blank   = $1001         ; empty glyph, with another before it
+
+        * = $1620
+update  lda #$17
+        tab             ; private base page at $1700
+        ldx #3
+uloop   jsr clear       ; take object X off its old rows
+        jsr draw        ; and put it on its new ones
+        dex
+        bpl uloop
+        lda #$00
+        tab             ; base page 0 again for BASIC
+        ldz #$00
+        rts
+
+rowptr  sta crow        ; A = character row, X = object
+        lsr a
+        sta ptr+1       ; row * 128, high byte
+        lda #$00
+        ror a           ; row * 128, low byte: $00 or $80
+        ora slot,x      ; slot offsets are below 128: no carry
+        sta ptr
+        lda #$05
+        sta ptr+2       ; bank 5
+        lda #$00
+        sta ptr+3
+        lda #3
+        sta count       ; an object covers three rows
+        rts
+
+nextrow lda ptr         ; add 128 to the pointer
+        eor #$80
+        sta ptr
+        bmi samepg      ; bit 7 now set: no carry
+        inc ptr+1
+samepg  inc crow
+        rts
+
+clear   lda oldrow,x
+        cmp #$ff
+        beq cdone       ; never drawn
+        jsr rowptr
+cloop   lda crow
+        cmp #25
+        bcs cdone       ; below the last row
+        lda #&lt;blank
+        ldz #2
+        sta [ptr],z     ; left glyph, low byte
+        ldz #4
+        sta [ptr],z     ; right glyph, low byte
+        lda #&gt;blank
+        ldz #3
+        sta [ptr],z
+        ldz #5
+        sta [ptr],z
+        jsr nextrow
+        dec count
+        bne cloop
+cdone   rts
+
+draw    lda objy,x
+        lsr a
+        lsr a
+        lsr a           ; character row = Y / 8
+        sta oldrow,x
+        jsr rowptr
+        lda objy,x
+        asl a
+        asl a
+        asl a
+        asl a
+        asl a           ; Y AND 7 into bits 7-5
+        ora #$10        ; bit 4: move the characters down
+        sta gxhi
+        txa
+        asl a
+        tay             ; Y register = 2 * object, for word tables
+        lda objx+1,y
+        and #$03
+        ora gxhi        ; X bits 9-8 into bits 1-0
+        sta gxhi
+        lda objx,y
+        sta gxlo
+        lda objimg,y
+        sta glo
+        lda objimg+1,y
+        sta ghi
+        inw glo         ; skip the blank: left strip, top glyph
+dloop   lda crow
+        cmp #25
+        bcs ddone
+        ldz #0
+        lda gxlo
+        sta [ptr],z     ; GOTOX
+        inz
+        lda gxhi
+        sta [ptr],z
+        inz
+        lda glo
+        sta [ptr],z     ; left strip glyph
+        inz
+        lda ghi
+        sta [ptr],z
+        inz
+        clc
+        lda glo
+        adc #3
+        sta [ptr],z     ; right strip glyph, three glyphs on
+        inz
+        lda ghi
+        adc #0
+        sta [ptr],z
+        inw glo         ; next glyph down the strip
+        jsr nextrow
+        dec count
+        bne dloop
+ddone   rts</code></pre>
+<p>ROWPTR works out the flat address of an object's slot. With 128 bytes
+per row, the row number shifted right once is the high byte and the bit
+shifted out becomes bit 7 of the low byte, so no multiplication is
+needed. NEXTROW adds 128 the same way. DRAW builds the GOTOX word from
+the low three bits of Y and the ten bits of X, then writes the GOTOX and
+both glyph numbers for each of the three rows. Only screen memory
+changes; the colour words set up by BASIC never do. INW is used for the
+glyph number because it carries into the high byte.</p>
+<h3 id="calling-it-from-basic">Calling it from BASIC</h3>
+<p>Assemble the routine to a file called RRBOBJ (with 64tass, for
+example, <code>64tass --m45gs02 -a rrbobj.asm -o rrbobj.prg</code>),
+or use the ready-assembled <code>rrbobj.prg</code> download, and make three changes
+to the BASIC program. Line 15 loads the routine, line 215 fills in each
+object's image and marks it as never drawn, and lines 260 and 270
+replace the call to the BASIC subroutine with POKEs into the table and
+one SYS per frame:</p>
+<pre data-download="code/ch12/rrb-objects-ml.bas code/ch12/rrb-objects-ml.prg"><code>15 BLOAD &quot;RRBOBJ&quot;,B0,P5632
+215 FOR N=0 TO 3 : WPOKE $1608+N*2,IG(N) : POKE $1614+N,255 : NEXT
+260 WPOKE $1600+N*2,X(N) : POKE $1610+N,Y(N) : NEXT
+270 SYS $1620 : SLEEP 0.02 : NEXT</code></pre>
+<p>The machine-language version takes Y from 0 to 199 only; above that
+it would need the negative-row handling of the BASIC subroutine. For X,
+values from 1009 to 1023 put the object partly off the left edge. A
+game written entirely in machine language would call UPDATE from a
+raster interrupt below the last text row, so the screen never shows an
+object half-moved.</p>
+<h3 id="texture-scaling">Texture scaling</h3>
+<p>The VIC-IV has no scale setting for individual characters. In SEAM,
+the screen and colour bytes of a character select its glyph, flips,
+width trim, NCM and attributes, but nothing that changes its size (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>). There are two ways round
+this: scale the whole display, or scale the image data.</p>
+<h4 id="scaling-the-whole-display">Scaling the whole display</h4>
+<p>CHRXSCL and CHRYSCL, described in <a
+href="#scaling-characters">Scaling characters</a>, stretch everything
+the RRB draws. GOTOX positions are pixels of the buffer, so they scale
+with it, and objects stay in place over the background as the scene
+zooms. Adding one line to the object program makes the whole scene
+grow to double width, from the left edge, every 60 frames:</p>
+<pre data-download="code/ch12/rrb-zoom.bas code/ch12/rrb-zoom.prg"><code>265 POKE $D05A,120-MOD(T,60)</code></pre>
+<p>Line 290 already restores CHRXSCL, because it is one of the
+registers saved from <code>$D058</code>. The VIC-IV applies CHRXSCL as
+it sends each line to the screen, so a raster interrupt can change it
+partway down to give different bands different widths, as in a
+perspective road or floor (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>). Check the result on a real MEGA65, for the
+reason given in <a href="#scaling-characters">Scaling
+characters</a>.</p>
+<h4 id="scaling-an-object-with-dma">Scaling an object with DMA</h4>
+<p>To change the size of one object, redraw its glyphs at the new size.
+DMAgic does this with fractional steps (<a
+href="ch08-ml-methods-specific-to-the-mega65.html#transparency-and-line-drawing">Chapter
+8</a>). Options <code>$82</code> and <code>$83</code> set the source
+step in 256ths of a byte and whole bytes, and DMAgic keeps the
+fraction as it goes, so a step of 2.0 reads every second byte and 0.5
+reads each byte twice. Options <code>$84</code> and <code>$85</code> do
+the same for the destination. Every option goes back to its default
+when the last job of a list finishes (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>).</p>
+<p>The strip layout makes this simple. A pixel column of a strip is a
+run of bytes 8 apart, so one DMA job with a destination step of 8 writes
+a whole column. If the source texture is stored column by column, each
+column a run of consecutive bytes, the source step is texture height ÷
+new height: one job scales one column vertically. Choosing which
+texture column feeds each new column scales it horizontally. This is
+how a raycasting game draws its walls. It works for FCM, where each
+byte is a pixel; NCM packs two pixels into a byte and would need a
+different layout.</p>
+<p>These lines add a 32 × 32 texture to the object program and
+redraw object 0 every frame at a size from 1 to 16 pixels, centred in
+its 16 × 16 image. Object 0 gets an image of its own at glyph
+<code>$1009</code>, straight after the ball's seven glyphs, so the
+other three balls are unchanged:</p>
+<pre data-download="code/ch12/rrb-scale.bas code/ch12/rrb-scale.prg"><code>212 IG(0)=IM+7 : GB=IG(0)*64 : S=16 : SS=-1 : GOSUB 400 : GOSUB 500
+266 S=S+SS : IF S&lt;2 OR S&gt;15 THEN SS=-SS
+267 GOSUB 500
+400 REM TEXTURE AND DMA LIST, ONCE
+410 FOR PX=0 TO 31 : FOR PY=0 TO 31 : C=0
+420 IF (PX-15.5)^2+(PY-15.5)^2&lt;240 THEN C=5+8*MOD(INT(PX/4)+INT(PY/4),2)
+430 POKE $42000+PX*32+PY,C : NEXT : NEXT
+440 FOR I=0 TO 18 : READ B : POKE $5F000+I,B : NEXT
+450 DATA 10,130,0,131,0,133,8,0,0,0,0,0,32,4,0,0,4,0,0
+460 RETURN
+500 REM SCALE THE TEXTURE INTO IMAGE IG(0) AT S X S PIXELS
+510 EDMA 3,448,0,GB : O=INT((16-S)/2) : V=INT(8192/S)
+520 POKE $5F002,MOD(V,256) : POKE $5F004,INT(V/256) : WPOKE $5F009,S
+530 FOR PX=0 TO S-1 : Q=PX+O
+540 WPOKE $5F00B,$2000+INT(PX*32/S)*32
+550 WPOKE $5F00E,GB-$40000+(1+INT(Q/8)*3)*64+O*8+MOD(Q,8)
+560 POKE $D702,5 : POKE $D704,0 : POKE $D701,$F0 : POKE $D705,0 : NEXT
+570 RETURN</code></pre>
+<p>Lines 410 to 430 draw a green chequered disc into the texture at
+<code>$42000</code>, one 32-byte column at a time. Lines 440 and 450
+place a DMA list in bank 5, at <code>$5F000</code>:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Offset</th>
+<th>Bytes</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td><code>$0A</code></td>
+<td>F018A list format</td>
+</tr>
+<tr class="even">
+<td>1-4</td>
+<td><code>$82</code> <em>lo</em> <code>$83</code> <em>hi</em></td>
+<td>Source step, set by line 520</td>
+</tr>
+<tr class="odd">
+<td>5-6</td>
+<td><code>$85</code> <code>$08</code></td>
+<td>Destination step: 8 bytes, one pixel row</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td><code>$00</code></td>
+<td>End of options</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td><code>$00</code></td>
+<td>Command: copy</td>
+</tr>
+<tr class="even">
+<td>9-10</td>
+<td>count</td>
+<td>New height, set by line 520</td>
+</tr>
+<tr class="odd">
+<td>11-13</td>
+<td>source</td>
+<td>Texture column, bank 4, set by line 540</td>
+</tr>
+<tr class="even">
+<td>14-16</td>
+<td>destination</td>
+<td>Image column, bank 4, set by line 550</td>
+</tr>
+<tr class="odd">
+<td>17-18</td>
+<td>modulo</td>
+<td>Unused</td>
+</tr>
+</tbody>
+</table>
+<p>Line 510 clears the image and works out the margin O and the source
+step V, which is 32 ÷ S in 256ths: 8192 ÷ S. Rounding V down keeps the
+last row read inside the column. Each pass of the loop picks a texture
+column, points the job at it and at one column of the image, and starts
+the job. Line 560 writes the list's bank before its megabyte and the
+low byte last, which starts it, as in <a
+href="ch08-ml-methods-specific-to-the-mega65.html#advanced-dma">Chapter
+8</a>.</p>
+<p>Shrinking needs no extra code, but enlarging does: an image bigger
+than the texture shows each texture pixel two or more times, and the
+object must have strips enough to hold it. Because the image is
+rewritten while it is on screen, object 0 may flicker. A program that
+minds keeps two images for the object, scales into the one not being
+shown, and then switches IG(0).</p>
+<h4 id="scaling-from-machine-language">Scaling from machine
+language</h4>
+<p>In machine language the list is the same, written with labels. This
+is one column scaled from 32 to 16 pixels, with a source step of exactly
+2:</p>
+<pre><code>column  .byte $0a       ; F018A format
+        .byte $82, $00  ; source step: 0/256 ...
+        .byte $83, $02  ; ... plus 2 whole bytes
+        .byte $85, $08  ; destination step: one pixel row
+        .byte $00       ; end of options
+        .byte $00       ; command: copy
+        .word 16        ; new height
+        .word $2000     ; texture column 0 at $42000
+        .byte $04
+        .word $00c0     ; left strip: image at $40080, + 64
+        .byte $04
+        .word $0000     ; modulo, unused
+
+        lda #$00
+        sta $d702       ; list in bank 0
+        sta $d704       ; megabyte 0, written after $D702
+        lda #&gt;column
+        sta $d701
+        lda #&lt;column
+        sta $d705       ; start the enhanced job</code></pre>
+<p>A routine that scales a whole object patches the count, source and
+destination for each column, or builds one chained job per column and
+starts them all with one trigger. In a chain, each job still begins
+with its own option list, even if that is only the <code>$00</code> that
+ends it, and the steps set by the first job carry over until the chain
+ends.</p>
+<h3 id="going-further">Going further</h3>
+<ul>
+<li><strong>More objects.</strong> Replace the fixed slots with a list
+per row, rebuilt each frame from the objects that touch that row, so
+rows without objects cost nothing extra.</li>
+<li><strong>Bigger objects.</strong> Add strips, and a row for each
+extra glyph of height. The arithmetic is unchanged: strip <em>s</em>,
+glyph <em>j</em> of an image whose strips are <em>h</em> glyphs tall is
+glyph 1 + <em>s</em>(<em>h</em> + 1) + <em>j</em>.</li>
+<li><strong>NCM objects.</strong> NCM glyphs are 16 pixels wide and use
+half the memory per pixel of FCM, and the Y offset works on them too.
+They cost more cycles per glyph (<a href="#the-cycle-budget">Time limits and the cycle budget</a>).</li>
+<li><strong>Frame timing.</strong> Run the update from a raster
+interrupt, as in <a
+href="ch08-ml-methods-specific-to-the-mega65.html#raster-interrupts">Chapter
+8</a>, so that objects move once per frame and never tear.</li>
+</ul>
+<h2 id="animation">Animation</h2>
+<p>Animation is a sequence of frames, and everything on the MEGA65's
+display can change between one frame and the next: palette entries,
+character data, screen words, sprite pointers and positions, and the
+pointers that say where the screen is. The skill is in choosing the
+cheapest change that gives the effect. Rewriting pixels is the most
+expensive of these, and on the VIC-IV it is rarely needed.</p>
+<h3 id="one-change-per-frame">One change per frame</h3>
+<p>A PAL display shows 50 frames a second and an NTSC one 60. Changes
+should be made while the VIC-IV is not drawing the part of the screen
+they affect, which in practice means once a frame, in the lines below
+the text area. From BASIC, VSYNC waits for such a line; machine language
+uses a raster interrupt (Chapter 8). A change made while that area is
+being drawn shows half old and half new for one frame, which is called
+tearing.</p>
+<p>Movement looks smooth when it advances by the same amount every
+frame. Speeds that are not a whole number of pixels per frame are kept
+as fixed-point numbers: hold X in 1/256ths of a pixel as a 16-bit value,
+add the speed every frame, and draw at the high byte. A speed of 384
+(1.5 pixels) then moves 1, 2, 1, 2 pixels on successive frames, which
+the eye sees as an even 1.5. Because NTSC has 20% more frames a second,
+the same per-frame speeds run 20% faster there. A program that cares
+reads bit 7 of <code>$D06F</code>, which is set in NTSC mode, and scales
+its speeds (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>viciv.vhdl</code>).</p>
+<h3 id="what-to-change">What to change</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Technique</th>
+<th>What changes</th>
+<th>Good for</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Colour cycling</td>
+<td>A few palette entries</td>
+<td>Water, fire, flowing light, fades; the whole screen at once</td>
+</tr>
+<tr class="even">
+<td>Character redefinition</td>
+<td>One glyph's data</td>
+<td>Every copy of a tile at once: waves, conveyor belts, blinking
+lights</td>
+</tr>
+<tr class="odd">
+<td>Glyph swapping</td>
+<td>One screen word per cell</td>
+<td>Animating one tile, or an <a href="#rrb-objects">RRB object</a>,
+by pointing at another image</td>
+</tr>
+<tr class="even">
+<td>Sprite frames</td>
+<td>One sprite pointer</td>
+<td>Walking, spinning and exploding sprites</td>
+</tr>
+<tr class="odd">
+<td>Movement</td>
+<td>Position registers or GOTOX words</td>
+<td>Sprites and RRB objects</td>
+</tr>
+<tr class="even">
+<td>Scrolling and page flipping</td>
+<td>SCRNPTR, COLPTR, TEXTXPOS and TEXTYPOS</td>
+<td>Moving the whole screen; showing a finished frame</td>
+</tr>
+<tr class="odd">
+<td>Redrawing</td>
+<td>Bitmap or bitplane pixels</td>
+<td>Line drawings, and anything with no repetition</td>
+</tr>
+</tbody>
+</table>
+<p>The first six cost a handful of register or memory writes per frame,
+whatever the size of the thing that changes. A sprite's frames, for
+example, are separate images in memory, and showing the next one is a
+single pointer write: with the 16-bit pointers of the <a
+href="#a-16-colour-sprite">16-colour sprite program</a>, where each
+256-byte image takes four 64-byte blocks, frame F of a sequence starting
+at pointer P is pointer P + 4 × F. Glyph swapping works the same way for
+FCM and NCM characters, whose screen words are image addresses ÷ 64.</p>
+<h3 id="colour-cycling">Colour cycling</h3>
+<p>This program fills the screen with diagonal bands in palette entries
+16 to 31, then rotates those 16 entries one place every frame, so the
+bands flow across the screen although screen memory never changes:</p>
+<pre data-download="code/ch12/colour-cycling.bas code/ch12/colour-cycling.prg"><code>10 REM COLOUR CYCLING: A RAINBOW THAT FLOWS
+20 DIM R(15),G(15),B(15)
+30 FOR I=0 TO 15 : R(I)=PEEK($D110+I) : G(I)=PEEK($D210+I)
+40 B(I)=PEEK($D310+I) : NEXT I
+50 PRINT CHR$(147); : SC=$0800 : CR=$FF80000
+60 FOR Y=0 TO 24 : FOR X=0 TO 79 : A=Y*80+X
+70 POKE SC+A,160 : POKE CR+A,64+(INT((X+Y*2)/3) AND 15) : NEXT X,Y
+80 T=0
+90 VSYNC 255 : T=MOD(T+1,16)
+100 FOR I=0 TO 15 : J=(I+T) AND 15
+110 POKE $D110+I,R(J) : POKE $D210+I,G(J) : POKE $D310+I,B(J) : NEXT I
+120 GET K$ : IF K$="" THEN 90
+130 PALETTE RESTORE : PRINT CHR$(147);</code></pre>
+<p>Lines 20 to 40 keep a copy of the 16 entries. Line 70 puts a reverse
+space (screen code 160) in every cell, with the bold attribute, 64, so
+colour <em>c</em> shows entry 16 + <em>c</em>, the KERNAL's spectrum
+(see <a href="#attributes">Attributes</a>). Each frame, line 110 loads
+entry 16 + I with the colour that started at entry 16 + (I + T) AND 15.
+That is 48 palette writes a frame for a picture of 2,000 cells. PALETTE
+RESTORE puts the system colours back at the end.</p>
+<h3 id="double-buffering">Page flipping</h3>
+<p>When a frame has to be drawn rather than adjusted, drawing it on the
+visible screen lets the viewer see it half-finished. Page flipping,
+also called double buffering, draws each frame in a second screen that is not being shown, then
+switches SCRNPTR to it during the vertical blank, and draws the next
+frame in the one that was showing before. The switch is three register
+writes, so it always completes in time, however long the drawing
+took.</p>
+<pre data-download="code/ch12/double-buffering.bas code/ch12/double-buffering.prg"><code>10 REM PAGE FLIPPING: DRAW OUT OF SIGHT, THEN SWITCH
+20 D=1 : B=0 : X=0 : Y=0 : DX=1 : DY=1
+30 EDMA 3,2000,1,$FF80000              : REM WHITE TEXT COLOUR
+40 HR=PEEK($D05D) : P0=WPEEK($D060) : P2=PEEK($D062)
+50 CLRBIT $D05D,7
+60 O=0 : IF D THEN O=B*2048             : REM BUFFER TO DRAW IN
+70 A=$50000+O : EDMA 3,2000,32,A        : REM CLEAR IT
+80 FOR R=0 TO 7 : EDMA 3,16,160,A+(Y+R)*80+X : NEXT R
+90 VSYNC 255 : WPOKE $D060,O : POKE $D062,5 : REM SHOW IT
+100 IF D THEN B=1-B
+110 X=X+DX : IF X=0 OR X=64 THEN DX=-DX
+120 Y=Y+DY : IF Y=0 OR Y=17 THEN DY=-DY
+130 GET K$ : IF K$=" " THEN D=1-D
+140 IF K$="" OR K$=" " THEN 60
+150 WPOKE $D060,P0 : POKE $D062,P2 : POKE $D05D,HR : PRINT CHR$(147);</code></pre>
+<p>The two screens are at <code>$50000</code> and <code>$50800</code>,
+2,048 bytes apart. Each frame, lines 70 and 80 clear the hidden one and
+draw a 16 × 8 block of reverse spaces in it, and line 90 waits for the
+bottom border and shows it. Both screens share the editor's colour RAM,
+which line 30 sets to white. Pressing the space bar toggles D, and with
+D at 0 the program clears and draws the screen it is showing. The block
+then flickers, or appears torn, whenever the display reaches it between
+the clear and the redraw. Any other key ends the program.</p>
+<p>The cost of page flipping is the memory for a second screen; on
+the MEGA65 that is rarely a problem. The same technique works for
+bitmaps and bitplanes by switching CHARPTR or the plane addresses
+instead.</p>
+<h2 id="perception">Perception</h2>
+<p>The display is only half of the system; the other half is the
+viewer's eye and brain. Several of the techniques in this chapter work
+because of how people see, and knowing why helps in choosing between
+them.</p>
+<p><span id="seeing-motion"></span><strong>Regular steps beat
+speed.</strong> The brain joins still frames into motion best when the
+steps are even. An object that moves 2 pixels every frame looks smoother
+than one that moves 4 pixels every other frame, and one late frame shows
+as a jerk even at 50 frames a second, so a program should finish its
+work inside every frame (<a href="#one-change-per-frame">One change per
+frame</a>). The same joining-up is why colour cycling looks like
+movement although no cell changes place.</p>
+<p><span id="brightness-first"></span><strong>Brightness before
+hue.</strong> The eye resolves detail in brightness much better than in
+colour, so text and outlines need to differ in brightness from what is
+behind them, and with 256 free palette entries that is the programmer's
+choice to make. The usual measure is luma,
+<code>0.299 R + 0.587 G + 0.114 B</code> (ITU-R BT.601): pure blue (29)
+is much darker than pure green (150), and yellow (226) is almost as
+bright as white. A shading ramp for sprites or FCM tiles should rise in
+luma at every step, whatever its hues.</p>
+<p><span id="where-the-eye-goes"></span><strong>Spend where the player
+looks.</strong> Attention goes first to movement, then to the strongest
+contrast. Colours, and the Raster Rewrite Buffer's <a
+href="#the-cycle-budget">cycle budget</a>, are best spent on the
+player's object and what is near it; backgrounds and status lines can be
+simpler and darker. Layers that scroll at different speeds, as in the
+parallax mentioned in <a href="#smooth-scrolling">Smooth scrolling</a>,
+give depth cheaply, because the slower layer reads as further away.</p>
+<h3 id="light-is-not-linear">Light is not linear</h3>
+<p>The values in the palette registers do not give proportional amounts
+of light. Every display follows a gamma curve, in which light rises
+more steeply than the value. On a modern monitor calibrated to the sRGB
+standard (IEC 61966-2-1), a value of 128 out of 255 gives only about 22%
+of the light of 255, and about 188 is needed for half. Televisions use
+steeper curves: about 192 gives half on a modern set following ITU-R
+BT.1886, and about 200 on the PAL televisions of the C64's day, whose
+nominal gamma was 2.8. The exact figure depends on the display; the
+shape of the curve does not. Two things follow:</p>
+<ul>
+<li><strong>Fades and shading ramps</strong> can step the palette
+values by equal amounts. The gamma curve is close to the way the eye
+judges brightness, so equal steps in value look roughly even. Equal
+steps in light would not: they would seem to stay bright and then drop
+away near the end.</li>
+<li><strong>Mixing</strong> two colours in the eye, as in the next
+section, gives the average of their light, not of their values.</li>
+</ul>
+<h3 id="mixing-colours">Mixing colours</h3>
+<p>Two colours can be made to look like a third in two ways. Spatial
+mixing, or dithering, puts them in alternate pixels, close enough that
+the eye merges them; at 640 pixels across the pixels are fine enough to
+merge at a normal viewing distance. Temporal mixing alternates them on
+the same pixels in alternate frames. With 256 palette entries chosen
+from 16 million colours, the MEGA65 seldom needs either for its own
+sake, but they matter in the modes with few colours per cell: VIC-II
+bitmaps, NCM characters and 16-colour sprites.</p>
+<p>This is not the colour blending that C64 programmers relied on. A
+PAL composite signal carries too little colour detail to keep adjacent
+pixels apart, and a PAL television averages the colour of neighbouring
+lines, so on a C64 two colours were mixed before the picture ever left
+the screen, and tricks such as alternating lines of two colours made a
+third. The MEGA65's HDMI and VGA outputs are digital and analogue RGB,
+which keep every pixel separate, so on the MEGA65 the mixing happens
+only in the eye.</p>
+<p>This program shows four bands on a 640 × 200 bitmap (see <a
+href="#an-80-column-bitmap">An 80-column bitmap</a>). The first is a
+checkerboard of red and yellow pixels. The second alternates between red
+and yellow every frame. The third is a solid orange with a green value
+of 128, the average of the two colours' values, and the fourth a solid
+orange with a green value of 188, the average of their light:</p>
+<pre data-download="code/ch12/mixing-colours.bas code/ch12/mixing-colours.prg"><code>10 REM THREE WAYS TO MIX RED AND YELLOW
+20 BM=$40000 : SC=$44000
+30 EDMA 3,16000,0,BM : EDMA 3,2000,0,SC        : REM ALL BLACK
+40 FOR R=2 TO 5 : FOR Y=0 TO 7 : V=$AA : IF Y AND 1 THEN V=$55
+50 FOR C=10 TO 69 : POKE BM+R*640+C*8+Y,V : NEXT C,Y
+60 EDMA 3,60,$27,SC+R*80+10 : NEXT R            : REM DITHER
+70 FOR R=8 TO 11 : EDMA 3,60,$FF,SC+R*80+10 : NEXT : REM FLICKER
+80 FOR R=14 TO 17 : EDMA 3,60,$EE,SC+R*80+10 : NEXT : REM VALUE 128
+90 FOR R=20 TO 23 : EDMA 3,60,$DD,SC+R*80+10 : NEXT : REM VALUE 188
+100 POKE $D10D,$FF,$FF,$FF : POKE $D20D,$CB,$08,$00 : POKE $D30D,0,0,0
+110 HR=PEEK($D05D) : D1=PEEK($D011) : DIM P(13)
+120 FOR I=0 TO 13 : P(I)=PEEK($D058+I) : NEXT
+130 C0=PEEK($D068) : C1=PEEK($D069) : C2=PEEK($D06A)
+140 CLRBIT $D05D,7 : POKE $D068,0,0,4 : WPOKE $D060,$4000 : POKE $D062,4
+150 SETBIT $D011,5
+160 POKE $D10F,$FF : G=0                        : REM ENTRY 15: RED
+170 VSYNC 255 : G=255-G : POKE $D20F,G          : REM RED, THEN YELLOW
+180 GET K$ : IF K$="" THEN 170
+190 POKE $D011,D1 : FOR I=0 TO 13 : POKE $D058+I,P(I) : NEXT
+200 POKE $D068,C0,C1,C2 : POKE $D05D,HR : PALETTE RESTORE</code></pre>
+<p>Line 40 makes each cell's bitmap a checkerboard, <code>$AA</code> and
+<code>$55</code> on alternate lines, and line 60 colours those cells
+red on yellow, <code>$27</code>. The other bands have an empty bitmap and
+take their colour from the background nybble: entry 15 for the flicker
+band, and entries 14 and 13, which line 100 sets to the two oranges.
+The green values are written nybble-swapped, <code>$08</code> for 128
+and <code>$CB</code> for 188. Line 170 switches entry 15's green between
+0 and 255 every frame, which turns it from red to yellow and back.</p>
+<p>On a display that shows each pixel unchanged, the checkerboard
+looks closer to the fourth band than to the third, as the gamma curve
+predicts. Most displays do not show the MEGA65's 720 × 576 picture
+unchanged, though: a monitor or television scales it to its own
+resolution, and so does the MEGA65's optional 720p upscaler (UPSCALE,
+bit 5 of <code>$D053</code>). Scalers usually average the stored values
+of neighbouring pixels rather than their light, which pulls a fine
+checkerboard towards the third band, so compare the bands on your own
+display (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<p>The flickering band
+shows the weakness of temporal mixing on a 50 Hz display: each colour
+appears 25 times a second, and the eye notices flicker at that rate,
+most of all when the two colours differ in brightness, as red and yellow
+do. It works better for two colours of similar luma, where only the hue
+alternates. Any key restores the screen and the palette.</p>
 <h2 id="summary">Summary</h2>
 <ul>
 <li><strong>BASIC 65</strong> draws on bitplane screens in banks 4 and 5
@@ -3338,6 +3612,10 @@ pixels wide, at a high memory cost. Each plane starts on an 8KB
 boundary; even and odd planes share one 128KB block chosen by
 <code>$D07C</code>, and <code>$D03B</code> inverts planes as they are
 drawn.</li>
+<li><strong>Plotting</strong> in machine language needs one address
+formula per mode, all of the same shape because every mode stores its
+pixels in 8-line cell rows; one Bresenham line routine serves them all
+through a vector.</li>
 <li><strong>The Raster Rewrite Buffer</strong> uses GOTOX entries to
 place characters at any X position and layer them with transparency, for
 many-object and parallax graphics. It has about 2,590 cycles of an
@@ -3352,7 +3630,7 @@ fractional steps resample an object's image.</li>
 <li><strong>Animation</strong> changes the cheapest thing that gives
 the effect, once a frame below the text area: palette entries, glyph
 data, screen words, sprite pointers, positions, or the screen pointers
-themselves. Double buffering shows only finished frames.</li>
+themselves. Page flipping shows only finished frames.</li>
 <li><strong>Perception</strong>: the eye wants regular steps, reads
 brightness before colour, and averages light rather than values, so
 dithered colours look lighter than their average value, unless a scaler

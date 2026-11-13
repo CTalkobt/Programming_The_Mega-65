@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,7 +31,8 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-7-45gs02-machine-language">Programming
 the MEGA65 — Chapter 7: 45GS02 Machine Language</h1>
-<p>Oct 4, 2026 · Updated Oct 27, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch07/ch07.d81">ch07.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Machine language is the processor's own language: the bytes the
 45GS02 fetches and executes. Every BASIC statement eventually becomes
@@ -440,9 +441,11 @@ separate mnemonics such as LBNE, others choose the long form
 automatically when the target is too far away. The long forms are one
 byte longer, so short branches remain the default. When encoding a long
 branch by hand, note that its 16-bit offset is counted from the
-instruction's second byte, not from the next instruction:
-<code>BNE $3000</code> at <code>$2002</code> encodes as
-<code>$D3 $FC $0F</code> (MEGA65 Book, p. L-13).</p>
+instruction's third and last byte, the address of the opcode plus two,
+not from the next instruction: <code>BNE $3000</code> at
+<code>$2002</code> encodes as <code>$D3 $FC $0F</code>, because
+<code>$2004</code> + <code>$0FFC</code> is <code>$3000</code> (MEGA65
+Book, p. L-13). BSR's offset is counted the same way.</p>
 <p><strong>Flat indirect</strong> is the 45GS02's own mode, covered in
 Chapter 5. The instruction is an ordinary <code>(zp),Z</code>
 instruction preceded by a NOP prefix, <code>$EA</code>. The prefix tells
@@ -452,7 +455,7 @@ treat them as a 28-bit address. Any instruction that supports
 <h2 id="instruction-groups">Instruction Groups</h2>
 <p>The 45GS02 has far more instructions than the 6502's 56, but they
 fall into the same handful of families. This section surveys them;
-Chapter 10 gives every opcode, mode, flag effect and timing.</p>
+Chapter 10 gives every opcode, mode and flag effect.</p>
 <table>
 <thead>
 <tr class="header">
@@ -524,8 +527,9 @@ Chapter 10 gives every opcode, mode, flag effect and timing.</p>
 </tr>
 <tr class="odd">
 <td>System</td>
-<td>BRK RTI MAP EOM</td>
-<td>MAP and EOM control memory mapping</td>
+<td>BRK RTI MAP EOM NOP</td>
+<td>MAP and EOM control memory mapping; EOM and NOP are the same
+opcode</td>
 </tr>
 </tbody>
 </table>
@@ -556,7 +560,7 @@ gives them, with footnotes for each speed.</li>
 </ul>
 <p>Prefix bytes cost time too: a quad or flat instruction must also
 execute its prefix bytes, so <code>LDQ</code> takes longer than
-<code>LDA</code> even though it moves four bytes.</p>
+<code>LDA</code>, though far less than the four loads it replaces.</p>
 <p>The 45GS02 can also switch to a 6502 personality, in which the new
 opcodes are replaced by the NMOS 6502's undocumented instructions. The
 Book warns that this mode is incomplete and that most undocumented
@@ -666,10 +670,12 @@ instructions:</p>
         ldq num1        ; Q = num1
         adcq num2       ; Q = num1 + num2 + carry
         stq result</code></pre>
-<p>The flags reflect the full 32-bit result: N comes from bit 31, Z is
-set only if all 32 bits are zero, and C holds the carry out of bit 31.
-That means 32-bit values can be compared and tested with ordinary
-branches.</p>
+<p>After the ADCQ, the flags reflect the full 32-bit result: N comes
+from bit 31, Z is set only if all 32 bits are zero, and C holds the
+carry out of bit 31. That means 32-bit values can be compared and tested
+with ordinary branches. Test N and Z before the STQ, though, not after
+it: unlike STA, STQ changes N and Z, setting them from A alone
+(Chapter 10).</p>
 <h3 id="pitfalls">Pitfalls</h3>
 <p>Because Q includes Z, any quad instruction that loads or changes Q
 also changes the Z register. Code that uses Z as an index must save it,
@@ -678,6 +684,9 @@ only LDQ adds Z to the pointer, as in <code>LDQ ($10),Z</code> and
 <code>LDQ [$10],Z</code>; the other quad instructions ignore Z as an
 index (MEGA65 Book, p. L-12), since Z is itself part of the value being
 loaded or stored.</p>
+<p>STQ is the one store that changes flags: it leaves N and Z set from
+A, not from the 32-bit value, so a branch that tests the result of a
+quad operation belongs before the STQ that saves it (Chapter 10).</p>
 <p>The quad instructions are 45GS02-specific. Code that uses them will
 not run on a C65 or in an emulator that lacks them, so a program that
 may run elsewhere should check the CPU first.</p>
@@ -739,7 +748,9 @@ bytes itself (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <
 <h3 id="interrupts">Interrupts</h3>
 <p>An interrupt makes the CPU stop what it is doing, push the program
 counter and status, and run a handler. RTI returns to the interrupted
-code. There are three sources:</p>
+code. There are three sources, and a fourth vector, at
+<code>$FFFC</code>, for reset, which restarts the machine instead of
+returning:</p>
 <table>
 <thead>
 <tr class="header">
@@ -765,14 +776,20 @@ set</td>
 <td><code>$FFFE</code></td>
 <td>A software interrupt, used by monitors as a breakpoint</td>
 </tr>
+<tr class="even">
+<td>Reset</td>
+<td><code>$FFFC</code></td>
+<td>Power-on and the reset button; starts the KERNAL afresh and does
+not return</td>
+</tr>
 </tbody>
 </table>
 <p>The vectors are read from whatever is mapped at
 <code>$FFFA-$FFFF</code>, usually the KERNAL ROM. The KERNAL handlers
-jump through RAM vectors that programs can change; in C64 mode the IRQ
-vector is at <code>$0314</code>, as on a C64. Chapter 11 lists the
-MEGA65-mode vectors, and Chapter 8 shows how to write raster interrupt
-handlers.</p>
+jump through RAM vectors that programs can change. The IRQ vector is at
+<code>$0314</code>, as on a C64, in both C64 mode and MEGA65 mode.
+Chapter 11 lists the whole vector table, and Chapter 8 shows how to
+write raster interrupt handlers.</p>
 <p>Two 45GS02 details matter here. First, MAP blocks interrupts until
 the next EOM, so a mapping change is never interrupted halfway. Second,
 a handler must restore every register it changes, and on the 45GS02 that
@@ -860,19 +877,25 @@ address</td>
 </table>
 <p>The full command reference is in the MEGA65 Book (p. O-6 onward).</p>
 <p>The program below puts the border through every colour many times
-over. It uses Z and Y as nested loop counters, so it also exercises one
-of the 45GS02's new registers. It is placed at <code>$42000</code>, in
-bank 4, which is free as long as no graphics commands are used.</p>
+over, for a few seconds. It uses X, Z and Y as nested loop counters, so
+it also exercises one of the 45GS02's new registers. Two loops would not
+be enough to see: 65,536 passes through the inner loop take about a
+sixtieth of a second at 40.5 MHz, so the outer loop repeats them 256
+times. The program is placed at <code>$42000</code>, in bank 4, which is
+free as long as no graphics commands are used.</p>
 <p>Enter the first line, then type each following instruction at the
 address the monitor offers:</p>
-<pre><code>A 42000 LDZ #$00
-A 42002 LDY #$00
-A 42004 INC $D020
-A 42007 DEY
-A 42008 BNE $42004
-A 4200A DEZ
-A 4200B BNE $42002
-A 4200D RTS</code></pre>
+<pre><code>A 42000 LDX #$00
+A 42002 LDZ #$00
+A 42004 LDY #$00
+A 42006 INC $D020
+A 42009 DEY
+A 4200A BNE $42006
+A 4200C DEZ
+A 4200D BNE $42004
+A 4200F DEX
+A 42010 BNE $42002
+A 42012 RTS</code></pre>
 <p>Branches are relative, so the code works wherever it is mapped:
 assembled at $42000, it runs correctly when SYS maps it at $2000. Check
 the result with <code>D 42000</code>, then leave the monitor with X and
@@ -880,9 +903,9 @@ run the program from BASIC:</p>
 <pre><code>BANK 4 : SYS $2000</code></pre>
 <p>Recall from Chapter 6 that during SYS, <code>$2000-$7FFF</code> comes
 from the selected bank, which is why the code at <code>$42000</code>
-runs at <code>$2000</code>, and that <code>$8000-$FFFF</code> always has
-the system view with I/O mapped, which is why <code>INC $D020</code>
-reaches the VIC-IV.</p>
+runs at <code>$2000</code>, and that <code>$C000-$FFFF</code> always
+holds the ROM and I/O, which is why <code>INC $D020</code> reaches the
+VIC-IV.</p>
 <p>The border flickers with horizontal bands of colour rather than
 changing as a whole. At 40.5 MHz the inner loop runs many times during
 each scan line, so the colour changes partway across the screen. This is
@@ -893,6 +916,33 @@ has no labels, comments or source files. For anything larger, use a
 cross-assembler on a PC, or an assembler that runs on the MEGA65
 itself; the next section lists some. The examples in the rest of this book use assembler syntax
 with labels.</p>
+<p>Here is the same program as source for a cross-assembler. It begins
+with a BASIC header, the one-line BASIC program
+<code>10 BANK0:SYS$2012</code> that Chapter 9 builds byte by byte, so
+the assembled PRG loads like a BASIC program and starts with RUN. The
+code now runs in bank 0, straight after the header, and the labels
+replace the addresses the monitor needed:</p>
+<pre data-download="code/ch07/border.asm code/ch07/border.prg"><code>        * = $2001
+        .word next      ; BASIC header: 10 BANK0:SYS$2012
+        .word 10        ; line number
+        .byte $fe, $02  ; BANK
+        .text &quot;0:&quot;
+        .byte $9e       ; SYS
+        .text &quot;$2012&quot;
+        .byte 0         ; end of line
+next    .word 0         ; end of program
+
+start   ldx #$00        ; $2012
+outer   ldz #$00
+middle  ldy #$00
+inner   inc $d020       ; next border colour
+        dey
+        bne inner
+        dez
+        bne middle
+        dex
+        bne outer
+        rts             ; back to BASIC</code></pre>
 <h2 id="development-tools">Development Tools</h2>
 <p>Most machine-language programs for the MEGA65 are written on a PC.
 The source is assembled or compiled there into a PRG file, which is
@@ -961,10 +1011,10 @@ TRB; and functions marked <code>__far</code> are kept in bank 5 and
 called through a small resident stub, so a program can be larger than
 bank 0. A C program becomes a disk image ready for the MEGA65 like
 this:</p>
-<pre><code>cc45 hello.c -o hello.prg               ; compile, assemble and link
-disk45 create work.d81 -n WORK          ; make an empty D81 image
-disk45 add work.d81 hello.prg hello     ; copy the program onto it
-xemu-xmega65 -prgmode 65 -prg hello.prg ; or run it in Xemu</code></pre>
+<pre><code>cc45 hello.c -o hello.prg               # compile, assemble and link
+disk45 create work.d81 -n WORK          # make an empty D81 image
+disk45 add work.d81 hello.prg hello     # copy the program onto it
+xemu-xmega65 -prgmode 65 -prg hello.prg # or run it in Xemu</code></pre>
 <p>The PRG starts with a BASIC line that calls the program, so
 <code>RUN</code> starts it. <code>ca45 hello.s45 -o hello.prg</code>
 assembles a source file on its own in the same way.</p>

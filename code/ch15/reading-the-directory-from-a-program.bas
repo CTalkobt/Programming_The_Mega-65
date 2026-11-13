@@ -1,4 +1,4 @@
-10 DIM N$(143), T$(143), B(143) : C = -1
+10 DIM N$(296), T$(296), B(296) : C = -1
 20 OPEN 1, 8, 0, "$"
 30 GET#1, A$, A$                    : REM SKIP THE LOAD ADDRESS
 40 DO
@@ -17,5 +17,5 @@
 170 LOOP
 180 CLOSE 1
 190 PRINT "DISK: "; N$(0); "  ID: "; T$(0)
-200 FOR I = 1 TO C : PRINT N$(I), LEFT$(T$(I), 3), B(I) : NEXT
+200 FOR I = 1 TO C : PRINT N$(I), LEFT$(T$(I), 4), B(I) : NEXT
 210 PRINT C; "FILES,"; FR; "BLOCKS FREE"

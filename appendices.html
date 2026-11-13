@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -28,7 +28,19 @@
 <nav class="chapnav"><span><a href="ch17-major-peripherals.html">&larr; Previous</a></span><a href="index.html">Contents</a><span></span></nav>
 <h1 id="programming-the-mega65--appendices">Programming the MEGA65 —
 Appendices</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<ul>
+<li><a href="#appendix-a-screen-codes-and-colours">Appendix A: Screen Codes and Colours</a></li>
+<li><a href="#appendix-b-petscii-codes">Appendix B: PETSCII Codes</a></li>
+<li><a href="#appendix-c-number-conversion">Appendix C: Number Conversion</a></li>
+<li><a href="#appendix-d-45gs02-opcode-map">Appendix D: 45GS02 Opcode Map</a></li>
+<li><a href="#appendix-e-key-registers">Appendix E: Key Registers</a></li>
+<li><a href="#appendix-f-converting-c64-and-c65-programs">Appendix F: Converting C64 and C65 Programs</a></li>
+<li><a href="#appendix-g-the-built-in-monitor">Appendix G: The Built-in Monitor</a></li>
+<li><a href="#appendix-h-sources-and-further-reading">Appendix H: Sources and Further Reading</a></li>
+<li><a href="#appendix-i-memory-map">Appendix I: Memory Map</a></li>
+<li><a href="#appendix-j-glossary">Appendix J: Glossary</a></li>
+</ul>
 <h2 id="appendix-a-screen-codes-and-colours">Appendix A: Screen Codes
 and Colours</h2>
 <h3 id="screen-codes">Screen codes</h3>
@@ -89,6 +101,356 @@ upper-case set, subtract 64: PETSCII 65, <code>A</code>, is screen code
 1. Digits and most punctuation have the same value in both. Screen codes
 256 and above are used only in the VIC-IV's two-byte character modes;
 Chapter 12 describes them.</p>
+<h3 id="screen-code-chart">Screen code chart</h3>
+<p>Every screen code from 0 to 127 in the upper-case set of the standard
+font, <code>FONT C</code>. Each graphics character is shown by its
+Unicode equivalent: box drawing, block elements and, for the
+Commodore-specific lines, corners and half-shaded blocks, the Symbols
+for Legacy Computing block (U+1FB00-U+1FBFF), which Unicode 13 added
+for these characters. The book supplies a small font for these,
+cut from Noto Sans Symbols 2 (<a href="fonts/OFL.txt">SIL Open Font
+License</a>), so they show in any browser that can load web fonts. The key
+that types each graphics character is given in brackets. Codes 128 to
+255 are the same characters in reverse video. The key assignments are
+taken from the core's keyboard tables (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>matrix_to_ascii.vhdl</code>).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Character</th>
+<th>Code</th>
+<th>Character</th>
+<th>Code</th>
+<th>Character</th>
+<th>Code</th>
+<th>Character</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td><code>@</code></td>
+<td>32</td>
+<td>Space</td>
+<td>64</td>
+<td><code>─</code> (SHIFT+*)</td>
+<td>96</td>
+<td>Shifted space (SHIFT+SPACE)</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td><code>A</code></td>
+<td>33</td>
+<td><code>!</code></td>
+<td>65</td>
+<td><code>♠</code> (SHIFT+A)</td>
+<td>97</td>
+<td><code>▌</code> (MEGA+K)</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td><code>B</code></td>
+<td>34</td>
+<td><code>"</code></td>
+<td>66</td>
+<td><code>🭲</code> (SHIFT+B)</td>
+<td>98</td>
+<td><code>▄</code> (MEGA+I)</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td><code>C</code></td>
+<td>35</td>
+<td><code>#</code></td>
+<td>67</td>
+<td><code>🭸</code> (SHIFT+C)</td>
+<td>99</td>
+<td><code>▔</code> (MEGA+T)</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td><code>D</code></td>
+<td>36</td>
+<td><code>$</code></td>
+<td>68</td>
+<td><code>🭷</code> (SHIFT+D)</td>
+<td>100</td>
+<td><code>▁</code> (MEGA+@)</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td><code>E</code></td>
+<td>37</td>
+<td><code>%</code></td>
+<td>69</td>
+<td><code>🭶</code> (SHIFT+E)</td>
+<td>101</td>
+<td><code>▏</code> (MEGA+G)</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td><code>F</code></td>
+<td>38</td>
+<td><code>&amp;</code></td>
+<td>70</td>
+<td><code>🭺</code> (SHIFT+F)</td>
+<td>102</td>
+<td><code>▒</code> (MEGA++)</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td><code>G</code></td>
+<td>39</td>
+<td><code>'</code></td>
+<td>71</td>
+<td><code>🭱</code> (SHIFT+G)</td>
+<td>103</td>
+<td><code>▕</code> (MEGA+M)</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td><code>H</code></td>
+<td>40</td>
+<td><code>(</code></td>
+<td>72</td>
+<td><code>🭴</code> (SHIFT+H)</td>
+<td>104</td>
+<td><code>🮏</code> (MEGA+£)</td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td><code>I</code></td>
+<td>41</td>
+<td><code>)</code></td>
+<td>73</td>
+<td><code>╮</code> (SHIFT+I)</td>
+<td>105</td>
+<td><code>◤</code> (SHIFT+£)</td>
+</tr>
+<tr class="odd">
+<td>10</td>
+<td><code>J</code></td>
+<td>42</td>
+<td><code>*</code></td>
+<td>74</td>
+<td><code>╰</code> (SHIFT+J)</td>
+<td>106</td>
+<td><code>🮇</code> (MEGA+N)</td>
+</tr>
+<tr class="even">
+<td>11</td>
+<td><code>K</code></td>
+<td>43</td>
+<td><code>+</code></td>
+<td>75</td>
+<td><code>╯</code> (SHIFT+K)</td>
+<td>107</td>
+<td><code>├</code> (MEGA+Q)</td>
+</tr>
+<tr class="odd">
+<td>12</td>
+<td><code>L</code></td>
+<td>44</td>
+<td><code>,</code></td>
+<td>76</td>
+<td><code>🭼</code> (SHIFT+L)</td>
+<td>108</td>
+<td><code>▗</code> (MEGA+D)</td>
+</tr>
+<tr class="even">
+<td>13</td>
+<td><code>M</code></td>
+<td>45</td>
+<td><code>-</code></td>
+<td>77</td>
+<td><code>╲</code> (SHIFT+M)</td>
+<td>109</td>
+<td><code>└</code> (MEGA+Z)</td>
+</tr>
+<tr class="odd">
+<td>14</td>
+<td><code>N</code></td>
+<td>46</td>
+<td><code>.</code></td>
+<td>78</td>
+<td><code>╱</code> (SHIFT+N)</td>
+<td>110</td>
+<td><code>┐</code> (MEGA+S)</td>
+</tr>
+<tr class="even">
+<td>15</td>
+<td><code>O</code></td>
+<td>47</td>
+<td><code>/</code></td>
+<td>79</td>
+<td><code>🭽</code> (SHIFT+O)</td>
+<td>111</td>
+<td><code>▂</code> (MEGA+P)</td>
+</tr>
+<tr class="odd">
+<td>16</td>
+<td><code>P</code></td>
+<td>48</td>
+<td><code>0</code></td>
+<td>80</td>
+<td><code>🭾</code> (SHIFT+P)</td>
+<td>112</td>
+<td><code>┌</code> (MEGA+A)</td>
+</tr>
+<tr class="even">
+<td>17</td>
+<td><code>Q</code></td>
+<td>49</td>
+<td><code>1</code></td>
+<td>81</td>
+<td><code>●</code> (SHIFT+Q)</td>
+<td>113</td>
+<td><code>┴</code> (MEGA+E)</td>
+</tr>
+<tr class="odd">
+<td>18</td>
+<td><code>R</code></td>
+<td>50</td>
+<td><code>2</code></td>
+<td>82</td>
+<td><code>🭻</code> (SHIFT+R)</td>
+<td>114</td>
+<td><code>┬</code> (MEGA+R)</td>
+</tr>
+<tr class="even">
+<td>19</td>
+<td><code>S</code></td>
+<td>51</td>
+<td><code>3</code></td>
+<td>83</td>
+<td><code>♥</code> (SHIFT+S)</td>
+<td>115</td>
+<td><code>┤</code> (MEGA+W)</td>
+</tr>
+<tr class="odd">
+<td>20</td>
+<td><code>T</code></td>
+<td>52</td>
+<td><code>4</code></td>
+<td>84</td>
+<td><code>🭰</code> (SHIFT+T)</td>
+<td>116</td>
+<td><code>▎</code> (MEGA+H)</td>
+</tr>
+<tr class="even">
+<td>21</td>
+<td><code>U</code></td>
+<td>53</td>
+<td><code>5</code></td>
+<td>85</td>
+<td><code>╭</code> (SHIFT+U)</td>
+<td>117</td>
+<td><code>▍</code> (MEGA+J)</td>
+</tr>
+<tr class="odd">
+<td>22</td>
+<td><code>V</code></td>
+<td>54</td>
+<td><code>6</code></td>
+<td>86</td>
+<td><code>╳</code> (SHIFT+V)</td>
+<td>118</td>
+<td><code>🮈</code> (MEGA+L)</td>
+</tr>
+<tr class="even">
+<td>23</td>
+<td><code>W</code></td>
+<td>55</td>
+<td><code>7</code></td>
+<td>87</td>
+<td><code>○</code> (SHIFT+W)</td>
+<td>119</td>
+<td><code>🮂</code> (MEGA+Y)</td>
+</tr>
+<tr class="odd">
+<td>24</td>
+<td><code>X</code></td>
+<td>56</td>
+<td><code>8</code></td>
+<td>88</td>
+<td><code>♣</code> (SHIFT+X)</td>
+<td>120</td>
+<td><code>🮃</code> (MEGA+U)</td>
+</tr>
+<tr class="even">
+<td>25</td>
+<td><code>Y</code></td>
+<td>57</td>
+<td><code>9</code></td>
+<td>89</td>
+<td><code>🭵</code> (SHIFT+Y)</td>
+<td>121</td>
+<td><code>▃</code> (MEGA+O)</td>
+</tr>
+<tr class="odd">
+<td>26</td>
+<td><code>Z</code></td>
+<td>58</td>
+<td><code>:</code></td>
+<td>90</td>
+<td><code>♦</code> (SHIFT+Z)</td>
+<td>122</td>
+<td><code>🭿</code> (SHIFT+@)</td>
+</tr>
+<tr class="even">
+<td>27</td>
+<td><code>[</code></td>
+<td>59</td>
+<td><code>;</code></td>
+<td>91</td>
+<td><code>┼</code> (SHIFT++)</td>
+<td>123</td>
+<td><code>▖</code> (MEGA+F)</td>
+</tr>
+<tr class="odd">
+<td>28</td>
+<td><code>£</code></td>
+<td>60</td>
+<td><code>&lt;</code></td>
+<td>92</td>
+<td><code>🮌</code> (MEGA+-)</td>
+<td>124</td>
+<td><code>▝</code> (MEGA+C)</td>
+</tr>
+<tr class="even">
+<td>29</td>
+<td><code>]</code></td>
+<td>61</td>
+<td><code>=</code></td>
+<td>93</td>
+<td><code>│</code> (SHIFT+-)</td>
+<td>125</td>
+<td><code>┘</code> (MEGA+X)</td>
+</tr>
+<tr class="odd">
+<td>30</td>
+<td><code>↑</code></td>
+<td>62</td>
+<td><code>&gt;</code></td>
+<td>94</td>
+<td><code>π</code> (SHIFT+↑)</td>
+<td>126</td>
+<td><code>▘</code> (MEGA+V)</td>
+</tr>
+<tr class="even">
+<td>31</td>
+<td><code>←</code></td>
+<td>63</td>
+<td><code>?</code></td>
+<td>95</td>
+<td><code>◥</code> (MEGA+*)</td>
+<td>127</td>
+<td><code>▚</code> (MEGA+B)</td>
+</tr>
+</tbody>
+</table>
 <h3 id="colours">Colours</h3>
 <p>The first 16 palette entries are the C64's colours, used by COLOR,
 BORDER, BACKGROUND and colour RAM. CTRL with 1 to 8 types the first
@@ -153,9 +515,15 @@ eight, and MEGA with 1 to 8 the second eight.</p>
 </tr>
 </tbody>
 </table>
-<p>Entries 16 to 31 hold an alternate "rainbow" set, selected for text
-with ESC S and returned with ESC U, and entries 32 to 255 are free for
-programs to define with PALETTE.</p>
+<p>Entries 16 to 31 hold an alternate "rainbow" set. Text uses it when
+the bold attribute is set: the VIC-IV displays a bold character in
+entry 16 to 31 instead of 0 to 15 (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>). ESC S or <code>CHR$(1)</code> sets the
+attribute for what is printed next, and ESC U or <code>CHR$(4)</code>
+clears it; COLOR and FOREGROUND with 16 to 31 set it together with the
+colour, as Chapter 3 describes. Entries 32 to 255 are free for programs
+to define with PALETTE.</p>
 <h2 id="appendix-b-petscii-codes">Appendix B: PETSCII Codes</h2>
 <p>PETSCII is the character code used by PRINT, <code>CHR$</code>, ASC,
 GET and the keyboard. Codes 32 to 95 follow ASCII closely; the rest hold
@@ -208,10 +576,357 @@ control codes and graphics.</p>
 </table>
 <p>In the lower-case set, 65-90 are lower-case letters and 193-218 are
 capitals.</p>
+<h3 id="petscii-chart">PETSCII chart</h3>
+<p>The printable codes in the upper-case set of the standard font,
+<code>FONT C</code>, shown as in the screen code chart of Appendix
+A. Codes 0 to 31 and 128 to 159 are the control codes of the next
+section. Codes 192 to 223 show the same characters as 96 to 127, and
+the keyboard returns those higher codes: SHIFT with A gives 193, not
+97. Codes 224 to 254 show the same characters as 160 to 190, and 255
+is π.</p>
+<table>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th>Character</th>
+<th>Code</th>
+<th>Character</th>
+<th>Code</th>
+<th>Character</th>
+<th>Code</th>
+<th>Character</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>32</td>
+<td>Space</td>
+<td>64</td>
+<td><code>@</code></td>
+<td>96</td>
+<td><code>─</code> (SHIFT+*)</td>
+<td>160</td>
+<td>Shifted space (SHIFT+SPACE)</td>
+</tr>
+<tr class="even">
+<td>33</td>
+<td><code>!</code></td>
+<td>65</td>
+<td><code>A</code></td>
+<td>97</td>
+<td><code>♠</code> (SHIFT+A)</td>
+<td>161</td>
+<td><code>▌</code> (MEGA+K)</td>
+</tr>
+<tr class="odd">
+<td>34</td>
+<td><code>"</code></td>
+<td>66</td>
+<td><code>B</code></td>
+<td>98</td>
+<td><code>🭲</code> (SHIFT+B)</td>
+<td>162</td>
+<td><code>▄</code> (MEGA+I)</td>
+</tr>
+<tr class="even">
+<td>35</td>
+<td><code>#</code></td>
+<td>67</td>
+<td><code>C</code></td>
+<td>99</td>
+<td><code>🭸</code> (SHIFT+C)</td>
+<td>163</td>
+<td><code>▔</code> (MEGA+T)</td>
+</tr>
+<tr class="odd">
+<td>36</td>
+<td><code>$</code></td>
+<td>68</td>
+<td><code>D</code></td>
+<td>100</td>
+<td><code>🭷</code> (SHIFT+D)</td>
+<td>164</td>
+<td><code>▁</code> (MEGA+@)</td>
+</tr>
+<tr class="even">
+<td>37</td>
+<td><code>%</code></td>
+<td>69</td>
+<td><code>E</code></td>
+<td>101</td>
+<td><code>🭶</code> (SHIFT+E)</td>
+<td>165</td>
+<td><code>▏</code> (MEGA+G)</td>
+</tr>
+<tr class="odd">
+<td>38</td>
+<td><code>&amp;</code></td>
+<td>70</td>
+<td><code>F</code></td>
+<td>102</td>
+<td><code>🭺</code> (SHIFT+F)</td>
+<td>166</td>
+<td><code>▒</code> (MEGA++)</td>
+</tr>
+<tr class="even">
+<td>39</td>
+<td><code>'</code></td>
+<td>71</td>
+<td><code>G</code></td>
+<td>103</td>
+<td><code>🭱</code> (SHIFT+G)</td>
+<td>167</td>
+<td><code>▕</code> (MEGA+M)</td>
+</tr>
+<tr class="odd">
+<td>40</td>
+<td><code>(</code></td>
+<td>72</td>
+<td><code>H</code></td>
+<td>104</td>
+<td><code>🭴</code> (SHIFT+H)</td>
+<td>168</td>
+<td><code>🮏</code> (MEGA+£)</td>
+</tr>
+<tr class="even">
+<td>41</td>
+<td><code>)</code></td>
+<td>73</td>
+<td><code>I</code></td>
+<td>105</td>
+<td><code>╮</code> (SHIFT+I)</td>
+<td>169</td>
+<td><code>◤</code> (SHIFT+£)</td>
+</tr>
+<tr class="odd">
+<td>42</td>
+<td><code>*</code></td>
+<td>74</td>
+<td><code>J</code></td>
+<td>106</td>
+<td><code>╰</code> (SHIFT+J)</td>
+<td>170</td>
+<td><code>🮇</code> (MEGA+N)</td>
+</tr>
+<tr class="even">
+<td>43</td>
+<td><code>+</code></td>
+<td>75</td>
+<td><code>K</code></td>
+<td>107</td>
+<td><code>╯</code> (SHIFT+K)</td>
+<td>171</td>
+<td><code>├</code> (MEGA+Q)</td>
+</tr>
+<tr class="odd">
+<td>44</td>
+<td><code>,</code></td>
+<td>76</td>
+<td><code>L</code></td>
+<td>108</td>
+<td><code>🭼</code> (SHIFT+L)</td>
+<td>172</td>
+<td><code>▗</code> (MEGA+D)</td>
+</tr>
+<tr class="even">
+<td>45</td>
+<td><code>-</code></td>
+<td>77</td>
+<td><code>M</code></td>
+<td>109</td>
+<td><code>╲</code> (SHIFT+M)</td>
+<td>173</td>
+<td><code>└</code> (MEGA+Z)</td>
+</tr>
+<tr class="odd">
+<td>46</td>
+<td><code>.</code></td>
+<td>78</td>
+<td><code>N</code></td>
+<td>110</td>
+<td><code>╱</code> (SHIFT+N)</td>
+<td>174</td>
+<td><code>┐</code> (MEGA+S)</td>
+</tr>
+<tr class="even">
+<td>47</td>
+<td><code>/</code></td>
+<td>79</td>
+<td><code>O</code></td>
+<td>111</td>
+<td><code>🭽</code> (SHIFT+O)</td>
+<td>175</td>
+<td><code>▂</code> (MEGA+P)</td>
+</tr>
+<tr class="odd">
+<td>48</td>
+<td><code>0</code></td>
+<td>80</td>
+<td><code>P</code></td>
+<td>112</td>
+<td><code>🭾</code> (SHIFT+P)</td>
+<td>176</td>
+<td><code>┌</code> (MEGA+A)</td>
+</tr>
+<tr class="even">
+<td>49</td>
+<td><code>1</code></td>
+<td>81</td>
+<td><code>Q</code></td>
+<td>113</td>
+<td><code>●</code> (SHIFT+Q)</td>
+<td>177</td>
+<td><code>┴</code> (MEGA+E)</td>
+</tr>
+<tr class="odd">
+<td>50</td>
+<td><code>2</code></td>
+<td>82</td>
+<td><code>R</code></td>
+<td>114</td>
+<td><code>🭻</code> (SHIFT+R)</td>
+<td>178</td>
+<td><code>┬</code> (MEGA+R)</td>
+</tr>
+<tr class="even">
+<td>51</td>
+<td><code>3</code></td>
+<td>83</td>
+<td><code>S</code></td>
+<td>115</td>
+<td><code>♥</code> (SHIFT+S)</td>
+<td>179</td>
+<td><code>┤</code> (MEGA+W)</td>
+</tr>
+<tr class="odd">
+<td>52</td>
+<td><code>4</code></td>
+<td>84</td>
+<td><code>T</code></td>
+<td>116</td>
+<td><code>🭰</code> (SHIFT+T)</td>
+<td>180</td>
+<td><code>▎</code> (MEGA+H)</td>
+</tr>
+<tr class="even">
+<td>53</td>
+<td><code>5</code></td>
+<td>85</td>
+<td><code>U</code></td>
+<td>117</td>
+<td><code>╭</code> (SHIFT+U)</td>
+<td>181</td>
+<td><code>▍</code> (MEGA+J)</td>
+</tr>
+<tr class="odd">
+<td>54</td>
+<td><code>6</code></td>
+<td>86</td>
+<td><code>V</code></td>
+<td>118</td>
+<td><code>╳</code> (SHIFT+V)</td>
+<td>182</td>
+<td><code>🮈</code> (MEGA+L)</td>
+</tr>
+<tr class="even">
+<td>55</td>
+<td><code>7</code></td>
+<td>87</td>
+<td><code>W</code></td>
+<td>119</td>
+<td><code>○</code> (SHIFT+W)</td>
+<td>183</td>
+<td><code>🮂</code> (MEGA+Y)</td>
+</tr>
+<tr class="odd">
+<td>56</td>
+<td><code>8</code></td>
+<td>88</td>
+<td><code>X</code></td>
+<td>120</td>
+<td><code>♣</code> (SHIFT+X)</td>
+<td>184</td>
+<td><code>🮃</code> (MEGA+U)</td>
+</tr>
+<tr class="even">
+<td>57</td>
+<td><code>9</code></td>
+<td>89</td>
+<td><code>Y</code></td>
+<td>121</td>
+<td><code>🭵</code> (SHIFT+Y)</td>
+<td>185</td>
+<td><code>▃</code> (MEGA+O)</td>
+</tr>
+<tr class="odd">
+<td>58</td>
+<td><code>:</code></td>
+<td>90</td>
+<td><code>Z</code></td>
+<td>122</td>
+<td><code>♦</code> (SHIFT+Z)</td>
+<td>186</td>
+<td><code>🭿</code> (SHIFT+@)</td>
+</tr>
+<tr class="even">
+<td>59</td>
+<td><code>;</code></td>
+<td>91</td>
+<td><code>[</code></td>
+<td>123</td>
+<td><code>┼</code> (SHIFT++)</td>
+<td>187</td>
+<td><code>▖</code> (MEGA+F)</td>
+</tr>
+<tr class="odd">
+<td>60</td>
+<td><code>&lt;</code></td>
+<td>92</td>
+<td><code>£</code></td>
+<td>124</td>
+<td><code>🮌</code> (MEGA+-)</td>
+<td>188</td>
+<td><code>▝</code> (MEGA+C)</td>
+</tr>
+<tr class="even">
+<td>61</td>
+<td><code>=</code></td>
+<td>93</td>
+<td><code>]</code></td>
+<td>125</td>
+<td><code>│</code> (SHIFT+-)</td>
+<td>189</td>
+<td><code>┘</code> (MEGA+X)</td>
+</tr>
+<tr class="odd">
+<td>62</td>
+<td><code>&gt;</code></td>
+<td>94</td>
+<td><code>↑</code></td>
+<td>126</td>
+<td><code>π</code> (SHIFT+↑)</td>
+<td>190</td>
+<td><code>▘</code> (MEGA+V)</td>
+</tr>
+<tr class="even">
+<td>63</td>
+<td><code>?</code></td>
+<td>95</td>
+<td><code>←</code></td>
+<td>127</td>
+<td><code>◥</code> (MEGA+*)</td>
+<td>191</td>
+<td><code>▚</code> (MEGA+B)</td>
+</tr>
+</tbody>
+</table>
+
 <h3 id="control-codes">Control codes</h3>
 <p>Printing these codes performs an action rather than showing a
 character. They can be typed into strings in quote mode, or produced
-with <code>CHR$</code>.</p>
+with <code>CHR$</code>. Codes 1 to 26 can be typed as CTRL with the
+letters A to Z, and the colours as CTRL or MEGA with 1 to 8. A code that
+is not listed does nothing when printed.</p>
 <table>
 <thead>
 <tr class="header">
@@ -223,96 +938,264 @@ with <code>CHR$</code>.</p>
 </thead>
 <tbody>
 <tr class="odd">
-<td>5</td>
-<td>White</td>
+<td>1</td>
+<td>Bold on: text uses the alternate colours 16-31</td>
 <td>129</td>
 <td>Orange</td>
 </tr>
 <tr class="even">
-<td>13</td>
-<td>Return</td>
+<td>2</td>
+<td>Underline on</td>
+<td>130</td>
+<td>Underline off</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td>Bold off: text uses colours 0-15</td>
 <td>133-140</td>
 <td>F1, F3, F5, F7, F2, F4, F6, F8</td>
 </tr>
-<tr class="odd">
-<td>14</td>
-<td>Lower-case set</td>
+<tr class="even">
+<td>5</td>
+<td>White</td>
 <td>141</td>
 <td>Shifted return</td>
 </tr>
-<tr class="even">
-<td>17</td>
-<td>Cursor down</td>
+<tr class="odd">
+<td>6</td>
+<td>Default text colour</td>
 <td>142</td>
 <td>Upper-case set</td>
 </tr>
+<tr class="even">
+<td>7</td>
+<td>Bell</td>
+<td>143</td>
+<td>Flash off</td>
+</tr>
 <tr class="odd">
-<td>18</td>
-<td>Reverse on</td>
+<td>9</td>
+<td>Tab</td>
 <td>144</td>
 <td>Black</td>
 </tr>
 <tr class="even">
-<td>19</td>
-<td>Home</td>
+<td>10</td>
+<td>Line feed</td>
 <td>145</td>
 <td>Cursor up</td>
 </tr>
 <tr class="odd">
-<td>20</td>
-<td>Delete</td>
+<td>11</td>
+<td>Lock the case: SHIFT with MEGA no longer switches character sets</td>
 <td>146</td>
 <td>Reverse off</td>
 </tr>
 <tr class="even">
-<td>27</td>
-<td>Escape: starts an escape sequence</td>
+<td>12</td>
+<td>Unlock the case</td>
 <td>147</td>
 <td>Clear screen</td>
 </tr>
 <tr class="odd">
-<td>28</td>
-<td>Red</td>
+<td>13</td>
+<td>Return</td>
 <td>148</td>
 <td>Insert</td>
 </tr>
 <tr class="even">
-<td>29</td>
-<td>Cursor right</td>
-<td>149-155</td>
-<td>Brown, light red, dark grey, grey, light green, light blue, light
-grey</td>
+<td>14</td>
+<td>Lower-case set</td>
+<td>149</td>
+<td>Brown</td>
 </tr>
 <tr class="odd">
-<td>30</td>
-<td>Green</td>
+<td>15</td>
+<td>Flash on</td>
+<td>150</td>
+<td>Light red</td>
+</tr>
+<tr class="even">
+<td>17</td>
+<td>Cursor down</td>
+<td>151</td>
+<td>Dark grey</td>
+</tr>
+<tr class="odd">
+<td>18</td>
+<td>Reverse on</td>
+<td>152</td>
+<td>Grey</td>
+</tr>
+<tr class="even">
+<td>19</td>
+<td>Home</td>
+<td>153</td>
+<td>Light green</td>
+</tr>
+<tr class="odd">
+<td>20</td>
+<td>Delete</td>
+<td>154</td>
+<td>Light blue</td>
+</tr>
+<tr class="even">
+<td>21</td>
+<td>Back one word</td>
+<td>155</td>
+<td>Light grey</td>
+</tr>
+<tr class="odd">
+<td>23</td>
+<td>Forward one word</td>
 <td>156</td>
 <td>Purple</td>
 </tr>
 <tr class="even">
-<td>31</td>
-<td>Blue</td>
+<td>24</td>
+<td>Set or clear a tab stop</td>
 <td>157</td>
 <td>Cursor left</td>
 </tr>
 <tr class="odd">
-<td></td>
-<td></td>
+<td>26</td>
+<td>Back one tab stop</td>
 <td>158</td>
 <td>Yellow</td>
 </tr>
 <tr class="even">
-<td></td>
-<td></td>
+<td>27</td>
+<td>Escape: starts an escape sequence</td>
 <td>159</td>
 <td>Cyan</td>
 </tr>
+<tr class="odd">
+<td>28</td>
+<td>Red</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>29</td>
+<td>Cursor right</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>30</td>
+<td>Green</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>31</td>
+<td>Blue</td>
+<td></td>
+<td></td>
+</tr>
 </tbody>
 </table>
-<p>These are the C64's control codes, which the MEGA65 keeps;
-<code>PRINT CHR$(27); "X"</code> sends an escape sequence, as Chapter 2
-describes. The MEGA65 also defines further codes, such as for tabs and
-flashing text; the Book's character appendix lists them all.</p>
+<p>The cursor, colour, reverse, case and clear codes are the C64's. The
+others are the C65's and the MEGA65's (MEGA65 ROM source,
+<code>system.src</code>, control_vectors and shiftd).</p>
+<h3 id="escape-sequences">Escape sequences</h3>
+<p><code>PRINT CHR$(27); "X"</code> sends an escape sequence: code 27
+followed by one character. This table lists them in alphabetical order
+for looking up; <a
+href="ch02-getting-to-know-the-mega65.html#escape-sequences">Chapter 2,
+Escape sequences</a> explains them. ESC ↑ and ESC ← print as
+<code>CHR$(27); "^"</code> and <code>CHR$(27); "_"</code> (MEGA65 ROM
+source, <code>system.src</code>, escape_vectors).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Sequence</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ESC @</td>
+<td>Clear from the cursor to the end of the screen</td>
+</tr>
+<tr class="even">
+<td>ESC A, ESC C</td>
+<td>Auto-insert mode on, off</td>
+</tr>
+<tr class="odd">
+<td>ESC B, ESC T</td>
+<td>Set the bottom-right, top-left corner of a window</td>
+</tr>
+<tr class="even">
+<td>ESC D, ESC I</td>
+<td>Delete, insert a line</td>
+</tr>
+<tr class="odd">
+<td>ESC E, ESC F</td>
+<td>Steady, flashing cursor</td>
+</tr>
+<tr class="even">
+<td>ESC G, ESC H</td>
+<td>Bell on, off</td>
+</tr>
+<tr class="odd">
+<td>ESC J, ESC K</td>
+<td>Move to the start, the end of the line</td>
+</tr>
+<tr class="even">
+<td>ESC L, ESC M</td>
+<td>Scrolling on, off</td>
+</tr>
+<tr class="odd">
+<td>ESC N, ESC R</td>
+<td>Line pushing on, off (ROM 920396 and later)</td>
+</tr>
+<tr class="even">
+<td>ESC O</td>
+<td>Cancel insert, quote, reverse, underline and flash modes</td>
+</tr>
+<tr class="odd">
+<td>ESC P, ESC Q</td>
+<td>Erase to the start, the end of the line</td>
+</tr>
+<tr class="even">
+<td>ESC S, ESC U</td>
+<td>Bold on, off: alternate colours 16-31, or colours 0-15</td>
+</tr>
+<tr class="odd">
+<td>ESC V, ESC W</td>
+<td>Scroll up, down</td>
+</tr>
+<tr class="even">
+<td>ESC X</td>
+<td>Switch between 40 and 80 columns</td>
+</tr>
+<tr class="odd">
+<td>ESC Y, ESC Z</td>
+<td>Default tab stops, no tab stops</td>
+</tr>
+<tr class="even">
+<td>ESC [, ESC ]</td>
+<td>Monochrome, colour display</td>
+</tr>
+<tr class="odd">
+<td>ESC ↑, ESC ←</td>
+<td>Save, restore the cursor position (ROM 920362 and later)</td>
+</tr>
+<tr class="even">
+<td>ESC 4, ESC 8</td>
+<td>40 × 25, 80 × 25 screen</td>
+</tr>
+<tr class="odd">
+<td>ESC 5</td>
+<td>80 × 50 screen (ROM 920382 and later)</td>
+</tr>
+<tr class="even">
+<td>ESC ESC</td>
+<td>Cancel the escape sequence and the modes that ESC O cancels</td>
+</tr>
+</tbody>
+</table>
 <h2 id="appendix-c-number-conversion">Appendix C: Number Conversion</h2>
 <p>Each hexadecimal digit stands for four binary digits, so conversion
 between the two needs only this table:</p>
@@ -890,10 +1773,31 @@ instruction as <code>RTS #$nn</code>.</p>
 </tbody>
 </table>
 <p>BBR and BBS take a base page address and an 8-bit branch offset.</p>
+<p>An instruction's length follows from its mode. With no operand, or
+with A as the operand, it is one byte. With imm, bp, <code>bp,X</code>,
+<code>bp,Y</code>, <code>(bp,X)</code>, <code>(bp),Y</code>,
+<code>(bp),Z</code>, <code>(d,SP),Y</code> or rel it is two bytes. With
+abs, <code>abs,X</code>, <code>abs,Y</code>, <code>(abs)</code>,
+<code>(abs,X)</code>, rel16 or imm16, and for BBR and BBS, it is three
+bytes.</p>
+<p>The flat and quad instructions have no opcodes of their own. A
+prefix of <code>$EA</code> in front of a <code>(bp),Z</code> instruction
+makes it use a 32-bit pointer, written <code>[bp],Z</code>. A prefix of
+<code>$42 $42</code> makes an instruction work on Q instead of A, and
+<code>$42 $42 $EA</code> does both. Each prefix byte adds one to the
+length. <a
+href="ch10-vocabulary-of-the-45gs02.html#prefixes-and-encoding-notes">Chapter
+10, Prefixes and Encoding Notes</a> lists the prefixes and their
+effects, and <a
+href="ch10-vocabulary-of-the-45gs02.html#the-quad-instructions">The
+Quad Instructions</a> lists what can follow them.</p>
 <h2 id="appendix-e-key-registers">Appendix E: Key Registers</h2>
 <p>This is a quick reference to the registers used in this book. The
 MEGA65 Book's register appendices document every register and bit. Most
-of these need the VIC-IV (MEGA65) I/O personality.</p>
+of these need the VIC-IV (MEGA65) I/O personality. The names are those
+of the core's register list (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>src/vhdl</code>).</p>
 <table>
 <thead>
 <tr class="header">
@@ -909,223 +1813,349 @@ of these need the VIC-IV (MEGA65) I/O personality.</p>
 <td>CPU port direction</td>
 <td><code>$41</code> forces full speed, <code>$40</code> releases
 it</td>
-<td>8</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a></td>
 </tr>
 <tr class="even">
 <td><code>$01</code></td>
 <td>CPU port</td>
 <td>C64-style banking</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
 </tr>
 <tr class="odd">
+<td><code>$D000-$D010</code></td>
+<td>Sprite positions</td>
+<td>X and Y of sprites 0 to 7; <code>$D010</code> holds the ninth bits of X</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
 <td><code>$D011</code>, <code>$D012</code></td>
 <td>Control, raster</td>
 <td>Raster compare bit 8 and bits 7-0</td>
-<td>8</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a></td>
+</tr>
+<tr class="odd">
+<td><code>$D015</code></td>
+<td>SE</td>
+<td>Sprite enable bits</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
+<td><code>$D016</code></td>
+<td>XSCL, CSEL, MCM</td>
+<td>Horizontal smooth scroll, 38 or 40 columns, multicolour mode</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a>, <a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="odd">
+<td><code>$D018</code></td>
+<td>VS, CB</td>
+<td>Screen and character set addresses</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a>, <a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="even">
 <td><code>$D019</code>, <code>$D01A</code></td>
 <td>IRQ flags, mask</td>
 <td>Raster interrupt acknowledge and enable</td>
-<td>8</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D020</code>, <code>$D021</code></td>
 <td>Border, background</td>
 <td>Screen colours</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="even">
+<td><code>$D027-$D02E</code></td>
+<td>SPR0COL to SPR7COL</td>
+<td>Sprite colours</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="odd">
 <td><code>$D02F</code></td>
 <td>KEY</td>
 <td>Knock to select the I/O personality</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>$D030</code></td>
 <td>VIC-III control</td>
 <td>ROM banking, CRAM2K</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D031</code></td>
 <td>VIC-III control</td>
 <td>H640, FAST, ATTR, BPM, V400</td>
-<td>8, 12</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a>, <a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
+<td><code>$D032</code>, <code>$D03B</code></td>
+<td>BPENABLE, BPCOMP</td>
+<td>Bitplane enable and complement bits</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="odd">
+<td><code>$D048-$D04B</code></td>
+<td>TBDRPOS, BBDRPOS</td>
+<td>Top and bottom border positions</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
 <td><code>$D04C</code>, <code>$D04E</code></td>
 <td>TEXTXPOS, TEXTYPOS</td>
 <td>Text area position</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D051</code></td>
 <td>NORRDEL, DBLRR</td>
 <td>Raster rewrite buffer timing</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>$D052</code>, <code>$D053</code></td>
 <td>FNRASTER</td>
 <td>Physical raster line</td>
-<td>8</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D054</code></td>
 <td>CHR16, FCLRLO, FCLRHI, VFAST</td>
 <td>Two-byte characters, full colour, 40.5 MHz</td>
-<td>8, 12</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a>, <a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
+<td><code>$D055</code>, <code>$D056</code></td>
+<td>SPRHGTEN, SPRHGHT</td>
+<td>Extended sprite height: enable bits and height</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D057</code></td>
 <td>SPRX64EN</td>
 <td>64-pixel-wide sprites</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="even">
 <td><code>$D058</code>, <code>$D059</code></td>
 <td>LINESTEP</td>
 <td>Bytes per character row</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="odd">
+<td><code>$D05A</code>, <code>$D05B</code></td>
+<td>CHRXSCL, CHRYSCL</td>
+<td>Horizontal and vertical scaling of text</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
 <td><code>$D05D</code> bit 7</td>
 <td>HOTREG</td>
 <td>Hot register behaviour</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D05E</code></td>
 <td>CHRCOUNT</td>
 <td>Characters per row (low byte)</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>$D060-$D062</code></td>
 <td>SCRNPTR</td>
 <td>Screen memory address</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D064</code>, <code>$D065</code></td>
 <td>COLPTR</td>
 <td>Colour RAM offset</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
+<td><code>$D068-$D06A</code></td>
+<td>CHARPTR</td>
+<td>Character set address</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="odd">
+<td><code>$D06B</code></td>
+<td>SPR16EN</td>
+<td>16-colour sprite enable bits</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
 <td><code>$D06C-$D06E</code></td>
 <td>SPRPTRADR</td>
 <td>Sprite pointer list address</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D06F</code> bit 7</td>
 <td>PALNTSC</td>
 <td>Set in NTSC mode</td>
-<td>8, 13</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a>, <a href="ch13-sound.html">13</a></td>
+</tr>
+<tr class="even">
+<td><code>$D070</code></td>
+<td>MAPEDPAL, BTPALSEL, SPRPALSEL, ABTPALSEL</td>
+<td>Palette bank selection</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D079</code>, <code>$D07A</code></td>
 <td>RASCMP</td>
 <td>Physical raster compare</td>
-<td>8</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a></td>
 </tr>
 <tr class="even">
+<td><code>$D07B</code></td>
+<td>DISPROWS</td>
+<td>Number of text rows displayed</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="odd">
 <td><code>$D100-$D3FF</code></td>
 <td>Palette</td>
 <td>Red, green and blue, nybble-swapped</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>$D400-$D47F</code></td>
 <td>SIDs</td>
 <td>Four SIDs, <code>$20</code> bytes each</td>
-<td>13</td>
+<td><a href="ch13-sound.html">13</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D600-$D606</code></td>
 <td>UART</td>
 <td>Serial port</td>
-<td>17</td>
+<td><a href="ch17-major-peripherals.html">17</a></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>$D60A</code>, <code>$D610</code>, <code>$D619</code></td>
 <td>Keyboard queue</td>
 <td>MODKEY, ASCIIKEY, PETSCIIKEY</td>
-<td>16</td>
+<td><a href="ch16-control-ports.html">16</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D611</code>, <code>$D613</code>, <code>$D614</code></td>
 <td>Keyboard matrix</td>
 <td>Modifiers, column data, column select</td>
-<td>16</td>
+<td><a href="ch16-control-ports.html">16</a></td>
+</tr>
+<tr class="even">
+<td><code>$D61B</code></td>
+<td>Amiga mouse</td>
+<td>Amiga mouse support on the joystick ports</td>
+<td><a href="ch16-control-ports.html">16</a></td>
 </tr>
 <tr class="odd">
+<td><code>$D620-$D623</code></td>
+<td>POTAX, POTAY, POTBX, POTBY</td>
+<td>Paddle positions</td>
+<td><a href="ch16-control-ports.html">16</a></td>
+</tr>
+<tr class="even">
+<td><code>$D629</code></td>
+<td>M65MODEL</td>
+<td>MEGA65 model ID</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a>, <a href="ch17-major-peripherals.html">17</a></td>
+</tr>
+<tr class="odd">
+<td><code>$D630-$D635</code></td>
+<td>FWDATE, FWGIT</td>
+<td>Date stamp and git commit of the core</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
+</tr>
+<tr class="even">
 <td><code>$D63C</code></td>
 <td>SIDMODE</td>
 <td>6581 or 8580 behaviour</td>
-<td>13</td>
+<td><a href="ch13-sound.html">13</a></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>$D640-$D67F</code></td>
 <td>Hypervisor traps</td>
 <td>Hypervisor services</td>
-<td>8, 11</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
+</tr>
+<tr class="even">
+<td><code>$D6C8-$D6CB</code>, <code>$D6CF</code></td>
+<td>BOOTADDR, RECONFTRIG</td>
+<td>Reconfigure the FPGA from a bitstream in flash memory</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D6E0</code> onward</td>
 <td>Ethernet</td>
 <td>Ethernet controller</td>
-<td>17</td>
+<td><a href="ch17-major-peripherals.html">17</a></td>
 </tr>
 <tr class="even">
 <td><code>$D6F4</code>, <code>$D6F5</code></td>
 <td>MIXREGSEL, MIXREGDATA</td>
 <td>Audio mixer coefficients</td>
-<td>13</td>
+<td><a href="ch13-sound.html">13</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D700-$D707</code></td>
 <td>DMAgic</td>
 <td>DMA list address and triggers</td>
-<td>5, 8</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch08-ml-methods-specific-to-the-mega65.html">8</a></td>
 </tr>
 <tr class="even">
 <td><code>$D70F</code></td>
 <td>DIVBUSY, MULBUSY</td>
 <td>Math accelerator status</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D711</code></td>
 <td>AUDEN, NOMIX</td>
 <td>Audio DMA control</td>
-<td>13</td>
+<td><a href="ch13-sound.html">13</a></td>
 </tr>
 <tr class="even">
 <td><code>$D720-$D75F</code></td>
 <td>Audio DMA</td>
 <td>Four channels of 16 registers</td>
-<td>13</td>
+<td><a href="ch13-sound.html">13</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D768-$D77F</code></td>
 <td>Math accelerator</td>
 <td>DIVOUT, MULTINA, MULTINB, MULTOUT</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
+</tr>
+<tr class="even">
+<td><code>$D7EF</code></td>
+<td>HWRNG</td>
+<td>Hardware random number; reading it starts the next</td>
+<td><a href="ch03-basic65-reference-guide.html">3</a>, <a href="ch04-effective-programming-in-basic65.html">4</a></td>
+</tr>
+<tr class="odd">
+<td><code>$D7FE</code> bit 7</td>
+<td>NOTRDY</td>
+<td>Set while the next random number is not ready</td>
+<td><a href="ch03-basic65-reference-guide.html">3</a></td>
 </tr>
 <tr class="even">
 <td><code>$DC00</code>, <code>$DC01</code></td>
 <td>CIA 1 ports</td>
 <td>Joysticks and keyboard</td>
-<td>16</td>
+<td><a href="ch16-control-ports.html">16</a></td>
 </tr>
 <tr class="odd">
+<td><code>$DD00</code></td>
+<td>CIA 2 port A</td>
+<td>IEC bus lines and VIC-II bank</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch08-ml-methods-specific-to-the-mega65.html">8</a>, <a href="ch12-graphics.html">12</a>, <a href="ch17-major-peripherals.html">17</a></td>
+</tr>
+<tr class="even">
 <td><code>$FFD7110</code></td>
 <td>RTC</td>
 <td>Real-time clock</td>
-<td>17</td>
+<td><a href="ch17-major-peripherals.html">17</a></td>
 </tr>
 </tbody>
 </table>
@@ -1227,12 +2257,11 @@ O).</p>
 <tr class="odd">
 <td>A</td>
 <td><code>A address instruction</code></td>
-<td>Assemble an instruction; the monitor then offers the next
-address</td>
+<td>Assemble an instruction; the monitor then offers the next address</td>
 </tr>
 <tr class="even">
 <td>B</td>
-<td><code>B address</code></td>
+<td><code>B [from]</code></td>
 <td>Show memory as character bitmaps</td>
 </tr>
 <tr class="odd">
@@ -1243,52 +2272,62 @@ address</td>
 <tr class="even">
 <td>D</td>
 <td><code>D [from [to]]</code></td>
-<td>Disassemble</td>
+<td>Disassemble; without a range, one screenful (from ROM 920410)</td>
 </tr>
 <tr class="odd">
+<td>E</td>
+<td><code>E</code></td>
+<td>Examine BASIC's strings: lists the string storage in bank 1 from the top down</td>
+</tr>
+<tr class="even">
 <td>F</td>
 <td><code>F from to byte</code></td>
 <td>Fill memory with a byte</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>G</td>
 <td><code>G [address]</code></td>
 <td>Jump to an address</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>H</td>
 <td><code>H from to data</code></td>
 <td>Hunt for bytes or text in memory</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>J</td>
 <td><code>J address</code></td>
 <td>Call a subroutine, as with JSR</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>L</td>
 <td><code>L "name" [, unit [, address]]</code></td>
 <td>Load a file into memory</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>M</td>
 <td><code>M [from [to]]</code></td>
 <td>Show memory as hexadecimal and text</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>R</td>
 <td><code>R</code></td>
 <td>Show the registers</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>S</td>
 <td><code>S "name", unit, from, to</code></td>
 <td>Save memory to a file</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>T</td>
 <td><code>T from to destination</code></td>
 <td>Transfer (copy) memory</td>
+</tr>
+<tr class="odd">
+<td>U</td>
+<td><code>U target=source [, pattern]</code></td>
+<td>Copy files from one disk unit to another</td>
 </tr>
 <tr class="even">
 <td>V</td>
@@ -1302,11 +2341,57 @@ address</td>
 </tr>
 <tr class="even">
 <td>@</td>
-<td><code>@ [command]</code></td>
-<td>Disk command, status or directory</td>
+<td><code>@ [unit] [, command]</code></td>
+<td>Disk status, a disk command, or with <code>$</code> a directory</td>
+</tr>
+<tr class="odd">
+<td>.</td>
+<td><code>. address instruction</code></td>
+<td>The same as A</td>
+</tr>
+<tr class="even">
+<td>&gt;</td>
+<td><code>&gt; address bytes</code></td>
+<td>Store bytes in memory; M prints its lines in this form</td>
+</tr>
+<tr class="odd">
+<td>;</td>
+<td><code>; register values</code></td>
+<td>Set the registers; R prints its line in this form</td>
+</tr>
+<tr class="even">
+<td>?</td>
+<td><code>?</code></td>
+<td>List the commands</td>
+</tr>
+<tr class="odd">
+<td><code>$ + &amp; % '</code></td>
+<td><code>$D020</code>, <code>+53280</code></td>
+<td>A number typed on its own, with its prefix, is converted: the monitor prints it in hexadecimal, decimal, octal and binary</td>
 </tr>
 </tbody>
 </table>
+<p>The table follows the monitor's own command table and help text
+(MEGA65 ROM source, <code>bsmon.asm</code>). E and U are not in the
+list that <code>?</code> prints.</p>
+<p>A short session shows the usual steps. It puts a three-instruction
+routine at <code>$1600</code>, which is free for machine code
+(Appendix I), checks it, and returns to BASIC to run it:</p>
+<pre><code>MONITOR
+A 1600 LDA #$00
+A 1602 STA $D020
+A 1605 RTS
+D 1600 1605
+M 1600
++53280
+X
+SYS $1600</code></pre>
+<p>After the first A line the monitor offers each following address,
+so only the instruction is typed. D lists the three instructions back, and M shows the same
+bytes in hexadecimal, <code>A9 00 8D 20 D0 60</code>. The line
+<code>+53280</code> converts a decimal number, showing that it is
+<code>$D020</code>. X returns to BASIC, where <code>SYS $1600</code>
+turns the border black.</p>
 <p>Memory and registers shown by M and R can be changed by moving the
 cursor onto the display, typing over the values and pressing RETURN, as
 in other Commodore monitors. Chapter 7 walks through a first program
@@ -1352,8 +2437,21 @@ project's history in "MEGA65: The First Ten Years".</td>
 <tr class="even">
 <td><a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
 ROM change log</a></td>
-<td>What changed in each ROM release, used to say which ROM introduced a
-BASIC 65 or KERNAL feature.</td>
+<td>What changed in each ROM release from 920288 onwards, used to say
+which ROM introduced a BASIC 65 or KERNAL feature.</td>
+</tr>
+<tr class="odd">
+<td><a href="https://www.m-e-g-a.org/mega65-rom-history/">MEGA65 ROM
+history</a></td>
+<td>Change notes for the earlier ROMs, from January 2021 to ROM 920376
+in July 2022.</td>
+</tr>
+<tr class="even">
+<td><a href="https://cc65.github.io/doc/cpus.html">cc65 CPU
+reference</a></td>
+<td>The instruction sets and opcodes of the 6502 family as the cc65
+assembler knows them, including the 4510 and 45GS02. Appendix D and
+Chapter 10 are checked against it.</td>
 </tr>
 <tr class="odd">
 <td><a href="https://files.mega65.org/html/main.php?view=article">MEGA65
@@ -1397,55 +2495,55 @@ part of the 256MB space is populated (Chapter 5).</p>
 <td><code>$0000000-$000FFFF</code></td>
 <td>64KB</td>
 <td>Chip RAM, bank 0: system areas, text screen, BASIC program text and scalar variables</td>
-<td>5, 6</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch06-advanced-basic65.html">6</a></td>
 </tr>
 <tr class="even">
 <td><code>$0010000-$001FFFF</code></td>
 <td>64KB</td>
 <td>Chip RAM, bank 1: BASIC arrays and string text</td>
-<td>6</td>
+<td><a href="ch06-advanced-basic65.html">6</a></td>
 </tr>
 <tr class="odd">
 <td><code>$0020000-$003FFFF</code></td>
 <td>128KB</td>
 <td>Chip RAM, banks 2 and 3: the ROM, normally write-protected</td>
-<td>11</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$0040000-$005FFFF</code></td>
 <td>128KB</td>
 <td>Chip RAM, banks 4 and 5: BASIC graphics, or program data reserved with <code>MEM</code></td>
-<td>6, 9</td>
+<td><a href="ch06-advanced-basic65.html">6</a>, <a href="ch09-mixing-basic-with-machine-language.html">9</a></td>
 </tr>
 <tr class="odd">
 <td><code>$4000000</code> upward</td>
 <td>varies</td>
 <td>Cartridge port</td>
-<td>17</td>
+<td><a href="ch17-major-peripherals.html">17</a></td>
 </tr>
 <tr class="even">
 <td><code>$8000000-$87FFFFF</code></td>
 <td>8MB</td>
 <td>Attic RAM (not on every board)</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
 </tr>
 <tr class="odd">
 <td><code>$FF80000-$FF87FFF</code></td>
 <td>32KB</td>
 <td>Colour RAM</td>
-<td>5, 12</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="even">
 <td><code>$FFD0000-$FFD3FFF</code></td>
 <td>16KB</td>
 <td>I/O, one 4KB block per personality</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
 </tr>
 <tr class="odd">
 <td><code>$FFF8000-$FFFBFFF</code></td>
 <td>16KB</td>
 <td>Hypervisor</td>
-<td>5, 11</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 </tbody>
 </table>
@@ -1470,50 +2568,101 @@ versions (Chapter 11).</p>
 <tr class="odd">
 <td><code>$0000-$00FF</code></td>
 <td>Zero page, used by the KERNAL and BASIC 65. <code>$00</code> and <code>$01</code> are the CPU port</td>
-<td>5, 11</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$0100-$01FF</code></td>
 <td>Stack, while the E flag is set</td>
-<td>7</td>
+<td><a href="ch07-45gs02-machine-language.html">7</a></td>
 </tr>
 <tr class="odd">
+<td><code>$0200-$02FF</code></td>
+<td>BASIC's and the monitor's line input buffer, from <code>$0200</code>, then system variables; private apart from the USR vector</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
+</tr>
+<tr class="even">
 <td><code>$02F8-$02F9</code></td>
 <td>USR vector, read in the system bank</td>
-<td>9, 11</td>
+<td><a href="ch09-mixing-basic-with-machine-language.html">9</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
+</tr>
+<tr class="odd">
+<td><code>$0300-$0313</code></td>
+<td>System, private</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$0314-$0333</code></td>
 <td>KERNAL RAM vectors (IRQ, BRK, NMI, I/O routines, monitor)</td>
-<td>11</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="odd">
+<td><code>$0334-$03FF</code></td>
+<td>System, private; from <code>$0380</code>, the KERNAL's routines for calls between banks</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
+</tr>
+<tr class="even">
+<td><code>$0400-$05FF</code></td>
+<td>BASIC's run-time stack, for FOR, GOSUB and DO</td>
+<td><a href="ch06-advanced-basic65.html">6</a></td>
+</tr>
+<tr class="odd">
+<td><code>$0600-$07FF</code></td>
+<td>Shapes of the eight BASIC sprites, 64 bytes each</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
 <td><code>$0800-$0FCF</code></td>
 <td>80×25 text screen</td>
-<td>6, 12</td>
+<td><a href="ch06-advanced-basic65.html">6</a>, <a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="odd">
+<td><code>$0FF8-$0FFF</code></td>
+<td>Sprite pointers with an 80-column screen; <code>$0BF8-$0BFF</code> with a 40-column screen</td>
+<td><a href="ch12-graphics.html">12</a></td>
+</tr>
+<tr class="even">
+<td><code>$1000-$10FF</code></td>
+<td>Function key definitions</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
+</tr>
+<tr class="odd">
+<td><code>$1100-$15FF</code></td>
+<td>KERNAL and BASIC variables, the DOS buffer at <code>$1300</code> and BASIC's DMA list at <code>$1400</code>: system, private</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$1600-$17FF</code></td>
 <td>Free for machine code in every program</td>
-<td>9</td>
+<td><a href="ch09-mixing-basic-with-machine-language.html">9</a></td>
 </tr>
 <tr class="odd">
 <td><code>$1800-$1EFF</code></td>
-<td>Free only in programs that don't use the graphics commands, which keep work areas here: brush buffer at <code>$1800</code>, clipping at <code>$1C00</code>, IFF buffer at <code>$1D00</code>, scan-line buffer at <code>$1E00</code></td>
-<td>9</td>
+<td>Free only in programs that do not use the graphics commands, which keep work areas here: brush buffer at <code>$1800</code>, clipping at <code>$1C00</code>, IFF buffer at <code>$1D00</code>, scan-line buffer at <code>$1E00</code></td>
+<td><a href="ch09-mixing-basic-with-machine-language.html">9</a></td>
 </tr>
 <tr class="even">
 <td><code>$1F00-$1FFF</code></td>
 <td>Base page of the graphics commands</td>
-<td>9</td>
+<td><a href="ch09-mixing-basic-with-machine-language.html">9</a></td>
 </tr>
 <tr class="odd">
 <td><code>$2001-$F6FF</code></td>
-<td>BASIC program text, about 54KB; scalar variables are also kept in bank 0</td>
-<td>6</td>
+<td>BASIC program text, about 54KB</td>
+<td><a href="ch06-advanced-basic65.html">6</a></td>
+</tr>
+<tr class="even">
+<td><code>$F700-$FEFF</code></td>
+<td>Simple variables, eight bytes each: the eight reserved variables first, then up to 183 named ones, with the one-letter variables and functions in fixed places from <code>$FD00</code></td>
+<td><a href="ch03-basic65-reference-guide.html">3</a>, <a href="ch06-advanced-basic65.html">6</a></td>
+</tr>
+<tr class="odd">
+<td><code>$FF00-$FFFF</code></td>
+<td>System, private</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 </tbody>
 </table>
+<p>The rows marked private are taken from the ROM's own declarations (MEGA65 ROM source, <code>system.src</code> and <code>b65.src</code>) and can move between ROM versions.</p>
 <h3 id="what-the-cpu-sees-1">What the CPU Sees</h3>
 <p>In C64 mode the CPU's 64KB window is the C64's memory map,
 controlled by the CPU port at <code>$01</code>. These are the default
@@ -1596,112 +2745,112 @@ iomap.txt</a>).</p>
 <tr class="odd">
 <td><code>$D000-$D02E</code></td>
 <td>VIC-II registers: sprites, raster, screen control, colours</td>
-<td>8, 12</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a>, <a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="even">
 <td><code>$D02F</code></td>
 <td>KEY: the knock that selects the I/O personality</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D030-$D047</code></td>
 <td>VIC-III registers: ROM banking, H640 and other modes, bitplanes</td>
-<td>5, 12</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="even">
 <td><code>$D048-$D07F</code></td>
 <td>VIC-IV registers: screen layout, pointers, the raster rewrite buffer, sprite extensions</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D080-$D09F</code></td>
 <td>F011 floppy controller</td>
-<td>15</td>
+<td><a href="ch15-using-the-disk-drive.html">15</a></td>
 </tr>
 <tr class="even">
 <td><code>$D100-$D3FF</code></td>
 <td>Palette: red, green and blue values for entries 0-255</td>
-<td>12</td>
+<td><a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D400-$D47F</code></td>
 <td>The four SIDs, 32 bytes each, at <code>$D400</code>, <code>$D420</code>, <code>$D440</code> and <code>$D460</code></td>
-<td>13</td>
+<td><a href="ch13-sound.html">13</a></td>
 </tr>
 <tr class="even">
 <td><code>$D600-$D63F</code></td>
 <td>UART, keyboard, and system registers, including the core version and board type at <code>$D629</code> and <code>$D630-$D635</code></td>
-<td>11, 16, 17</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a>, <a href="ch16-control-ports.html">16</a>, <a href="ch17-major-peripherals.html">17</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D640-$D67F</code></td>
 <td>Hypervisor trap registers</td>
-<td>5, 11</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$D680-$D6AF</code></td>
 <td>SD card controller and floppy and IEC support</td>
-<td>14, 15</td>
+<td><a href="ch14-sd-card-and-mass-storage.html">14</a>, <a href="ch15-using-the-disk-drive.html">15</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D6C0-$D6CF</code></td>
 <td>FPGA and flash registers, used to reconfigure the FPGA</td>
-<td>11</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$D6E0-$D6EF</code></td>
 <td>Ethernet controller</td>
-<td>17</td>
+<td><a href="ch17-major-peripherals.html">17</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D6F4-$D6FD</code></td>
 <td>Audio mixer and direct digital audio</td>
-<td>13</td>
+<td><a href="ch13-sound.html">13</a></td>
 </tr>
 <tr class="even">
 <td><code>$D700-$D70F</code></td>
 <td>DMAgic</td>
-<td>5, 8</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch08-ml-methods-specific-to-the-mega65.html">8</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D711-$D75F</code></td>
 <td>Audio DMA: four sample channels</td>
-<td>13</td>
+<td><a href="ch13-sound.html">13</a></td>
 </tr>
 <tr class="even">
 <td><code>$D768-$D7EB</code></td>
 <td>Math accelerator: dividers and multipliers</td>
-<td>5</td>
+<td><a href="ch05-mega65-architecture.html">5</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D7EF</code></td>
 <td>Hardware random number generator</td>
-<td>3</td>
+<td><a href="ch03-basic65-reference-guide.html">3</a></td>
 </tr>
 <tr class="even">
 <td><code>$D7F0-$D7FE</code></td>
 <td>CPU control, including speed</td>
-<td>8</td>
+<td><a href="ch08-ml-methods-specific-to-the-mega65.html">8</a></td>
 </tr>
 <tr class="odd">
 <td><code>$D800-$DBFF</code></td>
 <td>Colour RAM, first 1KB</td>
-<td>5, 12</td>
+<td><a href="ch05-mega65-architecture.html">5</a>, <a href="ch12-graphics.html">12</a></td>
 </tr>
 <tr class="even">
 <td><code>$DC00-$DC0F</code></td>
 <td>CIA 1: keyboard, joysticks, timers</td>
-<td>16</td>
+<td><a href="ch16-control-ports.html">16</a></td>
 </tr>
 <tr class="odd">
 <td><code>$DD00-$DD0F</code></td>
 <td>CIA 2: IEC bus, VIC-II bank, timers</td>
-<td>15, 16</td>
+<td><a href="ch15-using-the-disk-drive.html">15</a>, <a href="ch16-control-ports.html">16</a></td>
 </tr>
 <tr class="even">
 <td><code>$DE00-$DFFF</code></td>
 <td>Cartridge I/O areas</td>
-<td>17</td>
+<td><a href="ch17-major-peripherals.html">17</a></td>
 </tr>
 </tbody>
 </table>
@@ -1721,22 +2870,22 @@ place of the CIAs and cartridge I/O (Chapter 5).</p>
 <tr class="odd">
 <td><code>$FF2F-$FFF5</code></td>
 <td>KERNAL jump table: extended entries from <code>$FF2F</code>, standard C64 entries from <code>$FF81</code></td>
-<td>11</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$FFFA-$FFFB</code></td>
 <td>NMI vector</td>
-<td>7, 11</td>
+<td><a href="ch07-45gs02-machine-language.html">7</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="odd">
 <td><code>$FFFC-$FFFD</code></td>
 <td>RESET vector</td>
-<td>11</td>
+<td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$FFFE-$FFFF</code></td>
 <td>IRQ and BRK vector</td>
-<td>7, 11</td>
+<td><a href="ch07-45gs02-machine-language.html">7</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 </tbody>
 </table>
@@ -1897,38 +3046,42 @@ their own.</p>
 <td>A ROM or other hardware plugged into the cartridge (expansion) port. See Chapter 17.</td>
 </tr>
 <tr class="even">
+<td><strong>Channel</strong></td>
+<td>A numbered connection between a program and a file or device, made by <code>OPEN</code> or <code>DOPEN</code> and named after <code>#</code> in <code>PRINT#</code>, <code>INPUT#</code> and <code>GET#</code>. Also called a file number or logical file. See Chapters 3 and 15.</td>
+</tr>
+<tr class="odd">
 <td><strong>Character set</strong></td>
 <td>The shapes of the characters on a text screen, usually eight bytes per character, one byte per row of eight pixels. Also called a font or charset. It can be redefined in RAM.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Chip RAM</strong></td>
 <td>The 384KB of RAM inside the FPGA, at <code>$0000000-$005FFFF</code>. It runs at full speed and is the only RAM the VIC-IV can display, so screens, bitmaps and sprites must be in it. See Chapter 5.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>CIA</strong></td>
 <td>Complex Interface Adapter, the MOS 6526. The C64 has two, at <code>$DC00</code> and <code>$DD00</code>, which read the keyboard and joysticks, drive the serial bus and provide timers and a time-of-day clock. The MEGA65 contains compatible versions. See Chapter 16.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Colour RAM</strong></td>
 <td>Memory holding the colour of each character on a text screen. On the C64 it is 1KB of 4-bit memory at <code>$D800</code>; on the MEGA65 it is 32KB of 8-bit memory at <code>$FF80000</code>, whose first 1KB still appears at <code>$D800</code>. See Chapter 5.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>Compiler</strong></td>
 <td>A program that translates a whole program, in a language such as C or BASIC, into machine code before it runs. Compiled programs run much faster than interpreted ones. Chapter 7 lists compilers for the MEGA65.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Core</strong></td>
 <td>The design loaded into the MEGA65's FPGA, which makes it behave as a particular machine. The MEGA65 core is the main one; others turn the hardware into, for example, a C64 or another computer. The core's version decides which hardware features exist.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>CPU</strong></td>
 <td>Central processing unit, the chip that runs programs. The MEGA65's CPU is the <em>45GS02</em>.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>CPU port</strong></td>
 <td>Address <code>$01</code>, whose low three bits (LORAM, HIRAM, CHAREN) choose whether BASIC ROM, KERNAL ROM, I/O and the character ROM appear in the C64 memory map. <code>$00</code> sets which bits are outputs. See Chapter 5.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>Cycle</strong></td>
 <td>One tick of the CPU's clock. Each instruction takes a whole number of cycles. At 1MHz a cycle lasts one microsecond; at the MEGA65's full 40.5MHz, about 25 nanoseconds. See Chapter 7.</td>
 </tr>
@@ -1952,20 +3105,28 @@ their own.</p>
 <td>Base 10, the everyday number system and the one BASIC uses unless told otherwise. Decimal mode, set by the D flag, is the CPU's <em>BCD</em> arithmetic. Appendix C converts between bases.</td>
 </tr>
 <tr class="odd">
+<td><strong>Device</strong></td>
+<td>See <em>unit</em>.</td>
+</tr>
+<tr class="even">
 <td><strong>Direct mode</strong></td>
 <td>Typing a line without a line number, so BASIC runs it as soon as RETURN is pressed. Most statements work in direct mode; a few, such as <code>RENUMBER</code>, work only there. See Chapter 3.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>Disassembler</strong></td>
 <td>A program that turns machine code back into mnemonics so it can be read. The built-in monitor disassembles with its <code>D</code> command (Appendix G).</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Disk image</strong></td>
 <td>A file that holds the contents of a whole floppy disk, such as a D81, D64 or D71 file.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>DMA</strong></td>
 <td>Direct memory access: copying or filling memory with a dedicated controller instead of the CPU. On the MEGA65 the controller is DMAgic.</td>
+</tr>
+<tr class="even">
+<td><strong>DMA list</strong></td>
+<td>The block of bytes in memory that tells DMAgic what to do: the command, the length, and the source and destination addresses, with optional settings in front. A program stores the list's address in DMAgic's registers to start the job. See Chapter 5.</td>
 </tr>
 <tr class="odd">
 <td><strong>DMAgic</strong></td>
@@ -1974,6 +3135,10 @@ their own.</p>
 <tr class="even">
 <td><strong>DOS</strong></td>
 <td>Disk Operating System: the code, in the drive or in the ROM, that manages files on a disk. Commands are sent to it on channel 15 or with BASIC 65's disk commands. See Chapter 15.</td>
+</tr>
+<tr class="odd">
+<td><strong>Drive</strong></td>
+<td>One disk mechanism within a <em>unit</em>. A dual-drive unit has drives 0 and 1, chosen with <code>D</code> in the disk commands; a single drive is drive 0.</td>
 </tr>
 </tbody>
 </table>
@@ -2007,7 +3172,7 @@ their own.</p>
 <tbody>
 <tr class="odd">
 <td><strong>Fast mode</strong></td>
-<td>Running the CPU above 1MHz. The MEGA65 offers 1, 2, 3.5 and 40.5MHz; MEGA65 mode starts at 40.5MHz. BASIC 65's <code>FAST</code> and <code>SPEED</code> select a speed. See Chapter 8.</td>
+<td>Running the CPU above 1MHz. The MEGA65 offers 1, 2, 3.5 and 40.5MHz; MEGA65 mode starts at 40.5MHz. BASIC 65's <code>FAST</code> and <code>SPEED</code> select 1, 3.5 or 40.5MHz; 2MHz is the C128's fast mode, selected through <code>$D030</code> in the C64 I/O personality. See Chapter 8.</td>
 </tr>
 <tr class="even">
 <td><strong>FAT32</strong></td>
@@ -2047,6 +3212,10 @@ their own.</p>
 <tr class="odd">
 <td><strong>Garbage collection</strong></td>
 <td>Reclaiming string memory that old values of string variables no longer use. BASIC does it automatically when string space runs out, which can cause a pause. See Chapter 6.</td>
+</tr>
+<tr class="even">
+<td><strong>GOTOX</strong></td>
+<td>A special entry in a screen row that moves the drawing position to a given X instead of showing a character; the basis of the <em>raster rewrite buffer</em> techniques. See Chapter 12.</td>
 </tr>
 </tbody>
 </table>
@@ -2393,24 +3562,32 @@ their own.</p>
 <td>The memory holding the screen code of each character on a text screen. On the C64 it is 1KB, at <code>$0400</code> by default; the VIC-IV can place it anywhere in chip RAM. Colours are held separately in <em>colour RAM</em>. See Chapter 12.</td>
 </tr>
 <tr class="odd">
+<td><strong>Secondary address</strong></td>
+<td>The third number in <code>OPEN</code>, passed to the device to say how the <em>channel</em> is to be used. On a disk drive, 2 to 14 are data channels and 15 is the command channel. See Chapters 15 and 17.</td>
+</tr>
+<tr class="even">
 <td><strong>SD card</strong></td>
 <td>The memory card that holds the MEGA65's ROM, cores, disk images and files. See Chapter 14.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>SEQ</strong></td>
 <td>A sequential file. See <em>sequential file</em>.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Sequential file</strong></td>
 <td>A file of type SEQ, read and written in order from start to end with <code>PRINT#</code>, <code>INPUT#</code> and <code>GET#</code>, and extended with <code>APPEND</code>. See Chapter 15.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><strong>SID</strong></td>
 <td>Sound Interface Device, the MOS 6581 and later 8580 sound chip of the C64, with three voices, an envelope generator and a filter. The MEGA65 has four, for twelve voices in stereo. See Chapter 13.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>Signed number</strong></td>
 <td>A number that can be negative, normally stored as two's complement, with the top bit as the sign. A signed byte holds -128 to 127. See Chapter 7.</td>
+</tr>
+<tr class="odd">
+<td><strong>Splat file</strong></td>
+<td>A disk file that was opened for writing and never closed. The directory shows it with an asterisk before its type, and <code>COLLECT</code> removes it. See Chapter 3.</td>
 </tr>
 <tr class="even">
 <td><strong>Sprite</strong></td>
@@ -2448,6 +3625,10 @@ their own.</p>
 <td>The single byte (or two bytes) that BASIC stores in place of a keyword, so <code>PRINT</code> takes one byte. See Chapter 6.</td>
 </tr>
 <tr class="odd">
+<td><strong>Trap</strong></td>
+<td>Two things. In BASIC 65, <code>TRAP</code> sends errors to a handler in the program (Chapter 3). In the Hypervisor, a trap is a call made by writing to one of the registers at <code>$D640-$D67F</code>, which switches the CPU into the Hypervisor to perform a service (Chapter 11).</td>
+</tr>
+<tr class="even">
 <td><strong>Two's complement</strong></td>
 <td>The usual way to store negative numbers: invert every bit and add 1, so -1 in a byte is <code>$FF</code>. Addition then works the same for signed and unsigned values.</td>
 </tr>
@@ -2467,10 +3648,14 @@ their own.</p>
 <td>Universal asynchronous receiver/transmitter, the hardware for serial (RS-232 style) communication. See Chapter 17.</td>
 </tr>
 <tr class="even">
+<td><strong>Unit</strong></td>
+<td>The number that identifies a device on the serial bus or inside the MEGA65, given after <code>U</code> in the disk commands and as the second number in <code>OPEN</code>: 8 and 9 are normally the disk drives, 4 a printer and 12 the SD card. Also called the device number. Compare <em>drive</em>.</td>
+</tr>
+<tr class="odd">
 <td><strong>Unsigned number</strong></td>
 <td>A number that can't be negative, so every bit counts towards its value. An unsigned byte holds 0 to 255 and a 16-bit value 0 to 65535. Compare <em>signed number</em>.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><strong>USR</strong></td>
 <td>A file type that works like SEQ but is marked for an application's own use. See Chapter 15.</td>
 </tr>

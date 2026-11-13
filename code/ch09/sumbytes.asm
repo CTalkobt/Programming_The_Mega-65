@@ -19,11 +19,11 @@ sum     pha             ; save A: low byte of the array address
         sta result
         sta result+1
         sta result+2
-
-loop    lda count       ; finished when count reaches zero
+        lda count       ; a count of zero is an error
         ora count+1
-        beq done
-        clc
+        beq fail
+
+loop    clc
         lda [ptr],z     ; next element of the array
         adc result
         sta result
@@ -36,9 +36,14 @@ next    inw ptr         ; advance the pointer
         bne nodec
         dec count+1
 nodec   dec count
-        bra loop
+        lda count       ; finished when count reaches zero
+        ora count+1
+        bne loop
+        sec             ; report success
 
 done    lda #$00
         tab             ; restore base page 0 for BASIC
-        sec             ; report success
-        rts
+        rts             ; LDA and TAB leave the carry alone
+
+fail    clc             ; report failure
+        bra done

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -29,8 +29,8 @@
 <nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-11-mega65-rom-guide">Programming
 the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
-<p class="downloads">Disk image: <a href="code/ch11/ch11.d81">ch11.d81</a> holds this chapter's 2 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch11/ch11.d81">ch11.d81</a> holds this chapter's 3 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
 DOS, the monitor, the character sets, and a complete set of C64 ROMs for
@@ -67,8 +67,7 @@ described. Because it is an ordinary file, the installed version is
 simply whichever image the SD card holds, and different machines may run
 different versions.</p>
 <h3 id="where-things-are">Where things are</h3>
-<p>The ROM is a 128KB image that the MEGA65 holds at
-<code>$20000-$3FFFF</code>, in banks 2 and 3. Its arrangement comes from
+<p>The image fills banks 2 and 3, and its arrangement comes from
 the C65's. The C65 brings its system ROM into the CPU's window using
 both banking mechanisms: <code>$D030</code> for some regions, and MAP
 for the rest (<a
@@ -169,8 +168,10 @@ binary integer: 920422 is <code>$000E0B66</code>. A single STQ stores it
 in four bytes:</p>
 <pre><code>        jsr $ff2f       ; VERSIONQ
         stq version     ; four bytes, low byte first</code></pre>
-<p>On a ROM older than 920417, <code>$FF2F</code> is not VERSIONQ, and
-calling it is likely to crash the program. At the time of writing,
+<p>VERSIONQ is the supported way to read the version, and it needs ROM
+920417 or later. On a ROM older than 920417, <code>$FF2F</code> is not
+VERSIONQ, and calling it is likely to crash the program, so a program
+that calls it should name 920417 as its minimum ROM. At the time of writing,
 920417 and later are beta releases; the latest stable ROM is 920413
 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <p>The version is also stored as text. The ROM image, which the MEGA65
@@ -236,8 +237,8 @@ read 0. Bits 0-3 of <code>$D628</code> belong to the J21 expansion
 header, not to the revision (<a
 href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>c65uart.vhdl</code>).</p>
-<p>Four further registers identify the core itself, the same build
-shown in Matrix Mode:</p>
+<p>Six further registers hold two values that identify the core itself,
+the same build shown in Matrix Mode:</p>
 <table>
 <thead>
 <tr class="header">
@@ -271,23 +272,35 @@ same information for the keyboard's firmware.</p>
 40 PRINT &quot;CORE BUILT ON DAY&quot;;N;&quot;OF&quot;;Y
 50 PRINT &quot;COMMIT: &quot;;HEX$(WPEEK($D634));HEX$(WPEEK($D632))</code></pre>
 <p>Hyppo, the Hypervisor, has a version of its own, which its getversion
-service returns (see <a href="#services-at-d640">Services at
-<code>$D640</code></a>).</p>
+service returns in two pairs of registers: the Hypervisor's version in A
+and X, and the version of its DOS in Y and Z, each as major and minor
+number (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo <code>dos.asm</code>):</p>
+<pre><code>        lda #$00        ; getversion
+        sta $d640
+        clv
+        sta hyppo       ; Hypervisor version, major
+        stx hyppo+1     ; and minor
+        sty hdos        ; DOS version, major
+        stz hdos+1      ; and minor
+        ldz #$00        ; leave Z as other code expects it</code></pre>
+<p><a href="#services-at-d640">Services at <code>$D640</code></a> lists
+the other services.</p>
 <h3 id="starting-another-core">Starting another core</h3>
 <p>The flash memory holds several cores in slots, and the flash menu
 starts the one the user picks (MEGA65 Book, pp. 5-7, 5-8). A program can
-do the same. It writes the flash address of the core to
-<code>$D6C8</code>-<code>$D6CB</code>, least significant byte first, and
-then writes <code>$42</code> to <code>$D6CF</code> to reconfigure the
-FPGA. The flash menu stores the address divided by 256. A core's
+do the same. It writes the flash address of the core, divided by 256,
+to <code>$D6C8</code>-<code>$D6CB</code>, least significant byte first,
+and then writes <code>$42</code> to <code>$D6CF</code> to reconfigure
+the FPGA. A core's
 bitstream starts 4KB into its slot, after the slot's header, and on R3 to
 R6 boards each slot is 8MB long, so slot <em>n</em> starts at
 <em>n</em> × <code>$800000</code> + <code>$1000</code> (<a
 href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>sdcardio.vhdl</code>, flash menu <code>megaflash.c</code> and
 <code>mf_utility.c</code>). Slot 1, for example, is at
-<code>$801000</code>, written as <code>$10</code>, <code>$80</code>,
-<code>$00</code>, <code>$00</code>:</p>
+<code>$801000</code>. Divided by 256 that is <code>$8010</code>, written
+as <code>$10</code>, <code>$80</code>, <code>$00</code>,
+<code>$00</code>:</p>
 <pre data-download="code/ch11/starting-another-core.bas code/ch11/starting-another-core.prg"><code>10 S=1 : REM SLOT NUMBER
 20 BANK 128
 30 POKE $D6C8,$10,(S AND 1)*128,INT(S/2),0
@@ -332,7 +345,8 @@ ROM.</p>
 <p>X/Y means a 16-bit value with the low byte in X and the high byte
 in Y. C is the carry flag: routines that can fail return with C=1 and an
 error code in A. A dash means the routine takes no input or returns no
-result. Unless the table says otherwise, assume a KERNAL routine changes
+result. Z in these columns is the Z register unless the table says "Z
+flag". Unless the table says otherwise, assume a KERNAL routine changes
 every register and flag. All of them expect the KERNAL's normal memory
 map, with the base page register B set to <code>$00</code>.</p>
 <table>
@@ -575,7 +589,7 @@ map, with the base page register B set to <code>$00</code>.</p>
 <td>STOP</td>
 <td>Test the STOP key</td>
 <td>—</td>
-<td>Z=1 if STOP is pressed</td>
+<td>Z flag set if STOP is pressed</td>
 </tr>
 <tr class="even">
 <td><code>$FFE4</code></td>
@@ -762,14 +776,14 @@ SYSFLAGS in ROM 920418 (<a href="https://github.com/MEGA65/mega65-rom-public/blo
 <tr class="odd">
 <td><code>$FF5F</code></td>
 <td>LKUPLA</td>
-<td>Find a free logical file number</td>
+<td>Look up the open file with a given logical file number</td>
 <td>A = logical file</td>
 <td>C=0 if found: A = logical file, X = device, Y = secondary address ($FF for none); C=1 if not found</td>
 </tr>
 <tr class="even">
 <td><code>$FF62</code></td>
 <td>LKUPSA</td>
-<td>Find a free secondary address</td>
+<td>Look up the open file with a given secondary address</td>
 <td>Y = secondary address</td>
 <td>C=0 if found: A = logical file, X = device, Y = secondary address ($FF for none); C=1 if not found</td>
 </tr>
@@ -856,8 +870,9 @@ happens only if the ROM on the card is 920416 or later. Mode 2 is the
 documented way to restart and run a program; in Xemu with ROM 920422 it
 reran a test program as expected. Mode 3 was not tested for this
 book.</p>
-<p>The last six are not among the entries the C65 moved, so they keep
-their C128 addresses. PRIMM at <code>$FF7D</code> is confirmed on the
+<p>The six entries from JSRFAR to PRIMM, at
+<code>$FF6E</code>-<code>$FF7D</code>, are not among the entries the C65
+moved, so they keep their C128 addresses. PRIMM at <code>$FF7D</code> is confirmed on the
 MEGA65 (<a
 href="https://m65digest.substack.com/p/robotfindskitten-part-2">MEGA65
 Digest</a>). The far-memory calls do not take the same arguments as on
@@ -866,7 +881,7 @@ and JSRFAR and JMPFAR take their target and register values from base
 page locations <code>$02</code>-<code>$09</code>. The inputs and outputs
 come from the MEGA65 Book's KERNAL Jump Table appendix.</p>
 <h4 id="where-the-far-calls-run">Where the far calls run</h4>
-<p>The far-call routines don't run from ROM. They exist to change the
+<p>The far-call routines do not run from ROM. They exist to change the
 memory map, and code running in the KERNAL at <code>$E000-$FFFF</code>
 could map itself out halfway through. So the KERNAL's start-up routine
 copies them into bank 0 RAM from <code>$0380</code>, below
@@ -919,6 +934,80 @@ RUN/STOP-RESTORE uses the same reset (MEGA65 ROM source,
 <code>ioinit</code>; <a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). To leave the
 program entirely, RESET_RUN with A=0 performs a full KERNAL warm
 boot.</p>
+<h3 id="example-saving-and-loading-a-file">Example: saving and loading
+a file</h3>
+<p>Every file operation starts with the same three calls: SETBNK for the
+banks of the data and the file name, SETLFS for the device and secondary
+address, and SETNAM for the name. This routine saves the 256 bytes at
+<code>$1700</code> to a file called BLOCK on drive 8 with
+<code>SYS $1600</code>, and loads them back with
+<code>SYS $1603</code>:</p>
+<pre data-download="code/ch11/kernalfile.asm code/ch11/kernalfile.prg"><code>        * = $1600
+buffer  = $1700         ; the 256 bytes to save and load
+bufend  = $1800         ; one past the last byte
+
+        jmp save        ; SYS $1600 saves the buffer
+                        ; SYS $1603 loads it back
+load    jsr setup
+        lda #$00        ; 0 = load, 1 = verify
+        ldx #&lt;buffer    ; load address, used because the
+        ldy #&gt;buffer    ; secondary address is 0
+        jsr $ffd5       ; LOAD
+        rts             ; C = 1: error code in A
+
+save    jsr setup
+        ldx $fb         ; borrow two base page bytes for
+        phx             ; the pointer SAVE wants
+        ldx $fc
+        phx
+        lda #&lt;buffer
+        sta $fb
+        lda #&gt;buffer
+        sta $fc
+        lda #$fb        ; A = where the start address is
+        ldx #&lt;bufend    ; X/Y = end address + 1
+        ldy #&gt;bufend
+        jsr $ffd8       ; SAVE
+        plx             ; put the two bytes back; PLX and
+        stx $fc         ; STX leave A and the carry alone
+        plx
+        stx $fb
+        rts             ; C = 1: error code in A
+
+setup   lda #$00        ; data in bank 0
+        tax             ; file name in bank 0
+        jsr $ff6b       ; SETBNK
+        lda #$00        ; logical file: not used by LOAD and SAVE
+        ldx #$08        ; device 8
+        ldy #$00        ; secondary address 0
+        jsr $ffba       ; SETLFS
+        lda #nameend-name
+        ldx #&lt;name
+        ldy #&gt;name
+        jmp $ffbd       ; SETNAM
+
+        .enc &quot;ascii&quot;    ; store capitals as $41-$5A, the
+        .cdef &quot; ~&quot;, 32  ; codes the keyboard gives
+name    .text &quot;BLOCK&quot;
+nameend</code></pre>
+<p>The <code>.enc</code> and <code>.cdef</code> lines make 64tass store
+the name unconverted. Without them, an assembler that converts its
+source text to PETSCII stores capitals as <code>$C1-$DA</code>, and the
+file is saved under a name that <code>DLOAD "BLOCK"</code> does not
+find.</p>
+<p>LOAD puts the file at the address in X and Y because the secondary
+address is 0, and returns the address after the last byte loaded in X
+and Y. SAVE takes its start address indirectly, from two bytes of the
+base page that A points to. The KERNAL's base page is private, so the
+routine borrows two bytes and puts them back.</p>
+<p>Both calls return with the carry set and an error code in A when the
+KERNAL could not do the job, for example 5 for a device that is not
+present (MEGA65 ROM source, <code>system.src</code>). From BASIC,
+<code>RREG A,,,,S</code> after the SYS gives the code and the carry, in
+bit 0 of S. The drive's own errors arrive through the disk status, DS
+and DS$ in BASIC, so check both. Note that the KERNAL's carry means the
+opposite of the Hypervisor's: a KERNAL routine sets the carry for an
+error, and a Hypervisor service sets it for success.</p>
 <h2 id="ram-vectors">RAM Vectors</h2>
 <p>The jump table lets programs call the KERNAL. The RAM vectors let
 programs change what the KERNAL does. Each is a two-byte address in RAM
@@ -1081,18 +1170,72 @@ not be assumed from the C64 or C128.</p>
 <h2 id="hypervisor-services">Hypervisor Services</h2>
 <p>The Hypervisor's services, documented by the MEGA65 Book for Hyppo
 version 1.2, are reached through trap registers at
-<code>$D640-$D67F</code>. The service number goes in A, other inputs in
-X, Y and Z, and the write is followed by CLV, because the CPU may or may
-not execute the byte after the trap when the service returns. On return,
+<code>$D640-$D67F</code>, with the convention Chapter 5 introduced: the
+service number in A, other inputs in X, Y and Z, a write to the trap
+register, then CLV. On return,
 carry set means success; carry clear means failure, with an error code
-in A. Registers not used for results are preserved, and the trap
-registers exist only in the MEGA65 I/O personalities, the normal one
-and the Ethernet one (MEGA65 Book, pp. N-4, N-5; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>).</p>
-<p>Most services use <code>$D640</code>. A few use other trap registers:
-<code>$D641</code> for ROM write-protection, <code>$D642</code> for
-configuration and freeze-slot services, <code>$D643</code> for serial
-monitor output, and <code>$D67F</code> for a program to freeze itself
-(MEGA65 Book, Appendix N).</p>
+in A. Registers not used for results are preserved (MEGA65 Book, pp.
+N-4, N-5).</p>
+<p>Most services use <code>$D640</code>. A few use other trap registers
+(MEGA65 Book, Appendix N; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo <code>main.asm</code>,
+<code>mem.asm</code>, <code>syspart.asm</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Register</th>
+<th>A</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$D641</code></td>
+<td><code>$00</code></td>
+<td>Write-protect the ROM in banks 2 and 3</td>
+</tr>
+<tr class="even">
+<td><code>$D641</code></td>
+<td><code>$02</code></td>
+<td>Make the ROM in banks 2 and 3 writable</td>
+</tr>
+<tr class="odd">
+<td><code>$D642</code></td>
+<td><code>$00</code>, <code>$02</code>, <code>$04</code>,
+<code>$06</code></td>
+<td>Read, write, apply and set the system configuration sector</td>
+</tr>
+<tr class="even">
+<td><code>$D642</code></td>
+<td><code>$08</code></td>
+<td>Set the default DMA list format to suit the ROM that is loaded</td>
+</tr>
+<tr class="odd">
+<td><code>$D642</code></td>
+<td><code>$10</code>, <code>$12</code>, <code>$14</code>,
+<code>$16</code></td>
+<td>Freeze slots: locate a slot, unfreeze from a slot, read the list of
+frozen memory regions, and return the number of slots in X (low) and Y
+(high)</td>
+</tr>
+<tr class="even">
+<td><code>$D643</code></td>
+<td>The character</td>
+<td>Write the character in A to the serial monitor</td>
+</tr>
+<tr class="odd">
+<td><code>$D67F</code></td>
+<td>Any</td>
+<td>Freeze the program, as if RESTORE had been held: the Freezer
+opens</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>$D642</code> services exist for the Freezer and the
+configuration utility, and the Hyppo source is their only full
+description. Chapter 8 uses the two <code>$D641</code> services. Hyppo
+also keeps <code>$D644</code> for emulators, and has traps at
+<code>$D651</code> and <code>$D652</code> to enter and leave its secure
+mode.</p>
 <h3 id="services-at-d640">Services at <code>$D640</code></h3>
 <p>The table lists the services the Book documents. "Not in 1.2" marks
 services the Book defines but describes as not implemented in Hyppo 1.2;
@@ -1225,7 +1368,8 @@ implement.</p>
 <td>Yes</td>
 <td>Read a sector of the open file</td>
 <td>— (reads the current open file)</td>
-<td>X/Y = number of bytes read</td>
+<td>X/Y = number of bytes read; the sector is in the SD card buffer at
+<code>$FFD6E00</code> (Chapter 14)</td>
 </tr>
 <tr class="odd">
 <td><code>$1C</code></td>
