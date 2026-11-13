@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,8 +31,8 @@ Drive</title>
 <h1
 id="programming-the-mega65--chapter-15-using-the-disk-drive">Programming
 the MEGA65 — Chapter 15: Using the Disk Drive</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
-<p class="downloads">Disk image: <a href="code/ch15/ch15.d81">ch15.d81</a> holds this chapter's 9 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch15/ch15.d81">ch15.d81</a> holds this chapter's 10 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Most of this chapter applies equally to a disk image on the SD card,
 the MEGA65's internal 3.5" drive and a Commodore drive on the IEC port.
@@ -50,7 +50,10 @@ reserved for disk drives, and BASIC 65's disk commands use unit 8 unless
 given a U argument. A unit assigned to a disk image or to the internal
 drive is handled inside the MEGA65; any other unit number is sent to the
 IEC port, where the device with that number answers (MEGA65 Book, p.
-6-3).</p>
+6-3). <a
+href="ch14-sd-card-and-mass-storage.html#managed-drives-and-unit-numbers">Managed
+drives and unit numbers</a> in Chapter 14 explains the two managed
+drives and how to mount images on them and change their numbers.</p>
 <p>The D argument selects a drive within a unit. It is needed only for
 old dual-drive units such as the Commodore 4040 or 8050, where the
 second drive is drive 1; every other drive is drive 0.</p>
@@ -140,11 +143,13 @@ it to be scratched first, or an <code>@</code> before the name, which
 works for data files as well as programs, as in <code>DOPEN#2,
 "@SCORES", W</code> (MEGA65 Book, DOPEN). If the file does not exist,
 the <code>@</code> has no effect and the file is created as usual.</p>
-<p>The Book advises against <code>@</code> on 1541 and 1571 drives, but
-the problem is wider than that. The "save-and-replace" bug that can
-corrupt a disk is in the DOS of every Commodore drive from the 2040 to
-the 1581, so avoid <code>@</code> on any external IEC drive. The
-MEGA65's own DOS does not have the bug. It was fixed in ROM 920303, and
+<p>The Book advises against <code>@</code> on 1541 and 1571 drives,
+because of the "save-and-replace" bug in their DOS, which can corrupt a
+disk. A MEGA65 Filehost article, cited below, reports the bug in every
+Commodore drive from the 2040 to the 1581. Whichever drives have it, a
+program cannot tell what is on the IEC port, so the safe rule is to
+avoid <code>@</code> on any external drive and scratch the old file
+first. The MEGA65's own DOS does not have the bug. It was fixed in ROM 920303, and
 from 920361 <code>@</code> also works when saving from EDIT mode (<a
 href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
 ROM change log</a>). On the internal drive and on disk images, DSAVE,
@@ -158,7 +163,9 @@ lists the whole file. APPEND# fails with <code>62, FILE NOT
 FOUND</code> the first time, before the file exists, so the program
 then creates it with DOPEN and W. A failed APPEND# or DOPEN still leaves
 its channel number in use, so DCLOSE it before opening it again, or the
-second open stops with <code>?FILE OPEN ERROR</code>:</p>
+second open stops with <code>?FILE OPEN ERROR</code>. Line 40 relies on
+DOPEN clearing the status that line 30 read, which it does from ROM
+920404 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>); <a href="#drive-status">Drive status</a> explains:</p>
 <pre data-download="code/ch15/example-a-notes-file.bas code/ch15/example-a-notes-file.prg"><code>10 LINE INPUT &quot;NOTE: &quot;; N$
 20 APPEND#2, &quot;NOTES&quot;
 30 IF DS = 62 THEN DCLOSE#2 : DOPEN#2, &quot;NOTES&quot;, W
@@ -245,35 +252,40 @@ sequential file would have to be read from the start:</p>
 adds.</p>
 <h4 id="example-a-stock-list">Example: a stock list</h4>
 <p>A relative file makes a simple database when each record has a
-number that identifies it, such as a part number. This program creates
-a stock list with four parts, then looks up one part and changes its
-quantity. Each record holds a name and a number separated by a comma,
-so INPUT# can read them back as two fields. A length of 24 leaves room
-for a name of up to 16 characters, the comma, a quantity of up to six
-characters and the carriage return:</p>
+number that identifies it, such as a part number. This program keeps a
+stock list. The first time it runs it creates the file and writes four
+parts; every time, it looks up one part and changes its quantity. Each
+record holds a name and a number separated by a comma, so INPUT# can
+read them back as two fields. PRINT# writes a number with a space or a
+minus sign in front and a space after it, so a length of 24 leaves room
+for a name of up to 16 characters, the comma, a quantity of up to four
+digits with its two spaces, and the carriage return:</p>
 <pre data-download="code/ch15/example-a-stock-list.bas code/ch15/example-a-stock-list.prg"><code>10 DOPEN#3, &quot;STOCK&quot;, L24
 20 IF DS THEN PRINT DS$ : STOP
-30 FOR R = 1 TO 4 : READ N$, Q
-40 RECORD#3, R : PRINT#3, N$ &quot;,&quot; Q
-50 NEXT
-60 DCLOSE#3
-70 DATA BOLTS, 120, NUTS, 300, WASHERS, 75, SCREWS, 40
-100 DOPEN#3, &quot;STOCK&quot;, L24
-110 INPUT &quot;PART NUMBER&quot;; R
-120 RECORD#3, R : INPUT#3, N$, Q
-130 IF ASC(N$) = 255 THEN PRINT &quot;NO SUCH PART&quot; : GOTO 170
-140 PRINT N$; Q; &quot;IN STOCK&quot; : INPUT &quot;CHANGE BY&quot;; C
-150 RECORD#3, R : PRINT#3, N$ &quot;,&quot; Q + C
-160 IF DS THEN PRINT DS$
-170 DCLOSE#3</code></pre>
-<p>Lines 100 to 170 are the update. Reading a record moves the file on
-to the next one, so line 150 gives RECORD again before writing the
-changed record back in the same place. The DOS fills a new relative
-file to the end of its last block with empty records, and an empty
-record reads back as the single character <code>CHR$(255)</code>; line
-130 uses this to spot a part number that was never written. Once the
-file exists, <code>DOPEN#3, "STOCK", L</code> opens it without giving
-the length again (MEGA65 Book, DOPEN).</p>
+30 RECORD#3, 1 : INPUT#3, N$
+40 IF ASC(N$) &lt;&gt; 255 THEN 100          : REM THE PARTS ARE ALREADY THERE
+50 FOR R = 1 TO 4 : READ N$, Q
+60 RECORD#3, R : PRINT#3, N$ &quot;,&quot; Q
+70 NEXT
+80 DATA BOLTS, 120, NUTS, 300, WASHERS, 75, SCREWS, 40
+100 INPUT &quot;PART NUMBER&quot;; R
+110 RECORD#3, R : INPUT#3, N$, Q
+120 IF ASC(N$) = 255 THEN PRINT &quot;NO SUCH PART&quot; : GOTO 160
+130 PRINT N$; Q; &quot;IN STOCK&quot; : INPUT &quot;CHANGE BY&quot;; C
+140 RECORD#3, R : PRINT#3, N$ &quot;,&quot; Q + C
+150 IF DS THEN PRINT DS$
+160 DCLOSE#3</code></pre>
+<p>Reading a record moves the file on to the next one, so line 140 gives
+RECORD again before writing the changed record back in the same place.
+The DOS fills a new relative file to the end of its last block with
+empty records, and an empty record reads back as the single character
+<code>CHR$(255)</code>, with any further variable in the INPUT# left
+empty or 0 (tested in Xemu with ROM 920413). Line 40 uses this to tell a
+new file from one that already holds its parts, so running the program
+again keeps the quantities changed earlier, and line 120 uses it to spot
+a part number that was never written. Once the file exists,
+<code>DOPEN#3, "STOCK", L</code> opens it without giving the length
+again (MEGA65 Book, DOPEN).</p>
 <p>RECORD numbers start at 1. Positioning beyond the last record and
 writing there makes the DOS extend the file with empty records, as long
 as the disk has room (MEGA65 Book, p. B-206).</p>
@@ -287,7 +299,7 @@ line starts with a two-byte link and a two-byte line number, which holds
 the file's size in blocks, then the text of the line and a zero byte.
 The first line is the disk name and ID, and the last is BLOCKS FREE
 (MEGA65 ROM source, dos.src). This program reads it into arrays:</p>
-<pre data-download="code/ch15/reading-the-directory-from-a-program.bas code/ch15/reading-the-directory-from-a-program.prg"><code>10 DIM N$(143), T$(143), B(143) : C = -1
+<pre data-download="code/ch15/reading-the-directory-from-a-program.bas code/ch15/reading-the-directory-from-a-program.prg"><code>10 DIM N$(296), T$(296), B(296) : C = -1
 20 OPEN 1, 8, 0, &quot;$&quot;
 30 GET#1, A$, A$                    : REM SKIP THE LOAD ADDRESS
 40 DO
@@ -306,13 +318,18 @@ The first line is the disk name and ID, and the last is BLOCKS FREE
 170 LOOP
 180 CLOSE 1
 190 PRINT &quot;DISK: &quot;; N$(0); &quot;  ID: &quot;; T$(0)
-200 FOR I = 1 TO C : PRINT N$(I), LEFT$(T$(I), 3), B(I) : NEXT
+200 FOR I = 1 TO C : PRINT N$(I), LEFT$(T$(I), 4), B(I) : NEXT
 210 PRINT C; &quot;FILES,&quot;; FR; &quot;BLOCKS FREE&quot;</code></pre>
 <p>Each line is collected into <code>L$</code>; the name is whatever
 lies between the first two quotation marks, and the rest, with leading
 spaces removed, is the type. The BLOCKS FREE line has no quotation
 marks, which ends the loop. Element 0 of the arrays holds the disk name,
-padded with spaces to 16 characters, and the ID. BASIC 65's ASC returns
+padded with spaces to 16 characters, and the ID, which is followed by
+the DOS type, <code>1D</code> on a disk formatted by the MEGA65. The
+arrays have room for the 296 entries a 1581 directory can hold; a 1541
+disk holds 144. Line 200 prints four characters of the type so that the
+<code>*</code> of an unclosed file, described next, does not push the
+last letter off. BASIC 65's ASC returns
 0 for an empty string, so the program works whether GET# returns a zero
 byte as <code>CHR$(0)</code> or as an empty string.</p>
 <p>The type text can carry markers: <code>*</code> before the type for
@@ -350,38 +367,85 @@ the common ones are:</p>
 <td>Files restored after scratching (the track value gives how many)</td>
 </tr>
 <tr class="odd">
+<td>02</td>
+<td>Selected partition: CHDIR has changed the directory (the track and
+sector values give its first and last track)</td>
+</tr>
+<tr class="even">
 <td>20-29</td>
 <td>Read or write errors: the disk is damaged, unformatted or
 write-protected</td>
+</tr>
+<tr class="odd">
+<td>25</td>
+<td>Write error: a block read back after writing did not match</td>
 </tr>
 <tr class="even">
 <td>26</td>
 <td>Write protect on</td>
 </tr>
 <tr class="odd">
+<td>30-34</td>
+<td>Syntax error in a command string or a file name</td>
+</tr>
+<tr class="even">
 <td>50</td>
 <td>Record not present: a relative file was positioned past its last
 record</td>
 </tr>
+<tr class="odd">
+<td>51</td>
+<td>Overflow in record: more was written than a relative record
+holds</td>
+</tr>
 <tr class="even">
+<td>52</td>
+<td>File too large: no room to extend a relative file</td>
+</tr>
+<tr class="odd">
+<td>60</td>
+<td>Write file open: the file is still open for writing</td>
+</tr>
+<tr class="even">
+<td>61</td>
+<td>File not open</td>
+</tr>
+<tr class="odd">
 <td>62</td>
 <td>File not found</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>63</td>
 <td>File exists</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>64</td>
 <td>File type mismatch: the file exists, but with another type</td>
 </tr>
+<tr class="even">
+<td>66</td>
+<td>Illegal track or sector</td>
+</tr>
 <tr class="odd">
+<td>70</td>
+<td>No channel: too many files are open on the drive</td>
+</tr>
+<tr class="even">
 <td>72</td>
 <td>Disk full</td>
+</tr>
+<tr class="odd">
+<td>73</td>
+<td>The DOS's name and version: the message after power-on or a
+reset, not an error</td>
 </tr>
 <tr class="even">
 <td>74</td>
 <td>Drive not ready: no disk</td>
+</tr>
+<tr class="odd">
+<td>75</td>
+<td>Format error</td>
 </tr>
 </tbody>
 </table>
@@ -390,13 +454,28 @@ share with the 1581; codes 03 to 05 come from the MEGA65's own DOS,
 which has the commands that produce them (MEGA65 ROM source, dos.src).
 Checking DS after each DOPEN and save is the single
 most effective way to make a program that uses disks reliable.</p>
+<p>DS is not always fresh. BASIC 65 reads the message from the drive
+the first time DS or <code>DS$</code> is used and then keeps it, until a
+command throws the kept copy away. OPEN and DOPEN do that, DOPEN only
+from ROM 920404 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), so the examples above are safe on current ROMs. The housekeeping
+commands in the next section do not when they run in a program, so DS
+after one of them can still show the result of an earlier command.
+<code>CLR DS</code>, a form of CLR the MEGA65 inherited from the C65,
+throws the kept message away, and the next use of DS reads the drive
+afresh (MEGA65 ROM source, <code>clear</code>, <code>Clear_DS</code>).
+<a href="#the-command-channel">The command channel</a> has an
+example.</p>
 <h2 id="disk-housekeeping">Disk Housekeeping</h2>
 <p>On the C64, every housekeeping job, from deleting a file to
 formatting a disk, meant sending a command string to the drive's
 command channel. BASIC 65 has a keyword for each, which builds the
 command string and sends it for you. The table gives both; the command
 strings are the ones BASIC 65 sends, with drive number 0 (MEGA65 ROM
-source, tabld). Chapter 3 lists the full syntax of each keyword.</p>
+source, tabld). Chapter 3 lists the full syntax of each keyword.
+<code>BACKUP U8 TO U9</code>, between the two managed drives, has no
+command string: the MEGA65 copies the disk itself, as described under
+<a href="#formatting-and-copying-whole-disks">Formatting and copying
+whole disks</a>.</p>
 <table>
 <thead>
 <tr class="header">
@@ -457,8 +536,8 @@ source, tabld). Chapter 3 lists the full syntax of each keyword.</p>
 <td><code>N0:NAME,ID</code></td>
 </tr>
 <tr class="odd">
-<td>Copy a whole disk</td>
-<td><code>BACKUP U8 TO U9</code></td>
+<td>Copy a whole disk in a dual drive</td>
+<td><code>BACKUP D0 TO D1, U10</code></td>
 <td><code>D1=0</code></td>
 </tr>
 </tbody>
@@ -593,6 +672,92 @@ show the result of an earlier command. Give <code>CLR DS</code> just
 before the command, and the next use of DS reads the drive afresh:</p>
 <pre data-download="code/ch15/the-command-channel-2.bas code/ch15/the-command-channel-2.prg"><code>10 CLR DS : SCRATCH &quot;TEMP*&quot;
 20 PRINT DS$</code></pre>
+<h3 id="subdirectories">Subdirectories</h3>
+<p>A 1581 disk can set aside a run of whole tracks as a partition, which
+appears in the directory as a file of type CBM, and a partition that has
+been formatted is a subdirectory with its own BAM and its own list of
+files. The MEGA65's DOS does this for the internal drive and for D81
+images, not for IEC drives. MKDIR creates and formats the partition in
+one step; its L argument is the size in tracks, at least 3, and each
+track gives 40 blocks, of which the subdirectory's own header, BAM and
+first directory block use some (MEGA65 ROM source, <code>mkdir</code>).
+CHDIR moves into it, and <code>CHDIR "/"</code> returns to the root:</p>
+<pre><code>MKDIR &quot;SUB&quot;, L5      : REM FIVE TRACKS: 200 BLOCKS
+CHDIR &quot;SUB&quot;
+DSAVE &quot;INNER&quot;        : REM SAVED INSIDE THE SUBDIRECTORY
+DIR                  : REM SHOWS ONLY INNER, AND 159 BLOCKS FREE
+CHDIR &quot;/&quot;
+DIR                  : REM SHOWS 200 &quot;SUB&quot; CBM</code></pre>
+<p>While a subdirectory is selected, every file command works inside it.
+After <code>CHDIR "/"</code> the status reads <code>02, SELECTED
+PARTITION</code>, which is a report and not an error (tested in Xemu
+with ROM 920413). Chapter 14's unit 12 has subdirectories
+of a different kind, those of the SD card's FAT32 file system, and CHDIR
+with U12 moves among those.</p>
+<h3 id="reading-blocks-directly">Reading blocks directly</h3>
+<p>The DOS can also read and write single blocks, by track and sector,
+for programs that inspect or repair disks. Open the command channel and
+a second channel named <code>#</code>, which gives the program a buffer
+in the drive. <code>U1</code> reads a block into the buffer, the
+program reads the bytes with GET#, and <code>B-P</code> moves the
+buffer's pointer to a chosen byte first. <code>U2</code> writes the
+buffer back to a block. The numbers after U1 and U2 are the channel,
+the drive, the track and the sector. This program reads the header
+block of a 1581 disk or D81 image, track 40, sector 0, and prints the
+disk name from bytes 4 to 19:</p>
+<pre data-download="code/ch15/reading-blocks-directly.bas code/ch15/reading-blocks-directly.prg"><code>10 OPEN 15, 8, 15 : OPEN 5, 8, 5, &quot;#&quot;
+20 PRINT#15, &quot;U1&quot;; 5; 0; 40; 0        : REM CHANNEL, DRIVE, TRACK, SECTOR
+30 INPUT#15, E, E$ : IF E THEN PRINT E; E$ : GOTO 70
+40 PRINT#15, &quot;B-P&quot;; 5; 4              : REM POINT AT BYTE 4
+50 N$ = &quot;&quot; : FOR I = 1 TO 16 : GET#5, A$ : N$ = N$ + A$ : NEXT
+60 PRINT &quot;DISK NAME: &quot;; N$
+70 CLOSE 5 : CLOSE 15</code></pre>
+<p>The name is padded to 16 characters with <code>CHR$(160)</code>.
+Chapter 14 shows where the header, the BAM and the directory lie on a
+D81. Each directory block holds eight entries of 32 bytes, laid out as
+on a 1581 (Commodore 1581 Disk Drive User's Guide):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Byte</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0-1</td>
+<td>In the first entry of a block only: the track and sector of the next directory block, or 0 and 255 in the last</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>File type: 0 scratched, 1 SEQ, 2 PRG, 3 USR, 4 REL, 5 CBM, with bit 7 set once the file has been closed and bit 6 set while it is locked</td>
+</tr>
+<tr class="odd">
+<td>3-4</td>
+<td>Track and sector of the file's first block</td>
+</tr>
+<tr class="even">
+<td>5-20</td>
+<td>Name, padded with <code>CHR$(160)</code></td>
+</tr>
+<tr class="odd">
+<td>21-22</td>
+<td>REL files: track and sector of the first side-sector block</td>
+</tr>
+<tr class="even">
+<td>23</td>
+<td>REL files: record length</td>
+</tr>
+<tr class="odd">
+<td>30-31</td>
+<td>Size in blocks, low byte first</td>
+</tr>
+</tbody>
+</table>
+<p>Writing blocks with U2 bypasses everything the DOS does to keep a
+disk consistent, so practise on a copy. Blocks a program claims for
+itself are not known to the directory, and COLLECT frees them, as noted
+above.</p>
 <h2 id="booting-disks">Booting Disks</h2>
 <p>There are three ways to start software from a disk (MEGA65 Book, pp.
 6-9, 6-10):</p>
@@ -603,8 +768,13 @@ Commodore disks follow.</li>
 <li><strong>BOOT</strong> loads and runs a program named
 <code>AUTOBOOT.C65</code>, the C65's convention.</li>
 <li><strong>Automatic booting.</strong> If the image or drive mounted at
-power-on has an <code>AUTOBOOT.C65</code>, it runs straight away.</li>
+power-on has an <code>AUTOBOOT.C65</code>, it runs straight away. The
+configuration utility chooses the image that is mounted at power-on;
+this is how the Intro Disk, <code>MEGA65.D81</code>, starts.</li>
 </ul>
+<p>Saving a short program as <code>AUTOBOOT.C65</code> on that image,
+perhaps one that sets a font, colours and KEY macros, gives a personal
+start-up routine (MEGA65 Book, p. 6-10).</p>
 <p>To make a disk of your own bootable, save its starting program as
 <code>AUTOBOOT.C65</code>. BOOT loads that file as a BASIC program and
 RUNs it, so a machine-language boot program needs a one-line BASIC stub
@@ -653,6 +823,16 @@ the C128, tells the KERNAL which
 bank the data (A) and the file name (X) are in. It must be called before
 OPEN, LOAD or SAVE; Chapter 11 also covers its form for 28-bit
 addresses.</p>
+<p>The carry flag after OPEN reports only the KERNAL's own errors, such
+as too many open files or a device that does not answer. A file that is
+not on the disk is not one of them: OPEN succeeds, the first BASIN
+returns no real data, and READST is then not 0, so the routine above
+stops after one byte (tested from BASIC in Xemu with ROM 920413, where
+the byte is 0). The reason, <code>62, FILE NOT FOUND</code>,
+waits on the drive's command channel. A routine that needs to tell the
+user why opens that channel as well, with a secondary address of 15 and
+no name, and reads the message from it with BASIN until the carriage
+return, exactly as the listing reads its file.</p>
 <p>For files on the SD card outside disk images, and for loading large
 files into attic RAM, use the Hypervisor services described in Chapters
 8 and 14 instead.</p>
@@ -669,7 +849,9 @@ data, REL for random-access records, CBM for subdirectories. A USR file
 is a SEQ file with a different label; add <code>,U</code> to the name
 to create one.</li>
 <li><strong>Directory.</strong> <code>OPEN 1,8,0,"$"</code> and GET#
-read the directory into a program, in the form LOAD "$" produces.</li>
+read the directory into a program, in the form LOAD "$" produces. MKDIR
+and CHDIR make and enter subdirectories on the MEGA65's own drives, and
+U1 with a <code>#</code> channel reads single blocks.</li>
 <li><strong>Status.</strong> DS and <code>DS$</code> report every
 operation; codes below 20 mean success. In a program, give
 <code>CLR DS</code> before a housekeeping command whose result you

@@ -1,0 +1,7 @@
+10 OPEN 15, 8, 15 : OPEN 5, 8, 5, "#"
+20 PRINT#15, "U1"; 5; 0; 40; 0        : REM CHANNEL, DRIVE, TRACK, SECTOR
+30 INPUT#15, E, E$ : IF E THEN PRINT E; E$ : GOTO 70
+40 PRINT#15, "B-P"; 5; 4              : REM POINT AT BYTE 4
+50 N$ = "" : FOR I = 1 TO 16 : GET#5, A$ : N$ = N$ + A$ : NEXT
+60 PRINT "DISK NAME: "; N$
+70 CLOSE 5 : CLOSE 15

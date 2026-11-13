@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -29,7 +29,7 @@
 <nav class="chapnav"><span></span><a href="index.html">Contents</a><span><a href="ch02-getting-to-know-the-mega65.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-1-introduction">Programming the
 MEGA65 — Chapter 1: Introduction</h1>
-<p>Oct 4, 2026 · Updated Oct 15, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
 <h2 id="what-the-mega65-is">What the MEGA65 Is</h2>
 <p>The MEGA65 is an 8-bit home computer, built in the 2020s to the
 design of a machine Commodore never released. It looks and feels like a
@@ -96,7 +96,6 @@ Book, p. 11-3):</p>
 <th>Mode</th>
 <th>ROM</th>
 <th>BASIC</th>
-<th>Prompt shows</th>
 </tr>
 </thead>
 <tbody>
@@ -104,19 +103,16 @@ Book, p. 11-3):</p>
 <td>MEGA65</td>
 <td>MEGA65 ROM (versions 92xxxx and later)</td>
 <td>BASIC 65</td>
-<td>MEGA65 start-up screen</td>
 </tr>
 <tr class="even">
 <td>C65</td>
 <td>Original Commodore 65 ROM (versions 91xxxx)</td>
 <td>BASIC 10</td>
-<td>C65 start-up screen</td>
 </tr>
 <tr class="odd">
 <td>C64</td>
 <td>Built into either ROM</td>
 <td>BASIC 2</td>
-<td>C64 start-up screen</td>
 </tr>
 </tbody>
 </table>
@@ -190,7 +186,7 @@ the techniques in Chapters 5 and 8.</p>
 </tr>
 <tr class="odd">
 <td>Attic RAM</td>
-<td>8MB or more of external RAM</td>
+<td>8MB of external RAM</td>
 <td>Chapters 5, 8</td>
 </tr>
 <tr class="even">
@@ -373,12 +369,13 @@ a feature arrived in a particular version, the text says so, and Chapter
 11 shows how a program can check what it is running on. If an example
 behaves differently on your machine, check for an update before assuming
 the example is wrong.</p>
-<p>The book was checked against ROM 920422 and the MEGA65 core's
-development source as of September 2026. At the time of writing, the
+<p>The text was checked against the source of ROM 920422 and the MEGA65
+core's development source as of September 2026. A chapter whose example
+programs were run on a different ROM says which one. At the time of writing, the
 latest stable release is package v0.97, from April 2025, with ROM 920413
-and its matching core; ROMs after 920413 are beta releases (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). A few
+and its matching core; ROMs after 920413 are beta releases (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). Some
 features described here are newer than the stable release, and the text
-gives the ROM that added each:</p>
+gives the ROM that added each. The main ones are:</p>
 <ul>
 <li>The KERNAL routines CURSOR (ROM 920415), RESET_RUN (920416) and
 VERSIONQ (920417), in Chapter 11.</li>
@@ -386,6 +383,10 @@ VERSIONQ (920417), in Chapter 11.</li>
 KEYLOCKS before ROM 920418, also in Chapter 11.</li>
 <li>SPRITE SYS R for high-resolution sprites (ROM 920415), in Chapter
 12.</li>
+<li>SYS TO (ROM 920414), and its I argument for routines outside
+<code>$1600-$1EFF</code> (920419), in Chapter 6.</li>
+<li><code>FRE(4)</code> and <code>FRE(5)</code>, which report the memory
+reserved in banks 4 and 5 (ROM 920415), also in Chapter 6.</li>
 </ul>
 <p>On a stable ROM, leave these out or check the version first, as
 Chapter 11 describes.</p>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,8 +31,8 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-9-mixing-basic-with-machine-language">Programming
 the MEGA65 — Chapter 9: Mixing BASIC with Machine Language</h1>
-<p>Oct 4, 2026 · Updated Oct 18, 2026 · @Craig Taylor</p>
-<p class="downloads">Disk image: <a href="code/ch09/ch09.d81">ch09.d81</a> holds this chapter's 5 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch09/ch09.d81">ch09.d81</a> holds this chapter's 7 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>A MEGA65 program does not have to be written entirely in one
 language. BASIC 65 is excellent at the parts of a program that change
@@ -333,7 +333,7 @@ them in memory before calling them. There are three common methods.</p>
 <p>BLOAD loads a file into memory without disturbing the BASIC program
 in memory. With B and P it loads to a given bank and address; without P
 it uses the load address stored in the file:</p>
-<pre data-download="code/ch09/bload.bas code/ch09/bload.prg"><code>10 BLOAD &quot;SPRITES.BIN&quot;, B4, P8192   : REM TO $42000
+<pre><code>10 BLOAD &quot;SPRITES.BIN&quot;, B4, P8192   : REM TO $42000
 20 BLOAD &quot;HELPERS&quot;                  : REM TO ITS OWN ADDRESS</code></pre>
 <p>Because BLOAD does not restart the program, it can be called from
 inside a running program, which is the usual way to load overlays or
@@ -358,16 +358,17 @@ and a B bank cannot.</p>
 <p>For a short routine in a printed listing, DATA statements remain the
 most portable method: the whole program is one listing that can be typed
 in.</p>
-<pre data-download="code/ch09/data-loaders.bas code/ch09/data-loaders.prg"><code>10 FOR I=0 TO 8
+<pre data-download="code/ch09/data-loaders.bas code/ch09/data-loaders.prg"><code>10 FOR I=0 TO 10
 20 READ B : POKE $1600+I, B : C=C+B
 30 NEXT
-40 IF C&lt;&gt;1396 THEN PRINT &quot;DATA ERROR&quot; : STOP
+40 IF C&lt;&gt;1140 THEN PRINT &quot;DATA ERROR&quot; : STOP
 50 SYS $1600
 60 END
-100 DATA 162,0,238,32,208,202,208,250,96</code></pre>
-<p>The routine cycles the border colour 256 times in 9 bytes:
-<code>LDX #0</code>, <code>INC $D020</code>, <code>DEX</code>,
-<code>BNE</code> back to the INC, <code>RTS</code>. The checksum in line
+100 DATA 162,79,169,1,157,0,8,202,16,250,96</code></pre>
+<p>The routine fills the top row of the 80-column screen at
+<code>$0800</code> with the letter A, in 11 bytes: <code>LDX #79</code>,
+<code>LDA #1</code>, <code>STA $0800,X</code>, <code>DEX</code>,
+<code>BPL</code> back to the STA, <code>RTS</code>. The checksum in line
 40 catches typing mistakes before they crash the machine, a practice
 worth keeping for any DATA loader.</p>
 <h3 id="code-appended-to-the-program">Code appended to the program</h3>
@@ -425,11 +426,7 @@ different amounts and kinds of data.</p>
 </tbody>
 </table>
 <h3 id="what-sys-does-to-basic">What SYS does to BASIC</h3>
-<p>With plain SYS, a register you don't give a value isn't set to zero:
-it gets whatever was left in its save location, usually the result of
-the previous SYS, and the same goes for the status register. SYS TO sets
-every register you leave out to zero (MEGA65 ROM source, SYS). Pass
-every register your routine depends on. During the call, SYS
+<p>During the call, SYS
 switches BASIC's ROM out of <code>$2000-$BFFF</code> and tells the
 KERNAL's interrupt handler to skip BASIC's interrupt-driven features,
 such as PLAY music and MOVSPR sprite movement. They resume when the
@@ -485,6 +482,11 @@ row in X:</p>
 20 SYS $1600, 160, 12   : REM FILL ROW 12 WITH SOLID BLOCKS</code></pre>
 <p>The routine sees A = 160 and X = 12 at its first instruction, exactly
 as if another machine-language routine had loaded them.</p>
+<p>With plain SYS, a register that is given no value is not set to zero:
+it gets whatever was left in its save location, usually the result of
+the previous SYS, and the same goes for the status register. SYS TO sets
+every register that is left out to zero (MEGA65 ROM source, SYS). Pass
+every register the routine depends on.</p>
 <h3 id="parameter-blocks">Parameter blocks</h3>
 <p>When four bytes are not enough, BASIC can POKE parameters into a
 small block of memory the routine knows about, then call it. The block
@@ -513,18 +515,70 @@ type to share this way, because each element is exactly one byte and the
 elements are stored one after another.</p>
 <h3 id="strings">Strings</h3>
 <p>POINTER applied to a string variable returns the address of its
-descriptor, not the text itself. Following the Commodore convention, the
-descriptor holds the length in one byte followed by the address of the
-text, and the text of a BASIC 65 string is in bank 1. A routine
-therefore reads the length and address from the descriptor, then reads
-the characters from bank 1 with a flat pointer.</p>
-<p>The Book documents this layout as part of POINTER, so it can be
-relied on: three bytes, the length followed by the low and high bytes of
-the text's address as an offset in bank 1. The text itself can move
+descriptor, not the text itself. The descriptor is three bytes: the
+length, then the low and high bytes of the text's address, which is an
+offset in bank 1. The Book documents this layout as part of POINTER, so
+it can be relied on. The text itself can move
 whenever garbage collection runs, so a routine should take the address
 from the descriptor at the moment it is called rather than keep it
 (MEGA65 Book, p. B-193). Chapter 6 shows the same descriptor read from
 BASIC.</p>
+<p>A routine therefore needs two flat pointers: one to the descriptor,
+passed in the registers as for an array, and one it builds from the
+descriptor to reach the characters in bank 1. This one counts the spaces
+in a string and returns the count in A:</p>
+<pre data-download="code/ch09/spaces.asm code/ch09/spaces.prg"><code>        * = $1600
+workpg  = $17           ; private base page at $1700
+desc    = $00           ; flat pointer to the descriptor
+text    = $04           ; flat pointer to the characters
+length  = $08
+
+spaces  pha             ; save A: low byte of the descriptor address
+        lda #workpg
+        tab
+        pla
+        sta desc
+        stx desc+1
+        sty desc+2
+        stz desc+3
+        ldz #$00
+        lda [desc],z    ; descriptor byte 0: the length
+        sta length
+        inz
+        lda [desc],z    ; byte 1: low byte of the text address
+        sta text
+        inz
+        lda [desc],z    ; byte 2: high byte
+        sta text+1
+        lda #$01        ; the text is in bank 1
+        sta text+2
+        lda #$00
+        sta text+3
+
+        tax             ; X counts the spaces
+        taz             ; Z indexes the characters
+loop    cpz length
+        beq done
+        lda [text],z
+        cmp #$20
+        bne next
+        inx
+next    inz
+        bne loop
+
+done    lda #$00
+        tab             ; restore base page 0 for BASIC
+        taz
+        txa             ; return the count in A
+        rts</code></pre>
+<pre data-download="code/ch09/strings.bas code/ch09/strings.prg"><code>10 BLOAD &quot;SPACES&quot;, B0, P5632         : REM LOAD TO $1600
+20 A$=&quot;THE QUICK BROWN FOX&quot;
+30 P=POINTER(A$)
+40 SYS $1600, MOD(P,256), INT(P/256) AND 255, INT(P/65536) AND 255, INT(P/16777216)
+50 RREG N : PRINT &quot;SPACES:&quot;; N</code></pre>
+<p>Z indexes the characters, so the loop needs no arithmetic on the
+pointer, and a string's 255-character limit fits an 8-bit index
+exactly.</p>
 <h2 id="returning-results">Returning Results</h2>
 <p>The same methods work in the other direction. Which to use depends
 again on how much comes back.</p>
@@ -578,11 +632,15 @@ the routine leaves behind as the function's value. The vector is the two
 bytes at <code>$02F8</code>, low byte first, read in the system bank;
 the Book's POKE entry sets it to a routine at <code>$1800</code> (MEGA65
 Book, p. B-194), which is safe only in a program that uses no graphics
-commands:</p>
-<pre data-download="code/ch09/the-usr-function.bas code/ch09/the-usr-function.prg"><code>10 BANK 128
-20 POKE $02F8, 0, 24                   : REM USR VECTOR = $1800</code></pre>
-<p>POKE writes successive bytes from a list, so one statement sets both
-halves of the vector; WPOKE <code>$02F8,$1800</code> does the same.</p>
+commands. This program loads the routine listed below to
+<code>$1600</code> instead, points the vector at it and calls it:</p>
+<pre data-download="code/ch09/the-usr-function.bas code/ch09/the-usr-function.prg"><code>10 BLOAD &quot;BITCOUNT&quot;, B0, P5632       : REM LOAD TO $1600
+20 BANK 128 : WPOKE $02F8, $1600     : REM USR VECTOR
+30 PRINT USR(255); USR(4660)</code></pre>
+<p>WPOKE writes both halves of the vector at once; POKE with a list of
+two bytes, low byte first, does the same. With the routine below in
+place, line 30 prints 8 and 5, the number of bits set in 255 and in
+4660, which is <code>$1234</code>.</p>
 <p>BASIC 65's USR accepts string arguments as well as numbers. The
 MEGA65 team's own unit-test module uses this: after it is loaded at
 <code>$1600</code> and initialised with SYS, calls such as
@@ -598,9 +656,71 @@ floating-point accumulator, not in a register, and the result must be
 left there too. A routine must therefore call BASIC's own conversion
 routines to turn the argument into an integer and to turn its result
 back into floating point, and it must remove a string argument from
-BASIC's temporary string area when it is done. Those routines are
-internal to BASIC 65, and their addresses can change between ROM
+BASIC's temporary string area when it is done. Unlike a routine called
+by SYS, a USR routine runs with BASIC's ROM still mapped at
+<code>$2000-$BFFF</code>, so it can call those routines directly, but
+they are internal to BASIC 65, and their addresses change between ROM
 versions.</p>
+<p>The routine that the program above loads counts the bits set in a
+16-bit argument. It uses two of BASIC's routines, named here as in the
+ROM source: <code>getadr</code>, which turns the floating-point
+accumulator into an unsigned integer with the high byte in A and the low
+byte in Y, and stops with an ILLEGAL QUANTITY error if the value is
+negative; and <code>nosflt</code>, which turns an unsigned integer in A
+and Y back into floating point:</p>
+<pre data-download="code/ch09/bitcount.asm code/ch09/bitcount.prg"><code>        * = $1600
+getadr  = $5f9c         ; FAC to integer: A = high byte, Y = low byte
+nosflt  = $5c3c         ; integer in A (high) and Y (low) to FAC
+                        ; both addresses are for ROM 920413 only
+
+usr     jsr getadr      ; the argument, as a 16-bit integer
+        sta high
+        sty low
+        ldx #$00        ; X counts the bits that are set
+        ldy #16
+loop    asl low
+        rol high
+        bcc skip
+        inx
+skip    dey
+        bne loop
+        txa
+        tay             ; result: low byte in Y,
+        lda #$00        ; high byte in A
+        jmp nosflt      ; float it and return to BASIC
+
+low     .byte 0
+high    .byte 0</code></pre>
+<p>The two addresses are right for one ROM only. They come from
+assembling the ROM source for each version:</p>
+<table>
+<thead>
+<tr class="header">
+<th>ROM</th>
+<th><code>getadr</code></th>
+<th><code>nosflt</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>920413</td>
+<td><code>$5F9C</code></td>
+<td><code>$5C3C</code></td>
+</tr>
+<tr class="even">
+<td>920423</td>
+<td><code>$61D9</code></td>
+<td><code>$5E2A</code></td>
+</tr>
+</tbody>
+</table>
+<p>Both routines moved by about 500 bytes between those two versions.
+On any other ROM
+the routine as listed jumps into the middle of something else and
+crashes, so a program that uses USR this way must be assembled for the
+ROM it will run on and must say so (MEGA65 ROM source,
+<code>b65.src</code>). Chapter 11 describes how to live with such a
+dependency.</p>
 <p>For that reason this book recommends SYS with RREG for most work.
 Reserve USR for cases where calling machine code inside an expression
 genuinely simplifies the BASIC program, and keep the conversion calls in
@@ -611,7 +731,8 @@ machine-language routine adds up every element of a BASIC byte array and
 returns the 24-bit total. BASIC passes the array's address with POINTER
 and the registers, passes the element count in a parameter block, and
 reads the result from the same block. The routine reports success
-through the carry flag.</p>
+through the carry flag: it returns with the carry clear, and adds
+nothing, if the count is zero.</p>
 <h3 id="memory-layout">Memory layout</h3>
 <table>
 <thead>
@@ -665,11 +786,11 @@ sum     pha             ; save A: low byte of the array address
         sta result
         sta result+1
         sta result+2
-
-loop    lda count       ; finished when count reaches zero
+        lda count       ; a count of zero is an error
         ora count+1
-        beq done
-        clc
+        beq fail
+
+loop    clc
         lda [ptr],z     ; next element of the array
         adc result
         sta result
@@ -682,12 +803,22 @@ next    inw ptr         ; advance the pointer
         bne nodec
         dec count+1
 nodec   dec count
-        bra loop
+        lda count       ; finished when count reaches zero
+        ora count+1
+        bne loop
+        sec             ; report success
 
 done    lda #$00
         tab             ; restore base page 0 for BASIC
-        sec             ; report success
-        rts</code></pre>
+        rts             ; LDA and TAB leave the carry alone
+
+fail    clc             ; report failure
+        bra done</code></pre>
+<p>The base page stays at <code>$1700</code> with interrupts enabled.
+That is safe, because the KERNAL's interrupt entry saves B and sets it
+to zero before it does anything else, and restores it on the way out
+(see <a href="ch11-mega65-rom-guide.html#chaining-into-the-irq">Chaining
+into the IRQ</a> in Chapter 11).</p>
 <p>INW advances only the low 16 bits of the pointer, so the routine
 assumes the array does not cross a 64KB boundary. That holds for arrays
 of normal size; a routine meant for very large arrays would advance all

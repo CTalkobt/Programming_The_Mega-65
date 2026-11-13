@@ -1,0 +1,7 @@
+10 FOR R = 6 TO 11
+20 V = 0 : IF R = 6 OR R = 9 THEN V = 255     : REM RED OF EACH HALF
+30 POKE $D61E, V : POKE $D61D, $80 + R
+40 SLEEP 0.05                                : REM LET THE KEYBOARD TAKE IT
+50 NEXT
+60 SLEEP 3
+70 POKE $D61D, 0

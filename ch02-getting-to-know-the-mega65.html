@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,7 +31,7 @@ MEGA65</title>
 <h1
 id="programming-the-mega65--chapter-2-getting-to-know-the-mega65">Programming
 the MEGA65 — Chapter 2: Getting to Know the MEGA65</h1>
-<p>Oct 4, 2026 · Updated Oct 19, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch02/ch02.d81">ch02.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Before programming any computer, it pays to know its everyday tools
@@ -80,7 +80,7 @@ on a modern digital display. The choice matters to programmers as well
 as to viewers: it sets the frame rate that raster interrupts, music
 players and the jiffy durations used by SOUND count against, as
 Chapters 8 and 13 explain. BASIC's TI timer is not affected: it counts
-microseconds. A program can tell which is in use from bit 7 of
+seconds, with microsecond resolution, in either mode. A program can tell which is in use from bit 7 of
 <code>$D06F</code>, which is set in NTSC mode.</p>
 <h2 id="the-keyboard">The Keyboard</h2>
 <p>The MEGA65 keyboard follows the Commodore layout: letters and numbers
@@ -209,10 +209,15 @@ program runs</td>
 </tbody>
 </table>
 <p>Some programs take over RUN/STOP and RESTORE, so these combinations
-do not always work. The Freezer is started by the Hypervisor, which
-keeps it reachable even then (MEGA65 Book, Hypervisor services
-appendix, freeze services). The complete list of control and
-MEGA codes is in the Book (MEGA65 Book, p. E-3).</p>
+do not always work. The Freezer is the exception, for the reason given
+under <a href="#the-freezer">The Freezer</a> below. The complete list of
+control and MEGA codes is in the Book (MEGA65 Book, p. E-3).</p>
+<p>Matrix Mode is a debugging console that appears over the running
+display. It runs on a small helper processor in the core, separate from
+the main CPU, so it works even when a program has hung; MEGA + TAB again
+closes it. <a
+href="ch08-ml-methods-specific-to-the-mega65.html#matrix-mode-and-remote-debugging">Matrix
+Mode and remote debugging</a> in Chapter 8 describes its commands.</p>
 <h3 id="keys-held-at-start-up">Keys held at start-up</h3>
 <p>A key held down while the machine starts changes what it starts
 into. The Hypervisor checks some keys before the ROM is loaded, and the
@@ -321,7 +326,7 @@ a screen. The most useful are listed below; the Book has the full table
 </tr>
 <tr class="odd">
 <td>ESC 5</td>
-<td>Switch to 80 × 50</td>
+<td>Switch to 80 × 50 (ROM 920382 and later)</td>
 </tr>
 <tr class="even">
 <td>ESC @</td>
@@ -408,6 +413,10 @@ with ESC M, or the screen scrolls up (MEGA65 ROM source, escape table;
 <pre data-download="code/ch02/escape-sequences.bas code/ch02/escape-sequences.prg"><code>10 PRINT CHR$(27);"R";CHR$(27);"M";   : REM NO LINE PUSHING OR SCROLLING
 20 CURSOR 79,24 : PRINT "*";          : REM BOTTOM-RIGHT CORNER
 30 PRINT CHR$(27);"N";CHR$(27);"L";   : REM BACK TO NORMAL</code></pre>
+<p>Line 20 is right for an 80 × 25 screen. In any text mode,
+<code>CURSOR RWINDOW(2)-1, RWINDOW(3)-1</code> finds the bottom-right
+corner, because RWINDOW(2) and RWINDOW(3) give the width and height of
+the whole screen; RWINDOW(3) needs ROM 920404 or later (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <p>Some programs expect to start in 80 × 25 mode and may not work
 correctly in 80 × 50.</p>
 <h3 id="windows-and-tabs">Windows and tabs</h3>

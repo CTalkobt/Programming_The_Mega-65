@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -31,7 +31,8 @@ Architecture</title>
 <h1
 id="programming-the-mega65--chapter-5-mega65-architecture">Programming
 the MEGA65 — Chapter 5: MEGA65 Architecture</h1>
-<p>Oct 4, 2026 · Updated Oct 11, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch05/ch05.d81">ch05.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65 is an 8-bit machine with a 28-bit address space, and
 almost everything interesting about programming it follows from that
@@ -48,7 +49,8 @@ you need a working model of the machine underneath.</p>
 <ul>
 <li>The 45GS02 processor and how its speed is controlled</li>
 <li>The 28-bit address space and what lives where</li>
-<li>The different kinds of RAM: chip RAM, attic RAM and colour RAM</li>
+<li>The different kinds of memory: chip RAM, attic RAM, colour RAM and
+the ROM</li>
 <li>The three banking mechanisms that decide what the CPU sees in its
 64KB window</li>
 <li>I/O personalities, which let one set of chips behave as a VIC-II,
@@ -60,6 +62,10 @@ VIC-III or VIC-IV</li>
 that depend on banking and DMA, and Chapter 12 covers the VIC-IV in
 detail. Here the aim is the big picture: enough to reason about the
 machine as a whole.</p>
+<p>Several examples are short pieces of 45GS02 assembly, because that is
+how these mechanisms are driven. Chapter 7 introduces machine language;
+until then they can be read for their comments. Where BASIC 65 can do
+the same job, the BASIC is shown beside them.</p>
 <p>A note on notation. Addresses the CPU sees directly are written as
 four hex digits, such as $D020. Full 28-bit addresses are written with
 seven hex digits, such as $FF80000. Where it helps, a 28-bit address may
@@ -183,6 +189,64 @@ timing, and the MEGA65 Book's instruction-set appendix gives the cycle
 counts. The practical consequence is simple: at full
 speed, code that was too slow in BASIC on a C64 is often fast enough on
 a MEGA65 without any machine language at all.</p>
+<h4 id="controlling-the-speed">Controlling the speed</h4>
+<p>Three register bits choose the speed, and a fourth switch overrides
+them (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>,
+<code>viciv.vhdl</code>):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Control</th>
+<th>Where</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FAST</td>
+<td>Bit 6 of <code>$D031</code>, in the VIC-III and VIC-IV
+personalities</td>
+<td>Set on its own: 3.5 MHz. With all three bits clear: 1 MHz</td>
+</tr>
+<tr class="even">
+<td>VFAST</td>
+<td>Bit 6 of <code>$D054</code>, in the VIC-IV personality</td>
+<td>Set together with FAST: 40.5 MHz. It does nothing while FAST is
+clear, unless the 2 MHz bit is set</td>
+</tr>
+<tr class="odd">
+<td>C128 2 MHz bit</td>
+<td>Bit 0 of <code>$D030</code>, in the C64 personality only</td>
+<td>Set with FAST and VFAST clear: 2 MHz. Set with VFAST: 40.5 MHz</td>
+</tr>
+<tr class="even">
+<td>Override</td>
+<td>Writing 65 to address 0; writing 64 removes it</td>
+<td>40.5 MHz whatever the three bits say</td>
+</tr>
+</tbody>
+</table>
+<p>The override is what <code>POKE 0,65</code> sets. It does not change
+FAST or VFAST, and <code>POKE 0,64</code> does not select 1 MHz: it only
+hands control back to the three bits. A program cannot read the override
+back (MEGA65 ROM source, <code>rspeed</code>). The personalities are
+described under <a href="#io-personalities">I/O Personalities</a>
+below.</p>
+<p>In BASIC 65, SPEED sets FAST and VFAST, and <code>RSPEED(0)</code>
+reads them back as 1, 3 or 40. Machine language reads or writes the two
+bits directly:</p>
+<pre data-download="code/ch05/controlling-the-speed.bas code/ch05/controlling-the-speed.prg"><code>10 SPEED 1 : PRINT RSPEED(0)      : REM 1 MHZ: FAST AND VFAST CLEAR
+20 SPEED 3 : PRINT RSPEED(0)      : REM 3.5 MHZ: FAST SET
+30 SPEED : PRINT RSPEED(0)        : REM 40.5 MHZ: FAST AND VFAST SET
+40 PRINT PEEK($D031) AND 64; PEEK($D054) AND 64</code></pre>
+<pre><code> 1
+ 3
+ 40
+ 64  64</code></pre>
+<p>Because RSPEED reads only FAST and VFAST, it reports what the speed
+would be without the override and without the 2 MHz bit. The ROM also
+drops to 1 MHz by itself during some disk operations and restores the
+speed afterwards (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <h2 id="the-28-bit-address-space">The 28-Bit Address Space</h2>
 <p>Every byte the MEGA65 can reach has a 28-bit address, giving a 256MB
 address space. Only a small part of it is populated, and the CPU never
@@ -310,7 +374,7 @@ what can see it.</p>
 <tbody>
 <tr class="odd">
 <td>Chip RAM</td>
-<td>384KB</td>
+<td>384KB, of which 128KB holds the ROM</td>
 <td>Full speed</td>
 <td>Yes</td>
 <td>Programs, screens, bitmaps, sprites, character sets</td>
@@ -339,11 +403,12 @@ what can see it.</p>
 </tbody>
 </table>
 <h3 id="chip-ram">Chip RAM</h3>
-<p>Chip RAM lives inside the FPGA. The Book explains the name: it is the
-memory the CPU can reach at full speed (MEGA65 Book, memory chapter). Anything the
+<p>Chip RAM lives inside the FPGA, so the CPU reaches it at full speed
+with no wait states (MEGA65 Book, memory chapter). Anything the
 VIC-IV must display, such as a screen, a bitmap, a character set or
-sprite data, has to be in chip RAM. Because it is internal it also runs
-at full CPU speed with no wait states.</p>
+sprite data, has to be in chip RAM. Of its 384KB, the 128KB at
+<code>$20000-$3FFFF</code> holds the ROM, which leaves 256KB for programs
+and data: banks 0, 1, 4 and 5.</p>
 <h3 id="attic-ram">Attic RAM</h3>
 <p>Attic RAM is 8MB of external memory on the main board. It is much
 larger than chip RAM but slower, and the VIC-IV cannot see it at all.
@@ -573,6 +638,10 @@ mechanism above:</p>
 16-bit indirect access, which is very little for the ability to reach
 any address without disturbing the map. For scattered accesses this is
 usually the best choice; for bulk copies, DMA is faster.</p>
+<p>BASIC 65 has the same ability: PEEK and POKE take an address above
+<code>$FFFF</code> as a full 28-bit address, so
+<code>PRINT PEEK($FF80000)</code> reads the same byte. Chapter 6 covers
+this.</p>
 <h2 id="io-personalities">I/O Personalities</h2>
 <p>The <code>$D000-$DFFF</code> I/O area looks different depending on
 which machine the MEGA65 is pretending to be. This is called its I/O
@@ -655,6 +724,8 @@ works:</p>
         sta $d02f
         lda #$53
         sta $d02f</code></pre>
+<p>From C64 BASIC, which has no hexadecimal numbers, the same knock is
+<code>POKE 53295,71 : POKE 53295,83</code>.</p>
 <p>The VIC-IV bytes are the ASCII codes for "GS", and the Ethernet bytes
 spell "ET". MEGA65 mode starts with the VIC-IV personality already
 selected, so most MEGA65 programs never need the knock. It matters when
@@ -824,12 +895,14 @@ list    .byte $0a       ; option: F018A format
         .byte $00       ; source bank
         .word $0800     ; destination address
         .byte $00       ; destination bank
-        .word $0000     ; modulo, unused here</code></pre>
+        .word $0000     ; modulo, unused</code></pre>
 <p>The same job in a loop of STA instructions would take thousands of
-cycles. DMAgic does it in a small fraction of that time, and BASIC 65
-exposes the controller directly through its EDMA command. Chapter 8
-covers chained jobs, modulo and skip options, and copying to and from
-attic RAM.</p>
+cycles. DMAgic does it in a small fraction of that time. BASIC 65
+exposes the controller directly through its EDMA command, which builds
+the list itself: <code>EDMA 3, 2000, 32, $0800</code> is the same fill.
+Chapter 6 describes EDMA. Chapter 8
+covers chained jobs, the skip options, the modulo field (which the core
+reads but does not use), and copying to and from attic RAM.</p>
 <h2 id="the-math-accelerator">The Math Accelerator</h2>
 <p>The 6502 family has no multiply or divide instructions, and
 generations of programmers have written shift-and-add routines to make
@@ -914,10 +987,15 @@ arithmetic, such as computing line slopes or scaling factors in graphics
 routines, without any floating-point code. If you need signed results,
 handle the sign yourself before and after, just as you would with a
 software routine.</p>
-<p>BASIC 65 programs can reach the accelerator with POKE and PEEK, but
-the real benefit is in machine language, where it replaces some of the
-most frequently written subroutines in 6502 programming with a handful
-of loads and stores.</p>
+<p>The accelerator is a machine-language tool, where it replaces some of
+the most frequently written subroutines in 6502 programming with a
+handful of loads and stores. A BASIC 65 program cannot usefully drive it
+with POKE and PEEK, because BASIC uses the same registers for its own
+arithmetic (MEGA65 ROM source, <code>b65.src</code>) and overwrites the
+inputs between statements: in Xemu with ROM 920413, writing 1000 and 300
+to the inputs with WPOKE and reading MULTOUT in the next statement gave
+0. BASIC's own <code>*</code> and <code>/</code> already get the
+benefit.</p>
 <h2 id="summary">Summary</h2>
 <p>The MEGA65 is easiest to understand as layers, built up from the C64
 through the C65 to the MEGA65, and all still active:</p>

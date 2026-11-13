@@ -12,6 +12,36 @@
 <p>The full history is in the <a
 href="https://github.com/CTalkobt/Programming_The_Mega-65/commits/main">Git
 repository</a>.</p>
+<h2 id="2026-11-13">November 13, 2026</h2>
+<ul>
+<li>Chapter 1: the list of features newer than the stable ROM adds SYS TO and <code>FRE(4)</code>/<code>FRE(5)</code> and says it is not complete; attic RAM is given as 8MB.</li>
+<li>Chapter 2: TI counts seconds with microsecond resolution; Matrix Mode is explained; ESC 5 is dated to ROM 920382; a way to reach the bottom-right corner in any text mode.</li>
+<li>Chapter 3: corrections. BEGIN/BEND needs a colon before ELSE (with an example); EL is 65535, not -1, when no error has happened; error 40's example; disk checks use <code>DS &gt;= 20</code>.</li>
+<li>Chapter 3: new Keywords A to Z table linking every keyword to its entry; entries say which commands work only in direct mode or only in a program; ROM versions where the ROM change log gives them; a TURBO entry; SIND, COSD and TAND listed.</li>
+<li>Chapter 3: complete formats for NEW, KEY, CLR, BOOT, PALETTE, SCREEN, PEN, BOX, MOVSPR, SPRITE, PAINT, FIND, SET, DIR, COLLECT, DCLEAR and RESUME, and tables of values for RWINDOW, RDISK, RCOLOR, HIGHLIGHT, PEN, DMODE, PAINT, CHAR, RGRAPHIC, SPRITE and the sprite functions.</li>
+<li>Chapter 3: the graphics examples open and close a screen; the FGOSUB example is complete; the limit of 183 simple variables with longer names is stated.</li>
+<li>Chapter 4: corrections. The message subroutine clears its line with ESC Q, because <code>SPC</code> does not erase on the screen; the rule against REM on a GOSUB target is replaced; the validation routine's limits are stated; disk checks use <code>DS &gt;= 20</code>; memory figures separate simple variables from arrays and strings; BASIC's reserved variable names are listed.</li>
+<li>Chapter 5: new section, Controlling the speed, with a program; BASIC equivalents for the knock, flat addressing and a DMA fill; chip RAM is 384KB of which 256KB is free; BASIC cannot reliably use the math accelerator with POKE and PEEK.</li>
+<li>Chapter 6: the scalar area is <code>$F700-$FEFF</code>, with its limit of 183 variables; POINTER results for simple variables need BANK 0; the loaders reserve their memory with MEM; the function token prefix is named.</li>
+<li>Chapter 7: corrections to the long-branch offset base, the flags after STQ, the memory a SYS routine sees and the IRQ vector; the first program runs long enough to see and can be downloaded.</li>
+<li>Chapter 8: the takeover skeleton sets the stack pointer and its vectors; complete programs for the split screen, a cooperative window onto attic RAM, a cooperative raster interrupt and a Hypervisor file load; DMA modulo is documented as having no effect; a physical raster compare example.</li>
+<li>Chapter 9: a working USR routine and a routine that reads a BASIC string; the DATA loader has a visible effect; the worked example can report failure; fragments are no longer on the disk.</li>
+<li>Chapter 10: instruction lengths; MAP's megabyte selector; NEG NEG NEG as a 32-bit negate; more differences from the 65C02; notes reordered.</li>
+<li>Chapter 11: LKUPLA and LKUPSA corrected; a KERNAL save and load example; a table of the services on <code>$D641</code>, <code>$D642</code>, <code>$D643</code> and <code>$D67F</code>; a getversion example.</li>
+<li>Chapter 12: four figures (a window onto a wider map, screen geometry, the bits of a SEAM entry, an RRB row); Plotting Pixels and Drawing Lines now follows Bitplanes; Raster Techniques is retitled The Raster Rewrite Buffer; Smooth scrolling moved to Text Modes; Perception shortened.</li>
+<li>Chapter 12: corrections. <code>plotbp</code> preserves the colour, so <code>line</code> works on bitplanes; the GOTOX Y offset is explained once; the 800-position line and the 720 displayed pixels; NORRBWRAP is in the development core only; the half-light value is 188; alpha blending, ALPHEN and SHDEMU described.</li>
+<li>Chapter 12: downloads for every complete program (25, up from 11).</li>
+<li>Chapter 12: INT, the interlace bit of <code>$D031</code>: what it does to the video signal, and why the Display Address Translator needs it on a 400-line bitplane screen.</li>
+<li>Chapter 13: the SID clock is stated (0.985 MHz PAL, 1.023 MHz NTSC) with one value for 440 Hz in each, a note-frequency table, an envelope-times table and an interrupt-driven tune in machine language.</li>
+<li>Chapter 13: corrections. The audio DMA top address is the last sample plus one; sine mode needs the loop bit and addresses; PWMPDM, the default mixer coefficients and mixer inputs <code>$E</code> and <code>$F</code>; a program generates the sample file the worked example plays.</li>
+<li>Chapter 14: Hypervisor services name <code>$D640</code>, with listings that read a file a sector at a time and mount an image; new sections on reading card sectors, the partition table, FAT32 and the inside of a D81 image; D65 explained.</li>
+<li>Chapter 15: corrections to the stock-list record arithmetic, the directory reader (296 entries), the BACKUP row and the status table; <code>CLR DS</code> explained at Drive status; new sections, Subdirectories and Reading blocks directly.</li>
+<li>Chapter 16: paddle registers by port; RMOUSE button values; a keyboard matrix table and a held-key example; <code>$D619</code> needs core 0.96.</li>
+<li>Chapter 17: a table of <code>$D629</code> board models including R4; setting the clock's hours on R3 and later boards; IEC behaviour at each CPU speed; a minimal cartridge header; the UART clock select; new section on the keyboard and drive LEDs.</li>
+<li>Appendix A and B: full screen-code and PETSCII charts, with every graphics character shown by its Unicode glyph (box drawing, block elements and the Symbols for Legacy Computing block, from a small embedded font so they show in every browser), a complete control-code table and an escape-sequence table.</li>
+<li>Appendix D, E, G, I, J: instruction lengths and prefix encodings; 21 more registers; the complete monitor command table with a worked session; a bank 0 table without gaps; nine new glossary terms.</li>
+<li>Index: regenerated for the new sections.</li>
+</ul>
 <h2 id="2026-11-12">November 12, 2026</h2>
 <ul>
 <li>Chapter 12: Sprites rewritten, with a table of the VIC-IV sprite
