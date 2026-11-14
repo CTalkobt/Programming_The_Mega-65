@@ -452,27 +452,34 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 </tbody>
 </table>
 <h3 id="colours">Colours</h3>
-<p>The first 16 palette entries carry the C64's colour names and order,
-and are used by COLOR, BORDER, BACKGROUND and colour RAM. CTRL with 1 to
-8 types the first eight, and MEGA with 1 to 8 the second eight.</p>
-<p>Entries 16 to 31 hold an alternate "rainbow" set. Text uses it when
-the bold attribute is set: the VIC-IV displays a bold character in
-entry 16 to 31 instead of 0 to 15 (<a
+<p>The MEGA65 Book divides the first 32 palette entries into two sets
+of 16. Colour set A, entries 0 to 15, carries the C64's colour names and
+order, and is used by COLOR, BORDER, BACKGROUND and colour RAM. CTRL
+with 1 to 8 types the first eight, and MEGA with 1 to 8 the second
+eight. Colour set B, entries 16 to 31, is a "rainbow" of 16 further
+colours, and the same keys give those when set B is selected.</p>
+<p>Text shows colour set B when the bold attribute is set: the VIC-IV
+displays a bold character in entry 16 to 31 instead of 0 to 15 (<a
 href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>viciv.vhdl</code>). ESC S or <code>CHR$(1)</code> sets the
 attribute for what is printed next, and ESC U or <code>CHR$(4)</code>
 clears it; COLOR and FOREGROUND with 16 to 31 set it together with the
-colour, as Chapter 3 describes. The table puts each colour beside the
-one its bold form shows, so bold white, for example, comes out
-rambutan, a red-orange. Entries 32 to 255 are free for programs to define with
-PALETTE.</p>
+colour, as Chapter 3 describes. Despite the name, a set B colour is
+not a bolder form of its set A partner: the table pairs them by code,
+and white's partner, for example, is rambutan, a red-orange. Entries 32
+to 255 are free for programs to define with PALETTE.</p>
+<p>Colour set B is not the VIC-IV's alternate palette. That is a
+separate bank of 256 entries, chosen with <code>$D070</code>, which a
+character uses when it is both bold and reversed; see <a
+href="ch12-graphics.html#several-palettes">Several palettes</a> in
+Chapter 12.</p>
 <p>The levels are the ones the KERNAL installs at reset and PALETTE
 RESTORE puts back, on PALETTE's scale of 0 to 15 (MEGA65 ROM source,
 <code>system.src</code>). The palette registers hold eight bits per
 component, and a level of <em>n</em> written by the KERNAL gives an
 intensity of <em>n</em>×16 out of 255, which the swatches use; a screen
 shows them a little differently. The names, including the playful ones
-for the alternate set, are the MEGA65 Book's, from its System Palette
+for colour set B, are the MEGA65 Book's, from its System Palette
 appendix (<a
 href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-palette.tex">mega65-user-guide</a>,
 <code>appendix-system-palette.tex</code>).</p>
@@ -480,18 +487,20 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 <thead>
 <tr class="header">
 <th>Code</th>
+<th>Key</th>
 <th></th>
-<th>Colour</th>
+<th>Colour set A</th>
 <th>Red, green, blue</th>
-<th>Bold</th>
+<th>Code</th>
 <th></th>
-<th>Alternate colour</th>
+<th>Colour set B</th>
 <th>Red, green, blue</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>0</td>
+<td>CTRL+1</td>
 <td><span class="swatch" style="background:#000000" aria-hidden="true"></span></td>
 <td>Black</td>
 <td>0, 0, 0</td>
@@ -502,6 +511,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="even">
 <td>1</td>
+<td>CTRL+2</td>
 <td><span class="swatch" style="background:#f0f0f0" aria-hidden="true"></span></td>
 <td>White</td>
 <td>15, 15, 15</td>
@@ -512,6 +522,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="odd">
 <td>2</td>
+<td>CTRL+3</td>
 <td><span class="swatch" style="background:#f00000" aria-hidden="true"></span></td>
 <td>Red</td>
 <td>15, 0, 0</td>
@@ -522,6 +533,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="even">
 <td>3</td>
+<td>CTRL+4</td>
 <td><span class="swatch" style="background:#00f0f0" aria-hidden="true"></span></td>
 <td>Cyan</td>
 <td>0, 15, 15</td>
@@ -532,6 +544,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="odd">
 <td>4</td>
+<td>CTRL+5</td>
 <td><span class="swatch" style="background:#f000f0" aria-hidden="true"></span></td>
 <td>Purple</td>
 <td>15, 0, 15</td>
@@ -542,6 +555,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="even">
 <td>5</td>
+<td>CTRL+6</td>
 <td><span class="swatch" style="background:#00f000" aria-hidden="true"></span></td>
 <td>Green</td>
 <td>0, 15, 0</td>
@@ -552,6 +566,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="odd">
 <td>6</td>
+<td>CTRL+7</td>
 <td><span class="swatch" style="background:#0000f0" aria-hidden="true"></span></td>
 <td>Blue</td>
 <td>0, 0, 15</td>
@@ -562,6 +577,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="even">
 <td>7</td>
+<td>CTRL+8</td>
 <td><span class="swatch" style="background:#f0f000" aria-hidden="true"></span></td>
 <td>Yellow</td>
 <td>15, 15, 0</td>
@@ -572,6 +588,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="odd">
 <td>8</td>
+<td>MEGA+1</td>
 <td><span class="swatch" style="background:#f06000" aria-hidden="true"></span></td>
 <td>Orange</td>
 <td>15, 6, 0</td>
@@ -582,6 +599,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="even">
 <td>9</td>
+<td>MEGA+2</td>
 <td><span class="swatch" style="background:#a04000" aria-hidden="true"></span></td>
 <td>Brown</td>
 <td>10, 4, 0</td>
@@ -592,6 +610,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="odd">
 <td>10</td>
+<td>MEGA+3</td>
 <td><span class="swatch" style="background:#f07070" aria-hidden="true"></span></td>
 <td>Light Red (Pink)</td>
 <td>15, 7, 7</td>
@@ -602,6 +621,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="even">
 <td>11</td>
+<td>MEGA+4</td>
 <td><span class="swatch" style="background:#505050" aria-hidden="true"></span></td>
 <td>Dark Grey</td>
 <td>5, 5, 5</td>
@@ -612,6 +632,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="odd">
 <td>12</td>
+<td>MEGA+5</td>
 <td><span class="swatch" style="background:#808080" aria-hidden="true"></span></td>
 <td>Medium Grey</td>
 <td>8, 8, 8</td>
@@ -622,6 +643,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="even">
 <td>13</td>
+<td>MEGA+6</td>
 <td><span class="swatch" style="background:#90f090" aria-hidden="true"></span></td>
 <td>Light Green</td>
 <td>9, 15, 9</td>
@@ -632,6 +654,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="odd">
 <td>14</td>
+<td>MEGA+7</td>
 <td><span class="swatch" style="background:#9090f0" aria-hidden="true"></span></td>
 <td>Light Blue</td>
 <td>9, 9, 15</td>
@@ -642,6 +665,7 @@ href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-pa
 </tr>
 <tr class="even">
 <td>15</td>
+<td>MEGA+8</td>
 <td><span class="swatch" style="background:#b0b0b0" aria-hidden="true"></span></td>
 <td>Light Grey</td>
 <td>11, 11, 11</td>
@@ -1055,7 +1079,7 @@ character. They can be typed into strings in quote mode, or produced
 with <code>CHR$</code>. Codes 1 to 26 can be typed as CTRL with the
 letters A to Z, and the colours as CTRL or MEGA with 1 to 8. Each
 colour code is listed with both its colours: the first is used normally,
-and the second, from the alternate set, after code 1 turns bold on (see
+and the second, from colour set B, after code 1 turns bold on (see
 <a href="#colours">Colours</a>). A code that is not listed does nothing
 when printed.</p>
 <table>
@@ -1070,7 +1094,7 @@ when printed.</p>
 <tbody>
 <tr class="odd">
 <td>1</td>
-<td>Bold on: text uses the alternate colours 16-31</td>
+<td>Bold on: text uses colour set B (16-31)</td>
 <td>129</td>
 <td>Orange / The Other Cyan</td>
 </tr>
@@ -1082,7 +1106,7 @@ when printed.</p>
 </tr>
 <tr class="odd">
 <td>4</td>
-<td>Bold off: text uses colours 0-15</td>
+<td>Bold off: text uses colour set A (0-15)</td>
 <td>133-140</td>
 <td>F1, F3, F5, F7, F2, F4, F6, F8</td>
 </tr>
@@ -1291,7 +1315,7 @@ source, <code>system.src</code>, escape_vectors).</p>
 </tr>
 <tr class="even">
 <td>ESC S, ESC U</td>
-<td>Bold on, off: alternate colours 16-31, or colours 0-15</td>
+<td>Bold on, off: colour set B (16-31), or colour set A (0-15)</td>
 </tr>
 <tr class="odd">
 <td>ESC V, ESC W</td>
