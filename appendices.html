@@ -452,69 +452,9 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 </tbody>
 </table>
 <h3 id="colours">Colours</h3>
-<p>The first 16 palette entries are the C64's colours, used by COLOR,
-BORDER, BACKGROUND and colour RAM. CTRL with 1 to 8 types the first
-eight, and MEGA with 1 to 8 the second eight.</p>
-<table>
-<thead>
-<tr class="header">
-<th>Code</th>
-<th>Colour</th>
-<th>Code</th>
-<th>Colour</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>0</td>
-<td>Black</td>
-<td>8</td>
-<td>Orange</td>
-</tr>
-<tr class="even">
-<td>1</td>
-<td>White</td>
-<td>9</td>
-<td>Brown</td>
-</tr>
-<tr class="odd">
-<td>2</td>
-<td>Red</td>
-<td>10</td>
-<td>Light red</td>
-</tr>
-<tr class="even">
-<td>3</td>
-<td>Cyan</td>
-<td>11</td>
-<td>Dark grey</td>
-</tr>
-<tr class="odd">
-<td>4</td>
-<td>Purple</td>
-<td>12</td>
-<td>Grey</td>
-</tr>
-<tr class="even">
-<td>5</td>
-<td>Green</td>
-<td>13</td>
-<td>Light green</td>
-</tr>
-<tr class="odd">
-<td>6</td>
-<td>Blue</td>
-<td>14</td>
-<td>Light blue</td>
-</tr>
-<tr class="even">
-<td>7</td>
-<td>Yellow</td>
-<td>15</td>
-<td>Light grey</td>
-</tr>
-</tbody>
-</table>
+<p>The first 16 palette entries carry the C64's colour names and order,
+and are used by COLOR, BORDER, BACKGROUND and colour RAM. CTRL with 1 to
+8 types the first eight, and MEGA with 1 to 8 the second eight.</p>
 <p>Entries 16 to 31 hold an alternate "rainbow" set. Text uses it when
 the bold attribute is set: the VIC-IV displays a bold character in
 entry 16 to 31 instead of 0 to 15 (<a
@@ -522,8 +462,196 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>viciv.vhdl</code>). ESC S or <code>CHR$(1)</code> sets the
 attribute for what is printed next, and ESC U or <code>CHR$(4)</code>
 clears it; COLOR and FOREGROUND with 16 to 31 set it together with the
-colour, as Chapter 3 describes. Entries 32 to 255 are free for programs
-to define with PALETTE.</p>
+colour, as Chapter 3 describes. The table puts each colour beside the
+one its bold form shows, so bold white, for example, comes out
+rambutan, a red-orange. Entries 32 to 255 are free for programs to define with
+PALETTE.</p>
+<p>The levels are the ones the KERNAL installs at reset and PALETTE
+RESTORE puts back, on PALETTE's scale of 0 to 15 (MEGA65 ROM source,
+<code>system.src</code>). The palette registers hold eight bits per
+component, and a level of <em>n</em> written by the KERNAL gives an
+intensity of <em>n</em>×16 out of 255, which the swatches use; a screen
+shows them a little differently. The names, including the playful ones
+for the alternate set, are the MEGA65 Book's, from its System Palette
+appendix (<a
+href="https://github.com/MEGA65/mega65-user-guide/blob/master/appendix-system-palette.tex">mega65-user-guide</a>,
+<code>appendix-system-palette.tex</code>).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Code</th>
+<th></th>
+<th>Colour</th>
+<th>Red, green, blue</th>
+<th>Bold</th>
+<th></th>
+<th>Alternate colour</th>
+<th>Red, green, blue</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0</td>
+<td><span class="swatch" style="background:#000000" aria-hidden="true"></span></td>
+<td>Black</td>
+<td>0, 0, 0</td>
+<td>16</td>
+<td><span class="swatch" style="background:#e00000" aria-hidden="true"></span></td>
+<td>Guru Meditation</td>
+<td>14, 0, 0</td>
+</tr>
+<tr class="even">
+<td>1</td>
+<td><span class="swatch" style="background:#f0f0f0" aria-hidden="true"></span></td>
+<td>White</td>
+<td>15, 15, 15</td>
+<td>17</td>
+<td><span class="swatch" style="background:#f05000" aria-hidden="true"></span></td>
+<td>Rambutan</td>
+<td>15, 5, 0</td>
+</tr>
+<tr class="odd">
+<td>2</td>
+<td><span class="swatch" style="background:#f00000" aria-hidden="true"></span></td>
+<td>Red</td>
+<td>15, 0, 0</td>
+<td>18</td>
+<td><span class="swatch" style="background:#f0b000" aria-hidden="true"></span></td>
+<td>Carrot</td>
+<td>15, 11, 0</td>
+</tr>
+<tr class="even">
+<td>3</td>
+<td><span class="swatch" style="background:#00f0f0" aria-hidden="true"></span></td>
+<td>Cyan</td>
+<td>0, 15, 15</td>
+<td>19</td>
+<td><span class="swatch" style="background:#e0e000" aria-hidden="true"></span></td>
+<td>Lemon Tart</td>
+<td>14, 14, 0</td>
+</tr>
+<tr class="odd">
+<td>4</td>
+<td><span class="swatch" style="background:#f000f0" aria-hidden="true"></span></td>
+<td>Purple</td>
+<td>15, 0, 15</td>
+<td>20</td>
+<td><span class="swatch" style="background:#70f000" aria-hidden="true"></span></td>
+<td>Pandan</td>
+<td>7, 15, 0</td>
+</tr>
+<tr class="even">
+<td>5</td>
+<td><span class="swatch" style="background:#00f000" aria-hidden="true"></span></td>
+<td>Green</td>
+<td>0, 15, 0</td>
+<td>21</td>
+<td><span class="swatch" style="background:#60e060" aria-hidden="true"></span></td>
+<td>Seasick Green</td>
+<td>6, 14, 6</td>
+</tr>
+<tr class="odd">
+<td>6</td>
+<td><span class="swatch" style="background:#0000f0" aria-hidden="true"></span></td>
+<td>Blue</td>
+<td>0, 0, 15</td>
+<td>22</td>
+<td><span class="swatch" style="background:#00e030" aria-hidden="true"></span></td>
+<td>Soylent Green</td>
+<td>0, 14, 3</td>
+</tr>
+<tr class="even">
+<td>7</td>
+<td><span class="swatch" style="background:#f0f000" aria-hidden="true"></span></td>
+<td>Yellow</td>
+<td>15, 15, 0</td>
+<td>23</td>
+<td><span class="swatch" style="background:#00f090" aria-hidden="true"></span></td>
+<td>Slimer Green</td>
+<td>0, 15, 9</td>
+</tr>
+<tr class="odd">
+<td>8</td>
+<td><span class="swatch" style="background:#f06000" aria-hidden="true"></span></td>
+<td>Orange</td>
+<td>15, 6, 0</td>
+<td>24</td>
+<td><span class="swatch" style="background:#00d0d0" aria-hidden="true"></span></td>
+<td>The Other Cyan</td>
+<td>0, 13, 13</td>
+</tr>
+<tr class="even">
+<td>9</td>
+<td><span class="swatch" style="background:#a04000" aria-hidden="true"></span></td>
+<td>Brown</td>
+<td>10, 4, 0</td>
+<td>25</td>
+<td><span class="swatch" style="background:#0090f0" aria-hidden="true"></span></td>
+<td>Sea Sky</td>
+<td>0, 9, 15</td>
+</tr>
+<tr class="odd">
+<td>10</td>
+<td><span class="swatch" style="background:#f07070" aria-hidden="true"></span></td>
+<td>Light Red (Pink)</td>
+<td>15, 7, 7</td>
+<td>26</td>
+<td><span class="swatch" style="background:#0030f0" aria-hidden="true"></span></td>
+<td>Smurf Blue</td>
+<td>0, 3, 15</td>
+</tr>
+<tr class="even">
+<td>11</td>
+<td><span class="swatch" style="background:#505050" aria-hidden="true"></span></td>
+<td>Dark Grey</td>
+<td>5, 5, 5</td>
+<td>27</td>
+<td><span class="swatch" style="background:#0000e0" aria-hidden="true"></span></td>
+<td>Screen of Death</td>
+<td>0, 0, 14</td>
+</tr>
+<tr class="odd">
+<td>12</td>
+<td><span class="swatch" style="background:#808080" aria-hidden="true"></span></td>
+<td>Medium Grey</td>
+<td>8, 8, 8</td>
+<td>28</td>
+<td><span class="swatch" style="background:#7000f0" aria-hidden="true"></span></td>
+<td>Plum Sauce</td>
+<td>7, 0, 15</td>
+</tr>
+<tr class="even">
+<td>13</td>
+<td><span class="swatch" style="background:#90f090" aria-hidden="true"></span></td>
+<td>Light Green</td>
+<td>9, 15, 9</td>
+<td>29</td>
+<td><span class="swatch" style="background:#c000f0" aria-hidden="true"></span></td>
+<td>Sour Grape</td>
+<td>12, 0, 15</td>
+</tr>
+<tr class="odd">
+<td>14</td>
+<td><span class="swatch" style="background:#9090f0" aria-hidden="true"></span></td>
+<td>Light Blue</td>
+<td>9, 9, 15</td>
+<td>30</td>
+<td><span class="swatch" style="background:#f000b0" aria-hidden="true"></span></td>
+<td>Bubblegum</td>
+<td>15, 0, 11</td>
+</tr>
+<tr class="even">
+<td>15</td>
+<td><span class="swatch" style="background:#b0b0b0" aria-hidden="true"></span></td>
+<td>Light Grey</td>
+<td>11, 11, 11</td>
+<td>31</td>
+<td><span class="swatch" style="background:#f03060" aria-hidden="true"></span></td>
+<td>Hot Tamales</td>
+<td>15, 3, 6</td>
+</tr>
+</tbody>
+</table>
 <h2 id="appendix-b-petscii-codes">Appendix B: PETSCII Codes</h2>
 <p>PETSCII is the character code used by PRINT, <code>CHR$</code>, ASC,
 GET and the keyboard. Codes 32 to 95 follow ASCII closely; the rest hold
@@ -925,8 +1053,11 @@ is π.</p>
 <p>Printing these codes performs an action rather than showing a
 character. They can be typed into strings in quote mode, or produced
 with <code>CHR$</code>. Codes 1 to 26 can be typed as CTRL with the
-letters A to Z, and the colours as CTRL or MEGA with 1 to 8. A code that
-is not listed does nothing when printed.</p>
+letters A to Z, and the colours as CTRL or MEGA with 1 to 8. Each
+colour code is listed with both its colours: the first is used normally,
+and the second, from the alternate set, after code 1 turns bold on (see
+<a href="#colours">Colours</a>). A code that is not listed does nothing
+when printed.</p>
 <table>
 <thead>
 <tr class="header">
@@ -941,7 +1072,7 @@ is not listed does nothing when printed.</p>
 <td>1</td>
 <td>Bold on: text uses the alternate colours 16-31</td>
 <td>129</td>
-<td>Orange</td>
+<td>Orange / The Other Cyan</td>
 </tr>
 <tr class="even">
 <td>2</td>
@@ -957,7 +1088,7 @@ is not listed does nothing when printed.</p>
 </tr>
 <tr class="even">
 <td>5</td>
-<td>White</td>
+<td>White / Rambutan</td>
 <td>141</td>
 <td>Shifted return</td>
 </tr>
@@ -977,7 +1108,7 @@ is not listed does nothing when printed.</p>
 <td>9</td>
 <td>Tab</td>
 <td>144</td>
-<td>Black</td>
+<td>Black / Guru Meditation</td>
 </tr>
 <tr class="even">
 <td>10</td>
@@ -1007,49 +1138,49 @@ is not listed does nothing when printed.</p>
 <td>14</td>
 <td>Lower-case set</td>
 <td>149</td>
-<td>Brown</td>
+<td>Brown / Sea Sky</td>
 </tr>
 <tr class="odd">
 <td>15</td>
 <td>Flash on</td>
 <td>150</td>
-<td>Light red</td>
+<td>Light Red (Pink) / Smurf Blue</td>
 </tr>
 <tr class="even">
 <td>17</td>
 <td>Cursor down</td>
 <td>151</td>
-<td>Dark grey</td>
+<td>Dark Grey / Screen of Death</td>
 </tr>
 <tr class="odd">
 <td>18</td>
 <td>Reverse on</td>
 <td>152</td>
-<td>Grey</td>
+<td>Medium Grey / Plum Sauce</td>
 </tr>
 <tr class="even">
 <td>19</td>
 <td>Home</td>
 <td>153</td>
-<td>Light green</td>
+<td>Light Green / Sour Grape</td>
 </tr>
 <tr class="odd">
 <td>20</td>
 <td>Delete</td>
 <td>154</td>
-<td>Light blue</td>
+<td>Light Blue / Bubblegum</td>
 </tr>
 <tr class="even">
 <td>21</td>
 <td>Back one word</td>
 <td>155</td>
-<td>Light grey</td>
+<td>Light Grey / Hot Tamales</td>
 </tr>
 <tr class="odd">
 <td>23</td>
 <td>Forward one word</td>
 <td>156</td>
-<td>Purple</td>
+<td>Purple / Pandan</td>
 </tr>
 <tr class="even">
 <td>24</td>
@@ -1061,17 +1192,17 @@ is not listed does nothing when printed.</p>
 <td>26</td>
 <td>Back one tab stop</td>
 <td>158</td>
-<td>Yellow</td>
+<td>Yellow / Slimer Green</td>
 </tr>
 <tr class="even">
 <td>27</td>
 <td>Escape: starts an escape sequence</td>
 <td>159</td>
-<td>Cyan</td>
+<td>Cyan / Lemon Tart</td>
 </tr>
 <tr class="odd">
 <td>28</td>
-<td>Red</td>
+<td>Red / Carrot</td>
 <td></td>
 <td></td>
 </tr>
@@ -1083,13 +1214,13 @@ is not listed does nothing when printed.</p>
 </tr>
 <tr class="odd">
 <td>30</td>
-<td>Green</td>
+<td>Green / Seasick Green</td>
 <td></td>
 <td></td>
 </tr>
 <tr class="even">
 <td>31</td>
-<td>Blue</td>
+<td>Blue / Soylent Green</td>
 <td></td>
 <td></td>
 </tr>

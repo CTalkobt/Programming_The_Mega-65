@@ -6,6 +6,7 @@ pre{overflow-x:auto;padding:.75rem;background:#f4f4f4;border-radius:4px}
 code{font-family:Consolas,Menlo,"M65 Legacy Glyphs",monospace;font-size:.92em;background:#f4f4f4;padding:0 .2em}
 pre code{padding:0;background:none}
 table{border-collapse:collapse;display:block;overflow-x:auto;margin:1rem 0}
+.swatch{display:inline-block;width:2.5em;height:1em;vertical-align:middle;border:1px solid currentColor;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 th,td{border:1px solid #ccc;padding:.3rem .6rem;vertical-align:top;text-align:left}
 nav.chapnav{font-family:Helvetica,Arial,sans-serif;font-size:.9rem;display:flex;justify-content:space-between;margin:1rem 0;border-top:1px solid #ccc;padding-top:.5rem}
 figure{margin:1.5rem 0;text-align:center}

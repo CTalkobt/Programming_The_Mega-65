@@ -669,7 +669,7 @@ suggest:</p>
 <ul>
 <li><strong>Bold</strong> adds 16 to the colour, choosing palette
 entries 16 to 31 instead of 0 to 15. The KERNAL fills those with a
-second set of colours, so bold white text is orange, not brighter
+second set of colours, so bold white text is rambutan, a red-orange, not brighter
 white.</li>
 <li><strong>Underline</strong> sets every pixel of the character's last
 pixel row.</li>
@@ -1498,7 +1498,7 @@ the screen until a key is pressed:</p>
 240 SETBIT $D05D,7</code></pre>
 <p>Lines 50 to 100 work out each pixel's colour from its distance to
 the centre of an ellipse, from white in the middle through yellow,
-orange and light red to red, and 0 outside. Line 90 packs two pixels
+orange and light red (pink) to red, and 0 outside. Line 90 packs two pixels
 into each byte, the even (left) pixel in the high nybble. Each row is 8
 bytes, so the 32 rows take 256 bytes, from <code>$40100</code> to
 <code>$401FF</code>.</p>
