@@ -587,7 +587,8 @@ the trigger. There is no need to poll for completion, but because the
 DMA controller is part of the CPU, a job cannot be interrupted, and a
 long one delays interrupts too (MEGA65 Book, p. P-3). A raster interrupt
 that must fire on time should not compete with a very large transfer;
-split big jobs into pieces timed to fit between interrupts. The command
+split big jobs into pieces timed to fit between interrupts.</p>
+<p class="warning"><strong>Warning:</strong> the command
 byte has a bit documented as "yield to interrupts", bit 3, but the
 Book's own text says jobs cannot be interrupted, so do not rely on
 it.</p>

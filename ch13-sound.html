@@ -785,9 +785,9 @@ program chains a routine into the KERNAL's interrupt through the vector
 at <code>$0314</code>, as Chapter 11 described; the KERNAL calls it once
 a video frame. Every twelfth frame the routine starts the next note of a
 short tune, and two frames before that it clears the gate bit, because
-the envelope starts again only when the gate changes from 0 to 1. It
-uses SID 4, which PLAY does not use, so do not use SOUND with voices 4 to
-6 while it runs.</p>
+the envelope starts again only when the gate changes from 0 to 1.</p>
+<p class="warning"><strong>Warning:</strong> the routine uses SID 4, which PLAY does not use, so do
+not use SOUND with voices 4 to 6 while it runs.</p>
 <pre data-download="code/ch13/a-tune-from-an-interrupt.asm code/ch13/a-tune-from-an-interrupt.prg"><code>        * = $2001
         .word next          ; BASIC header: 10 BANK0:SYS$2012
         .word 10

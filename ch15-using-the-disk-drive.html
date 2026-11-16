@@ -143,13 +143,14 @@ it to be scratched first, or an <code>@</code> before the name, which
 works for data files as well as programs, as in <code>DOPEN#2,
 "@SCORES", W</code> (MEGA65 Book, DOPEN). If the file does not exist,
 the <code>@</code> has no effect and the file is created as usual.</p>
-<p>The Book advises against <code>@</code> on 1541 and 1571 drives,
+<p class="warning"><strong>Warning:</strong> the Book advises against <code>@</code> on 1541 and 1571 drives,
 because of the "save-and-replace" bug in their DOS, which can corrupt a
 disk. A MEGA65 Filehost article, cited below, reports the bug in every
 Commodore drive from the 2040 to the 1581. Whichever drives have it, a
 program cannot tell what is on the IEC port, so the safe rule is to
 avoid <code>@</code> on any external drive and scratch the old file
-first. The MEGA65's own DOS does not have the bug. It was fixed in ROM 920303, and
+first.</p>
+<p>The MEGA65's own DOS does not have the bug. It was fixed in ROM 920303, and
 from 920361 <code>@</code> also works when saving from EDIT mode (<a
 href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
 ROM change log</a>). On the internal drive and on disk images, DSAVE,
@@ -617,9 +618,10 @@ but its contents are incomplete, and SCRATCH will not delete it.
 COLLECT, the DOS's validate command, deals with it: it rebuilds the BAM
 from the files in the directory, deletes splat files, and frees any
 block that no file uses. The block count then matches the files the
-directory lists. The one danger is to disks with blocks a program has
+directory lists.</p>
+<p class="warning"><strong>Warning:</strong> COLLECT endangers disks with blocks a program has
 allocated directly, with block commands rather than files, such as boot
-blocks: COLLECT does not know about them and frees them too (MEGA65
+blocks: it does not know about them and frees them too (MEGA65
 Book, p. B-54).</p>
 <p>DCLEAR sends the initialise command. The drive closes all its files
 and channels and reads the BAM again, and BASIC closes its channels to
@@ -665,7 +667,7 @@ has no BASIC 65 keyword for it:</p>
 <p>Reading the channel with INPUT# gives the four parts of the message
 in separate variables, so after a scratch, <code>T</code> holds the
 number of files deleted.</p>
-<p>One caution applies to DS in a program. BASIC 65 keeps the last
+<p class="warning"><strong>Warning:</strong> in a program, DS can be out of date. BASIC 65 keeps the last
 status message it read, and the housekeeping commands do not clear it
 when they run in a program (MEGA65 ROM source, trans), so DS can still
 show the result of an earlier command. Give <code>CLR DS</code> just

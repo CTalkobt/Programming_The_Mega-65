@@ -169,9 +169,11 @@ in four bytes:</p>
 <pre><code>        jsr $ff2f       ; VERSIONQ
         stq version     ; four bytes, low byte first</code></pre>
 <p>VERSIONQ is the supported way to read the version, and it needs ROM
-920417 or later. On a ROM older than 920417, <code>$FF2F</code> is not
+920417 or later.</p>
+<p class="warning"><strong>Warning:</strong> on a ROM older than 920417, <code>$FF2F</code> is not
 VERSIONQ, and calling it is likely to crash the program, so a program
-that calls it should name 920417 as its minimum ROM. At the time of writing,
+that calls it should name 920417 as its minimum ROM.</p>
+<p>At the time of writing,
 920417 and later are beta releases; the latest stable ROM is 920413
 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <p>The version is also stored as text. The ROM image, which the MEGA65
@@ -306,8 +308,9 @@ as <code>$10</code>, <code>$80</code>, <code>$00</code>,
 30 POKE $D6C8,$10,(S AND 1)*128,INT(S/2),0
 40 POKE $D6CF,$42
 50 PRINT &quot;SLOT&quot;;S;&quot;DID NOT START&quot;</code></pre>
-<p>This is not a reset. The FPGA loads the new core from scratch, as at
-power-on, and everything in memory is lost. The new core keeps running
+<p class="warning"><strong>Warning:</strong> this is not a reset. The FPGA loads the new core from
+scratch, as at power-on, and everything in memory is lost.</p>
+<p>The new core keeps running
 until the machine is switched off, because the reset button does not
 change which core is running (MEGA65 Book, p. 5-8). If the slot holds no
 valid core, the FPGA searches on through the flash and, if it finds
@@ -890,8 +893,9 @@ the jump-table entries at <code>$FF6E</code> (JSRFAR) and
 <code>$FF71</code> (JMPFAR) simply jump to those copies. Disassembling
 <code>$FF6E</code> therefore shows a JMP into page 3 (MEGA65 ROM source,
 <code>install</code> and the RAM-copied far-call block).</p>
-<p>Always call them through the jump table, never at their RAM
-addresses. The jump-table addresses are the ROM's promise; where the
+<p class="warning"><strong>Warning:</strong> always call them through the jump table, never at
+their RAM addresses.</p>
+<p>The jump-table addresses are the ROM's promise; where the
 copies land is an internal detail, decided by the size of the code ahead
 of them, and it changes when that code changes. It has already happened
 between two released ROMs. For SYS TO, ROM 920414 added a MAP-offset

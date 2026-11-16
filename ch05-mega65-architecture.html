@@ -140,7 +140,7 @@ and Z as the high byte</td>
 </tr>
 </tbody>
 </table>
-<p>The B register deserves a word of warning. On a 6502, zero page is
+<p class="warning"><strong>Warning:</strong> the B register moves zero page. On a 6502, zero page is
 always $0000-$00FF. On the 45GS02 it is whichever page B points to. B is
 zero after reset, so existing code behaves as expected, but a routine
 that changes B and forgets to restore it will break everything that uses
@@ -549,8 +549,8 @@ sync (genlock), and bit 2 chooses whether colours 0-15 come from the
 palette ROM or palette RAM.
 The ROM-banking form of <code>$D030</code> exists only in the VIC-III
 and VIC-IV personalities, described in the next section; in the C64
-personality, <code>$D030</code> is the C128's 2 MHz register instead.
-CRAM2K deserves a warning: while it is set, the CIA registers at
+personality, <code>$D030</code> is the C128's 2 MHz register instead.</p>
+<p class="warning"><strong>Warning:</strong> while CRAM2K is set, the CIA registers at
 <code>$DC00</code> and <code>$DD00</code> are replaced by colour RAM, so
 the keyboard can't be scanned and CIA interrupts can't be read or
 acknowledged, though the timers keep running (<a
@@ -989,7 +989,8 @@ handle the sign yourself before and after, just as you would with a
 software routine.</p>
 <p>The accelerator is a machine-language tool, where it replaces some of
 the most frequently written subroutines in 6502 programming with a
-handful of loads and stores. A BASIC 65 program cannot usefully drive it
+handful of loads and stores.</p>
+<p class="warning"><strong>Warning:</strong> a BASIC 65 program cannot usefully drive it
 with POKE and PEEK, because BASIC uses the same registers for its own
 arithmetic (MEGA65 ROM source, <code>b65.src</code>) and overwrites the
 inputs between statements: in Xemu with ROM 920413, writing 1000 and 300

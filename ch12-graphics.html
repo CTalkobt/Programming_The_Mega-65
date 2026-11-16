@@ -322,7 +322,8 @@ or character set location, the VIC-IV calculates the equivalent address
 and updates its own pointers, such as CHARPTR, automatically. Five
 registers behave this way: <code>$D011</code>, <code>$D016</code>,
 <code>$D018</code>, <code>$D031</code>, and the VIC bank bits of
-<code>$DD00</code>. A write to any one of them propagates all five, so a
+<code>$DD00</code>.</p>
+<p class="warning"><strong>Warning:</strong> a write to any one of them propagates all five, so a
 program that has set CHARPTR directly can lose that setting simply by
 turning on multicolour mode in <code>$D016</code> (<a
 href="https://dansanderson.com/mega65/raster-rewrite-buffer/">Dan

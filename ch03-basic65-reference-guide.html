@@ -1632,7 +1632,8 @@ system messages, REM statements and keywords in listings.</p>
 <h4 id="merge">MERGE</h4>
 <p>Token <code>$E6</code> · Book p. B-166</p>
 <p>Loads a program from disk and adds its lines to the program in
-memory. Direct mode only; before ROM 920410, using MERGE or IMPORT in a
+memory. Direct mode only.</p>
+<p class="warning"><strong>Warning:</strong> before ROM 920410, using MERGE or IMPORT in a
 program corrupted program memory instead of giving an error
 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <p>Format: <code>MERGE filename [,D drive] [,U unit]</code></p>

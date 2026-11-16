@@ -594,7 +594,8 @@ sector 2048, and a system partition, type <code>$41</code>, after it.
 Writing is deliberately harder. The controller ignores command
 <code>$03</code> unless <code>$57</code> has been written to
 <code>$D680</code> just before it, and for sector 0 it needs
-<code>$4D</code> instead (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>sdcardio.vhdl</code>). A
+<code>$4D</code> instead (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>sdcardio.vhdl</code>).</p>
+<p class="warning"><strong>Warning:</strong> a
 wrong sector number destroys files or the whole card, so leave writing
 to the Hypervisor and the Freezer unless the program is a disk utility
 and has been tested on a card that does not matter.</p>
