@@ -31,7 +31,7 @@ Guide</title>
 <h1
 id="programming-the-mega65--chapter-3-basic-65-reference-guide">Programming
 the MEGA65 — Chapter 3: BASIC 65 Reference Guide</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 15, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch03/ch03.d81">ch03.d81</a> holds this chapter's 85 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every keyword in BASIC 65: commands,
@@ -1460,6 +1460,14 @@ in the frame.</p>
 <p>Token <code>$D7</code> · Book p. B-267</p>
 <p>Sends any BASIC error to a handler at the given line instead of
 stopping the program. TRAP with no line turns the handler off.</p>
+<p>The line is normally written as a constant line number, as in the
+MEGA65 Book. BASIC evaluates it when TRAP runs and keeps the result,
+and an error then branches to that line (MEGA65 ROM source, trap).</p>
+<p><strong>Warning:</strong> the line can also be an expression, such as
+a variable, but RENUMBER updates TRAP's line number only when it is a
+plain number. After renumbering, an expression still gives the old
+line, so an error goes to the wrong line or fails with
+<code>?UNDEFINED STATEMENT ERROR</code> (MEGA65 ROM source, renumber).</p>
 <p>Format: <code>TRAP [line]</code></p>
 <pre data-download="code/ch03/trap.bas code/ch03/trap.prg"><code>10 TRAP 100
 20 FOR I = 1 TO 100 : PRINT EXP(I) : NEXT
@@ -2936,15 +2944,63 @@ variable.</p>
 <h4 id="collision-bump"><span id="kw-collision"></span><span id="kw-bump"></span>COLLISION, BUMP</h4>
 <p>Tokens <code>$FE $17</code>, <code>$CE $03</code> · Book pp. B-55,
 B-37</p>
-<p>COLLISION names a subroutine BASIC calls when sprites collide; BUMP
-returns a bitfield of the sprites involved, type 1 for sprite-to-sprite
-and type 2 for sprite-to-background.</p>
+<p>COLLISION names a subroutine BASIC calls when an event happens: type
+1 when two sprites collide, type 2 when a sprite hits the background
+(text or graphics data), and type 3 when the light pen latches a
+position. The subroutine ends with RETURN. COLLISION with a type and no
+line number switches that trap off again. A type other than 1 to 3
+gives <code>?ILLEGAL QUANTITY ERROR</code> (MEGA65 ROM source, collision).</p>
+<p>BUMP returns a bitfield of the sprites involved in type 1 or type 2
+collisions since it was last called, and clears it; it takes only 1 or
+2. For type 3, <a href="#lpen">LPEN</a> gives the latched position; as
+its entry explains, the current core latches only touch input, not a
+real light pen (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>viciv.vhdl</code>).</p>
+<p>The line is normally written as a constant line number, as in the
+MEGA65 Book. BASIC evaluates it when COLLISION runs and keeps the
+result, and the handler is called at that line when the event happens
+(MEGA65 ROM source, optwrd).</p>
+<p><strong>Warning:</strong> the line can also be an expression, such as
+a variable, but RENUMBER does not change it. RENUMBER has updated
+COLLISION's line number since ROM 920385 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>),
+but only when it is a plain number, so after renumbering an expression
+still gives the old line, and the handler is called at the wrong line
+or fails with <code>?UNDEFINED STATEMENT ERROR</code> (MEGA65 ROM source,
+renumber).</p>
 <p>Format: <code>COLLISION type [, line]</code> /
 <code>BUMP(type)</code></p>
 <pre><code>10 COLLISION 1, 70
 ...
 70 S% = BUMP(1) : IF (S% AND 6) = 6 THEN PRINT &quot;SPRITES 1 AND 2 HIT&quot;
 80 RETURN</code></pre>
+<pre><code>90 COLLISION 1 : REM STOP CALLING LINE 70</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th>Type</th>
+<th>Event</th>
+<th>Read with</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Sprite to sprite (<code>$D01E</code>)</td>
+<td><code>BUMP(1)</code>: a bit for each sprite involved</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Sprite to background, text or graphics data (<code>$D01F</code>)</td>
+<td><code>BUMP(2)</code>: a bit for each sprite involved</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Light pen (on the current core, touch input)</td>
+<td><code>LPEN(0)</code> and <code>LPEN(1)</code>: the latched X and Y position</td>
+</tr>
+</tbody>
+</table>
+<p>(MEGA65 ROM source, collision, bump.)</p>
 <h4 id="rsprite-rsppos-rsprsys"><span id="kw-rsprite"></span><span id="kw-rsppos"></span><span id="kw-rsprsys"></span>RSPRITE, RSPPOS, RSPRSYS</h4>
 <p>Tokens <code>$CE $06</code>, <code>$CE $05</code>,
 <code>$CE $17</code> · Book pp. B-227, B-226, B-228 · RSPRSYS since ROM
