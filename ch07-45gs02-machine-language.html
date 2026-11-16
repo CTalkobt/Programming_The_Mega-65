@@ -31,7 +31,7 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-7-45gs02-machine-language">Programming
 the MEGA65 — Chapter 7: 45GS02 Machine Language</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch07/ch07.d81">ch07.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Machine language is the processor's own language: the bytes the
@@ -703,7 +703,7 @@ normally page 1, <code>$0100-$01FF</code>, but it is set by the stack
 pointer's high byte, so TYS can move the 8-bit stack to any page.
 Clearing E with CLE makes SP 16 bits wide, so the stack can be any size
 and anywhere in the 64KB window. TYS sets the high byte of SP from Y,
-and TSY reads it back (MEGA65 Book, pp. L-78, L-105, L-116).</p>
+and TSY reads it back (MEGA65 Book, pp. L-78, L-114, L-116).</p>
 <p>Most programs that call the KERNAL or return to BASIC should leave E
 set. A larger stack is useful for a self-contained program, such as a
 game that takes over the machine, or for deeply recursive code.</p>

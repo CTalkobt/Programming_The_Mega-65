@@ -29,7 +29,7 @@
 <nav class="chapnav"><span><a href="ch05-mega65-architecture.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch07-45gs02-machine-language.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-6-advanced-basic-65">Programming
 the MEGA65 — Chapter 6: Advanced BASIC 65</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch06/ch06.d81">ch06.d81</a> holds this chapter's 17 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 4 treated BASIC 65 as a language: how to structure programs,
@@ -256,7 +256,7 @@ link, two of line number and one terminating zero.</p>
 70 LOOP
 80 BANK 128</code></pre>
 <p>WPEEK reads a 16-bit value low byte first, which matches how both
-links and line numbers are stored (MEGA65 Book, p. B-284). Adding a loop
+links and line numbers are stored (MEGA65 Book, p. B-285). Adding a loop
 that prints <code>HEX$(PEEK(I))</code> for each byte of a line shows its
 tokens directly, which is a quick way to look up a token that Chapter 3
 does not list.</p>
@@ -364,7 +364,7 @@ forces a collection when it will not be noticed.</p>
 variables</h3>
 <p>POINTER gives the address of a variable's value. An integer is two
 bytes, high byte first, unlike most 16-bit values on the MEGA65 (MEGA65
-ROM source; the Book's POINTER entry says the opposite); a floating-point variable is five bytes; a
+Book, p. B-193; MEGA65 ROM source); a floating-point variable is five bytes; a
 string's POINTER is the address of its three-byte descriptor, which
 holds the length and then the text's address as an offset in bank 1
 (MEGA65 Book, p. B-193).</p>
@@ -435,7 +435,7 @@ naturally with POINTER, which returns flat addresses.</p>
 16-bit address is interpreted through BANK; an address above
 <code>$FFFF</code> is taken as a flat address and BANK is ignored.
 Either way, SYS sets up a fixed mapping for the call, and only part of
-it comes from the chosen bank (MEGA65 Book, p. B-256):</p>
+it comes from the chosen bank (MEGA65 Book, p. B-257):</p>
 <table>
 <thead>
 <tr class="header">
@@ -505,7 +505,7 @@ a few dozen. It is the fastest way for BASIC to move data between attic
 RAM and chip RAM.</p>
 <h3 id="sys-to">SYS TO</h3>
 <p>SYS has a second form, SYS TO, with named arguments and two extra
-abilities (MEGA65 Book, p. B-256). Registers are set by name, with
+abilities (MEGA65 Book, p. B-258). Registers are set by name, with
 each value in parentheses:</p>
 <pre><code>SYS TO $1600, A(5), X($FF)</code></pre>
 <p>The O argument overrides the MAP offset for <code>$2000-$7FFF</code>,
@@ -674,7 +674,7 @@ reserved.</p>
 where a calculation fails</h3>
 <p>RESUME with a line number lets a program record how far it got before
 an error. This uses the pattern from the Book's TRAP entry to find where
-EXP overflows (MEGA65 Book, p. B-267):</p>
+EXP overflows (MEGA65 Book, p. B-268):</p>
 <pre data-download="code/ch06/example-finding-where-a-calculation-fails.bas code/ch06/example-finding-where-a-calculation-fails.prg"><code>10 TRAP 100
 20 FOR I=1 TO 100
 30 PRINT EXP(I)
@@ -735,7 +735,7 @@ entry points that are stable enough to call.</p>
 <h3 id="example-installing-a-usr-routine">Example: installing a USR
 routine</h3>
 <p>The USR function jumps through a vector at <code>$02F8</code>, which
-BASIC sees in the system bank (MEGA65 Book, p. B-285). The smallest
+BASIC sees in the system bank (MEGA65 Book, p. B-286). The smallest
 possible USR routine is a single RTS: it leaves BASIC's floating-point
 accumulator untouched, so USR returns its argument unchanged. That is
 enough to show the mechanism:</p>
@@ -753,7 +753,7 @@ alongside PLAY</h3>
 <p>An ordinary SYS switches BASIC out, so interrupt-driven features
 pause for the duration of the call. SYS TO with <code>I(1)</code> keeps
 them running, which suits short routines called often while music plays
-(MEGA65 Book, p. B-256):</p>
+(MEGA65 Book, p. B-258):</p>
 <pre data-download="code/ch06/example-machine-code-alongside-play.bas code/ch06/example-machine-code-alongside-play.prg"><code>10 PLAY &quot;O4T0IC E G O5C O4G E L&quot;
 20 POKE $1600, $EE, $20, $D0, $60     : REM INC $D020 : RTS
 30 FOR I=1 TO 50

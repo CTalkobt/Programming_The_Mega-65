@@ -29,7 +29,7 @@
 <nav class="chapnav"><span><a href="ch12-graphics.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch14-sd-card-and-mass-storage.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-13-sound">Programming the MEGA65
 — Chapter 13: Sound</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch13/ch13.d81">ch13.d81</a> holds this chapter's 5 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The C64 had one SID. The MEGA65 has four, giving twelve voices, plus
@@ -57,8 +57,8 @@ knowledge</li>
 <li>The cross-bar mixer and its registers</li>
 </ul>
 <p>Register details in this chapter follow the MEGA65 Book, the official
-reference, in its August 2025 edition. Page references such as "p. P-18"
-refer to that edition.</p>
+reference, from the 2026 Oct 19 source. Page references such as "p. P-18"
+refer to that version.</p>
 <h2 id="sound-from-basic-65">Sound from BASIC 65</h2>
 <p>BASIC 65 divides the SIDs between two jobs. PLAY uses SID 1 for
 voices 1-3 and SID 3 for voices 4-6; SOUND uses SID 2 for voices 1-3 and
@@ -225,15 +225,15 @@ B-190, B-191).</p>
 </tr>
 </tbody>
 </table>
-<p>The Book says that while portamento is on, notes are not gated off
-between each other. In current ROMs the check that would do this is
-disabled, so each note still ends normally (MEGA65 ROM source, PLAY).
-Turn portamento off with <code>P0</code>.</p>
+<p>While portamento is on, each note is still gated off at its end: the
+ROM has a check that would hold notes on from one to the next, but it is
+disabled (MEGA65 Book, p. B-191; MEGA65 ROM source, PLAY). Turn
+portamento off with <code>P0</code>.</p>
 <pre data-download="code/ch13/play.bas code/ch13/play.prg"><code>10 ENVELOPE 9, 10, 5, 10, 5, 0, 300
 20 VOL 8, 8
 30 TEMPO 30
 40 PLAY &quot;O5T9HCIDCDEHCG IGAGFEFDEWCL&quot;, &quot;O2T0QCGEGCGEG DBGB CGEGL&quot;</code></pre>
-<p>This example is from the Book (MEGA65 Book, p. B-191). Spaces in PLAY
+<p>This example is from the Book (MEGA65 Book, p. B-192). Spaces in PLAY
 strings are ignored, so they can separate bars.</p>
 <p>Empty arguments leave a voice playing undisturbed, so
 <code>PLAY ,"O5CDE"</code> changes only voice 2. PLAY with no arguments
@@ -244,7 +244,7 @@ finish.</p>
 <h3 id="tempo-envelope-filter-and-vol">TEMPO, ENVELOPE, FILTER and
 VOL</h3>
 <p>TEMPO sets the length of a whole note to 24 divided by the speed, in
-seconds (MEGA65 Book, p. B-262): TEMPO 24 makes a whole note last one
+seconds (MEGA65 Book, p. B-263): TEMPO 24 makes a whole note last one
 second.</p>
 <p>The speed is 1 to 255, and the music system starts at 12. Each
 shorter note value halves the length, so a quarter note lasts 6 divided
@@ -533,7 +533,7 @@ the chip they had.</p>
 <p>The MEGA65 models either. The user chooses a default with the SID
 generation setting in the configuration utility, and a program can
 choose for itself with SIDMODE at <code>$D63C</code>: 0 selects 6581
-behaviour and 1 selects 8580 (MEGA65 Book, p. R-3). There is one bit
+behaviour and 1 selects 8580 (MEGA65 Book, p. R-4). There is one bit
 per SID in the low four bits of <code>$D63C</code>, in an unexpected
 order: bit 0 is SID 3 (<code>$D440</code>), bit 1 is SID 1
 (<code>$D400</code>), bit 2 is SID 4 (<code>$D460</code>) and bit 3 is
@@ -900,7 +900,7 @@ and 256 volume levels per channel, but no modulation between channels
 slots reserved for audio. Audio DMA instead uses idle CPU cycles, which
 exist only at full speed, about 40.5 MHz: then every instruction that
 reads a byte from memory leaves a wait state that audio DMA can use. Two
-consequences follow (MEGA65 Book, p. P-18):</p>
+consequences follow (MEGA65 Book, p. P-17):</p>
 <ul>
 <li><strong>The CPU must run at full speed</strong> while audio DMA
 plays.</li>
@@ -953,7 +953,7 @@ p. P-18; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>
 <h3 id="channel-registers">Channel registers</h3>
 <p>Channels 0 to 3 have 16 registers each, at <code>$D720</code>,
 <code>$D730</code>, <code>$D740</code> and <code>$D750</code>. Offsets
-are the same for every channel (MEGA65 Book, pp. P-21 to P-23):</p>
+are the same for every channel (MEGA65 Book, pp. P-20 to P-23):</p>
 <table>
 <thead>
 <tr class="header">
@@ -1104,7 +1104,7 @@ P-19). The value for a given rate is therefore:</p>
 use 40 MHz and differ by about 1%, which is inaudible for most purposes.
 At rates up to about 16 kHz with 8-bit samples, the irregular spacing of
 idle cycles causes no audible distortion in normal programs; at much
-higher rates it can (MEGA65 Book, p. P-19). Frequency and volume can
+higher rates it can (MEGA65 Book, p. P-18). Frequency and volume can
 both be changed while a sample plays, so one recorded note can be played
 at different pitches or faded in and out.</p>
 <h3 id="stereo">Stereo</h3>
@@ -1115,7 +1115,7 @@ opposite side: <code>$D71C</code> and <code>$D71D</code> send channels 0
 and 1 to the right, and <code>$D71E</code> and <code>$D71F</code> send
 channels 2 and 3 to the left. Setting both <code>$D729</code> and
 <code>$D71C</code> to <code>$FF</code> plays channel 0 at full volume on
-both sides (MEGA65 Book, p. P-19).</p>
+both sides (MEGA65 Book, p. P-18).</p>
 <h3 id="sine-mode">Sine mode</h3>
 <p>Setting bit 4 of a channel's control register plays a built-in
 32-sample, 16-bit sine wave instead of fetching from memory. Because no
@@ -1137,7 +1137,7 @@ works as well, and goes round the table twice in each loop.</p>
 flag, bit 3. The Book's text states that audio DMA cannot presently
 generate interrupts, although its register table lists interrupt flag
 and enable bits at <code>$D713</code> and offset registers at
-<code>$D714-$D717</code> (MEGA65 Book, pp. P-20, P-21). Development
+<code>$D714-$D717</code> (MEGA65 Book, pp. P-19, P-20). Development
 cores do raise these interrupts (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, October 2026), but until they are documented
 and in a release, a program should poll the stop flag, for example once
 a frame.</p>
@@ -1239,7 +1239,7 @@ stops it early, and calling the routine again restarts the sound,
 because it resets the current address.</p>
 <h3 id="detecting-the-end">Detecting the end</h3>
 <p>The hardware sets the stop flag, bit 3 of <code>$D720</code>, when
-the sample finishes (MEGA65 Book, p. P-20). A game can check it once a
+the sample finishes (MEGA65 Book, p. P-19). A game can check it once a
 frame:</p>
 <pre><code>        lda $d720
         and #%00001000  ; CH0STP

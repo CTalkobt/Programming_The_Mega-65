@@ -31,7 +31,7 @@ Drive</title>
 <h1
 id="programming-the-mega65--chapter-15-using-the-disk-drive">Programming
 the MEGA65 — Chapter 15: Using the Disk Drive</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch15/ch15.d81">ch15.d81</a> holds this chapter's 10 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Most of this chapter applies equally to a disk image on the SD card,
@@ -217,10 +217,9 @@ the type is just a number in the file's directory entry, 1 for SEQ and
 3 for USR, and only REL files and partitions get special treatment
 (MEGA65 ROM source, dos.src). PRINT#, INPUT#, GET#, APPEND# and COPY
 all work on USR files as on SEQ files (MEGA65 Book, pp. B-20, B-59).
-TYPE is the exception: the Book says it shows USR files too (p. B-270),
-but it asks the DOS for a SEQ file, so on a USR file it stops with
-<code>64, FILE TYPE MISMATCH</code> (MEGA65 ROM source, TYPE; tested
-with ROM 920422).</p>
+TYPE is the exception: it asks the DOS for a SEQ file, so on a USR file
+it stops with <code>64, FILE TYPE MISMATCH</code> (MEGA65 Book, p. B-271;
+MEGA65 ROM source, TYPE; tested with ROM 920422).</p>
 <p>The type is a label. A program can give its own data files the USR
 type so that they stand apart from ordinary text files in a directory
 listing, and so that a pattern can pick them out: <code>DIR

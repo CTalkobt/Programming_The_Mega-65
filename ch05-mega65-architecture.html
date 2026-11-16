@@ -31,7 +31,7 @@ Architecture</title>
 <h1
 id="programming-the-mega65--chapter-5-mega65-architecture">Programming
 the MEGA65 — Chapter 5: MEGA65 Architecture</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch05/ch05.d81">ch05.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65 is an 8-bit machine with a 28-bit address space, and
@@ -483,7 +483,7 @@ and goes straight to a 28-bit address.</p>
 <p>The interaction matters most in the <code>$A000-$BFFF</code> and
 <code>$E000-$FFFF</code> regions, where both <code>$D030</code> and
 <code>$01</code> can bring in ROM: if either is active and MAP does not
-map the block, the region shows ROM (MEGA65 Book, p. 14-39).</p>
+map the block, the region shows ROM (MEGA65 Book, p. 14-38).</p>
 <h3 id="the-c64-cpu-port">The C64 CPU port</h3>
 <p>Location <code>$01</code> works exactly as on the C64. Its low three
 bits, LORAM, HIRAM and CHAREN, choose whether BASIC ROM, KERNAL ROM, I/O
@@ -771,7 +771,7 @@ hypervisor mode and jumps to the matching handler. The service number
 must be in A, and the trap is followed by a CLV instruction, because the
 CPU may or may not execute the byte after the trap when the service
 returns. On return, the carry flag is set if the call succeeded; if it
-is clear, A holds an error code (MEGA65 Book, pp. N-4, N-5).</p>
+is clear, A holds an error code (MEGA65 Book, p. N-5).</p>
 <p>For example, this asks the Hypervisor for its version number using
 the general DOS trap at <code>$D640</code>:</p>
 <pre><code>        lda #$00        ; function: get version
@@ -789,7 +789,7 @@ makes the Freezer possible.</p>
 <h2 id="dmagic">DMAgic</h2>
 <p>DMAgic is the MEGA65's DMA controller: hardware that copies and fills
 blocks of memory far faster than the CPU can, at 40.5MB per second for
-fills and 20.25MB per second for copies (MEGA65 Book, p. P-3). It was
+fills and 20.25MB per second for copies (MEGA65 Book, p. P-4). It was
 designed for the C65; on the MEGA65 it is built into the CPU, and it
 reaches the full 28-bit address space.</p>
 <p>DMAgic does not take commands through registers alone. Instead the
@@ -873,8 +873,7 @@ can do. The most useful options are:</p>
 command byte choose the operation: <code>%00</code> copy,
 <code>%01</code> mix, <code>%10</code> swap, <code>%11</code> fill. Only
 copy and fill are implemented on the MEGA65; the swap and mix codes are
-defined by the F018 format but do nothing useful (MEGA65 Book, pp. P-6,
-P-24). A copy needs a source; a fill uses the low byte of the source
+defined by the F018 format but do nothing useful (MEGA65 Book, pp. P-6, P-23). A copy needs a source; a fill uses the low byte of the source
 address as the fill value.</p>
 <p>This example clears an 80 by 25 text screen at <code>$0800</code> in
 bank 0 by filling its 2,000 bytes with spaces:</p>

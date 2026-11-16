@@ -31,7 +31,7 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-9-mixing-basic-with-machine-language">Programming
 the MEGA65 — Chapter 9: Mixing BASIC with Machine Language</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch09/ch09.d81">ch09.d81</a> holds this chapter's 7 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>A MEGA65 program does not have to be written entirely in one
@@ -65,7 +65,7 @@ never touches. The MEGA65 has no single equivalent, but it has several
 good places, each with a different trade-off.</p>
 <p>Where code can live depends on what SYS can reach. SYS builds a fixed
 memory map for each call, and only part of it follows the bank chosen
-with BANK or a long address (MEGA65 Book, pp. 14-18, 14-43):</p>
+with BANK or a long address (MEGA65 Book, pp. 14-17, 14-43):</p>
 <table>
 <thead>
 <tr class="header">
@@ -143,7 +143,7 @@ commands use <code>$1800-$1FFF</code></td>
 <p>The area from <code>$1600</code> to <code>$1EFF</code> lies below the
 start of BASIC text, and during SYS it is always visible, whatever bank
 BASIC has selected. The Book recommends it for machine-code subroutines
-called from BASIC (MEGA65 Book, pp. 14-18, 14-19). In ROMs 920414 to
+called from BASIC (MEGA65 Book, p. 14-18). In ROMs 920414 to
 920418 it was also the only range usable with SYS TO's BASIC-active
 mode, described later; from 920419 that mode works anywhere SYS can
 reach (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>). The
@@ -184,7 +184,7 @@ those offsets fall outside the bank's window; <code>$8000-$BFFF</code>
 during SYS is always bank 0.</p>
 <p>Bank 0 itself can hold code above the BASIC program up to
 <code>$BFFF</code>, provided it stays clear of the end of the program
-text and BASIC's work areas (MEGA65 Book, p. B-256).</p>
+text and BASIC's work areas (MEGA65 Book, p. B-258).</p>
 <h3 id="attic-ram">Attic RAM</h3>
 <p>Code cannot run from attic RAM through SYS, but attic RAM is a good
 place to keep many routines or overlays that are copied into chip RAM
@@ -430,12 +430,12 @@ different amounts and kinds of data.</p>
 switches BASIC's ROM out of <code>$2000-$BFFF</code> and tells the
 KERNAL's interrupt handler to skip BASIC's interrupt-driven features,
 such as PLAY music and MOVSPR sprite movement. They resume when the
-routine returns with RTS (MEGA65 Book, pp. B-256, 14-44). A routine
+routine returns with RTS (MEGA65 Book, pp. B-258, 14-44). A routine
 called often while music plays can therefore make the music stutter.</p>
 <h3 id="sys-to">SYS TO</h3>
 <p>SYS TO is a second form of SYS with named arguments: <code>A</code>,
 <code>X</code>, <code>Y</code>, <code>Z</code> and <code>S</code> for
-registers, plus two extra abilities (MEGA65 Book, pp. B-256, 14-18,
+registers, plus two extra abilities (MEGA65 Book, pp. B-258, 14-18,
 14-19):</p>
 <table>
 <thead>

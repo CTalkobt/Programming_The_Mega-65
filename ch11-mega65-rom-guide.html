@@ -29,7 +29,7 @@
 <nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-11-mega65-rom-guide">Programming
 the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch11/ch11.d81">ch11.d81</a> holds this chapter's 3 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
@@ -189,7 +189,7 @@ core</h3>
 those, the core has read-only registers in the MEGA65 I/O personality,
 so a machine-language program must make the <code>$D02F</code> knock
 before reading them; BASIC 65 already has that personality selected.
-<code>$D629</code> holds a model ID (MEGA65 Book, p. U-3; <a
+<code>$D629</code> holds a model ID (MEGA65 Book, p. AD-3; <a
 href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>c65uart.vhdl</code>):</p>
 <table>
@@ -232,7 +232,8 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 </tr>
 </tbody>
 </table>
-<p>The Book's list stops at R3. From R5, the core reads the board's
+<p>The Book's list leaves out the MEGAphone R4 (<code>$22</code>) and the
+QMTECH boards <code>$60</code>-<code>$62</code>. From R5, the core reads the board's
 major revision from straps on the board, and bits 4-7 of
 <code>$D628</code> give the minor revision; on earlier boards those bits
 read 0. Bits 0-3 of <code>$D628</code> belong to the J21 expansion
@@ -289,7 +290,7 @@ number (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo <
 the other services.</p>
 <h3 id="starting-another-core">Starting another core</h3>
 <p>The flash memory holds several cores in slots, and the flash menu
-starts the one the user picks (MEGA65 Book, pp. 5-7, 5-8). A program can
+starts the one the user picks (MEGA65 Book, pp. 5-9, 5-10). A program can
 do the same. It writes the flash address of the core, divided by 256,
 to <code>$D6C8</code>-<code>$D6CB</code>, least significant byte first,
 and then writes <code>$42</code> to <code>$D6CF</code> to reconfigure
@@ -312,9 +313,9 @@ as <code>$10</code>, <code>$80</code>, <code>$00</code>,
 scratch, as at power-on, and everything in memory is lost.</p>
 <p>The new core keeps running
 until the machine is switched off, because the reset button does not
-change which core is running (MEGA65 Book, p. 5-8). If the slot holds no
+change which core is running (MEGA65 Book, p. 5-10). If the slot holds no
 valid core, the FPGA searches on through the flash and, if it finds
-nothing, starts the factory core in slot 0 (MEGA65 Book, p. 5-13).
+nothing, starts the factory core in slot 0 (MEGA65 Book, p. 5-18).
 The address registers are zero when a core starts, so
 <code>POKE $D6CF,$42</code> on its own restarts the machine from flash
 address 0, the factory core in slot 0. If the program carries on to
@@ -1168,7 +1169,7 @@ KERNAL out replaces them with its own, as shown in Chapter 8.</p>
 KERNAL. The one programs most often need is the USR vector, two bytes at
 <code>$02F8</code>, low byte first, read in the system bank:
 <code>BANK 128 : WPOKE $02F8, $1600</code> points USR at a routine at
-<code>$1600</code> (MEGA65 Book, p. B-285). Chapter 9 describes writing
+<code>$1600</code> (MEGA65 Book, p. B-286). Chapter 9 describes writing
 USR routines. Other BASIC vectors and work areas are internal and should
 not be assumed from the C64 or C128.</p>
 <h2 id="hypervisor-services">Hypervisor Services</h2>
@@ -1637,8 +1638,8 @@ start on a page boundary between <code>$0000</code> and
 byte; it is ASCII, and Hyppo does not convert from PETSCII. Services
 that pass data use the transfer area, which setname also sets to the
 name's page. The file services work on the FAT32 file system of the SD
-cards, not on floppy disks or disk images (MEGA65 Book, pp. N-10,
-N-38).</p>
+cards, not on floppy disks or disk images (MEGA65 Book, pp. N-4,
+N-42).</p>
 <h3 id="versions">Versions</h3>
 <p>Hyppo is updated with the MEGA65 core, independently of the ROM. In
 August 2026, for example, a pull request was opened against mega65-core
@@ -1648,7 +1649,7 @@ mkfile; it had not been merged at the time of writing (<a href="https://github.c
 error <code>$82</code>, not implemented, as an expected result for newer
 services rather than as a failure of the program.</p>
 <h3 id="error-codes">Error codes</h3>
-<p>The Book lists these error codes (MEGA65 Book, pp. N-7, N-8). Its
+<p>The Book lists these error codes (MEGA65 Book, pp. N-11, N-12). Its
 table also has lower-numbered codes for partition, argument and
 read/write errors, such as <code>$10</code> for an invalid address,
 which setname returns when Y is above <code>$7E</code>, and it notes that

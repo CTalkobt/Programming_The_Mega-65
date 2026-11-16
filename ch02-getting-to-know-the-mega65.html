@@ -31,7 +31,7 @@ MEGA65</title>
 <h1
 id="programming-the-mega65--chapter-2-getting-to-know-the-mega65">Programming
 the MEGA65 — Chapter 2: Getting to Know the MEGA65</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch02/ch02.d81">ch02.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Before programming any computer, it pays to know its everyday tools
@@ -273,8 +273,8 @@ AUTOBOOT.C65</td>
 </table>
 <p>The flash and utility menus appear only when the machine is switched
 on, not after a reset: from the second start onwards, the Hypervisor's
-screen says "POWER OFF/ON FOR FLASH OR UTIL MENU" (MEGA65 Book, pp. 3-6,
-5-7, 5-8, I-6, I-8; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo <code>main.asm</code>). Holding
+screen says "POWER OFF/ON FOR FLASH OR UTIL MENU" (MEGA65 Book, pp. 3-6, 5-9, 5-13, M-5, M-6,
+M-8; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, Hyppo <code>main.asm</code>). Holding
 NO SCROLL and a digit works because the Hypervisor sees only NO SCROLL
 and starts the flash menu, which then reads the digit as if it had been
 typed in the menu (<a href="https://files.mega65.org/html/main.php?ar=0bfae729-22ca-4d17-9e95-d32346b94400">MEGA65 Filehost, "Quick Core Slot Boot"</a>; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, flash menu <code>megaflash.c</code>).

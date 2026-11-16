@@ -31,7 +31,7 @@ Guide</title>
 <h1
 id="programming-the-mega65--chapter-3-basic-65-reference-guide">Programming
 the MEGA65 — Chapter 3: BASIC 65 Reference Guide</h1>
-<p>Oct 4, 2026 · Updated Nov 15, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch03/ch03.d81">ch03.d81</a> holds this chapter's 85 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every keyword in BASIC 65: commands,
@@ -149,7 +149,7 @@ variables (MEGA65 Book, p. B-6).</p>
 places to move the decimal point: <code>1.5E03</code> is 1500 and
 <code>7.7E-02</code> is 0.077. The symbol <code>π</code> is also a
 numeric literal, standing for pi: <code>STR$(π)</code> returns the digits
-<code>3.1415927</code> (MEGA65 Book, p. B-254).</p>
+<code>3.1415927</code> (MEGA65 Book, p. B-255).</p>
 <h4 id="number-prefixes">Number prefixes</h4>
 <table>
 <thead>
@@ -664,7 +664,7 @@ messages</a> below. ER holds the number of the last error and EL its
 line, and <code>ERR$(ER)</code> gives the message text.</p>
 <h4 id="catching-errors-in-a-program">Catching errors in a program</h4>
 <p>TRAP sets a line for BASIC to go to when an error happens in a
-running program, instead of stopping (MEGA65 Book, p. B-267). The lines
+running program, instead of stopping (MEGA65 Book, p. B-268). The lines
 from there form an error handler. It reads ER and EL to find out what
 went wrong and where, and ends with RESUME (MEGA65 Book, p. B-213):</p>
 <ul>
@@ -733,7 +733,7 @@ pass.</p>
 <p>ST gives the status of the last input or output operation on a
 channel. It is 0 when all is well and is otherwise set by the device;
 when reading a file, a value of 64 means the end of the file was
-reached (MEGA65 Book, p. B-251). HELP shows only BASIC errors; for disk
+reached (MEGA65 Book, p. B-252). HELP shows only BASIC errors; for disk
 errors, use DS and <code>DS$</code> (MEGA65 Book, p. B-131).</p>
 <h4 id="finding-the-cause">Finding the cause</h4>
 <p>When an error is hard to explain, HELP shows exactly which statement
@@ -1292,7 +1292,7 @@ entries <a href="#er-el">ER, EL</a>, <a href="#ds-ds-st">DS,
 <h3 id="program-flow">Program Flow</h3>
 <h4 id="do-loop-while-until-exit"><span id="kw-do"></span><span id="kw-loop"></span><span id="kw-while"></span><span id="kw-until"></span><span id="kw-exit"></span>DO, LOOP, WHILE, UNTIL, EXIT</h4>
 <p>Tokens <code>$EB</code>, <code>$EC</code>, <code>$FD</code>,
-<code>$FC</code>, <code>$ED</code> · Book pp. B-78, B-162, B-282, B-272,
+<code>$FC</code>, <code>$ED</code> · Book pp. B-78, B-162, B-283, B-273,
 B-104</p>
 <p>DO and LOOP enclose a block of statements that repeats. A WHILE or
 UNTIL condition can go after DO, tested before each pass, or after LOOP,
@@ -1311,7 +1311,7 @@ it.</p>
 down and leaves through EXIT when it reaches 0.</p>
 <h4 id="for-to-step-next"><span id="kw-for"></span><span id="kw-to"></span><span id="kw-step"></span><span id="kw-next"></span>FOR, TO, STEP, NEXT</h4>
 <p>Tokens <code>$81</code>, <code>$A4</code>, <code>$A9</code>,
-<code>$82</code> · Book pp. B-114, B-266, B-252, B-178</p>
+<code>$82</code> · Book pp. B-114, B-267, B-253, B-178</p>
 <p>FOR starts a counted loop and NEXT ends it. The index runs from the
 start value to the end value, changing by STEP each time, or by 1 if
 STEP is omitted. TO is also used by many other commands, such as COPY
@@ -1420,7 +1420,7 @@ and runs a program from disk. Running clears variables.</p>
 <pre data-download="code/ch03/end.bas code/ch03/end.prg"><code>10 IF V &lt; 0 THEN END
 20 PRINT V</code></pre>
 <h4 id="stop">STOP</h4>
-<p>Token <code>$90</code> · Book p. B-253</p>
+<p>Token <code>$90</code> · Book p. B-254</p>
 <p>Stops the program with a BREAK message naming the line, so it can be
 resumed with CONT.</p>
 <p>Format: <code>STOP</code></p>
@@ -1438,7 +1438,7 @@ the program has not been edited in between.</p>
 <p>Format: <code>SLEEP seconds</code></p>
 <pre><code>SLEEP 0.5 : REM WAIT HALF A SECOND</code></pre>
 <h4 id="wait">WAIT</h4>
-<p>Token <code>$92</code> · Book p. B-281</p>
+<p>Token <code>$92</code> · Book p. B-282</p>
 <p>Pauses until a memory location shows a given bit pattern: the value
 read is XORed with the optional third value, then ANDed with the mask,
 and the wait ends when the result is not zero.</p>
@@ -1446,7 +1446,7 @@ and the wait ends when the result is not zero.</p>
 <pre data-download="code/ch03/wait.bas code/ch03/wait.prg"><code>10 BANK 128
 20 WAIT $D611, 1 : REM WAIT FOR THE LEFT SHIFT KEY</code></pre>
 <h4 id="vsync">VSYNC</h4>
-<p>Token <code>$FE $54</code> · Book p. B-280 · Since ROM 920364
+<p>Token <code>$FE $54</code> · Book p. B-281 · Since ROM 920364
 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>)</p>
 <p>Waits until the video display reaches a raster line: 0-311 on PAL,
 0-261 on NTSC. Useful for changing colours or graphics at a fixed point
@@ -1457,7 +1457,7 @@ in the frame.</p>
 30 GOTO 10</code></pre>
 <h3 id="error-handling-and-debugging">Error Handling and Debugging</h3>
 <h4 id="trap">TRAP</h4>
-<p>Token <code>$D7</code> · Book p. B-267</p>
+<p>Token <code>$D7</code> · Book p. B-268</p>
 <p>Sends any BASIC error to a handler at the given line instead of
 stopping the program. TRAP with no line turns the handler off.</p>
 <p>The line is normally written as a constant line number, as in the
@@ -1504,7 +1504,7 @@ with the failing statement highlighted.</p>
 <p>Format: <code>HELP</code></p>
 <pre><code>HELP</code></pre>
 <h4 id="tron-troff"><span id="kw-tron"></span><span id="kw-troff"></span>TRON, TROFF</h4>
-<p>Tokens <code>$D8</code>, <code>$D9</code> · Book pp. B-269, B-268</p>
+<p>Tokens <code>$D8</code>, <code>$D9</code> · Book pp. B-270, B-269</p>
 <p>TRON turns on trace mode, in which each line number is printed as it
 runs; TROFF turns it off.</p>
 <p>Format: <code>TRON</code> / <code>TROFF</code></p>
@@ -1751,7 +1751,7 @@ abbreviation.</p>
 <pre data-download="code/ch03/print.bas code/ch03/print.prg"><code>10 FOR I = 1 TO 10 : PRINT I, I * I, SQR(I) : NEXT</code></pre>
 <h4 id="print-using-using"><span id="kw-print-using"></span><span id="kw-using"></span>PRINT USING, USING</h4>
 <p>Tokens <code>$99 $FB</code> (or <code>$98 $FB</code> with
-<code>#</code>), <code>$FB</code> · Book pp. B-200, B-273</p>
+<code>#</code>), <code>$FB</code> · Book pp. B-200, B-274</p>
 <p>Prints values laid out by a format string, in which <code>#</code>
 marks a digit position and <code>.</code> the decimal point, so columns
 of figures line up.</p>
@@ -1842,7 +1842,7 @@ comma in a PRINT statement (<a
 href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
 ROM change log</a>).</p>
 <h4 id="spc-tab"><span id="kw-spc"></span><span id="kw-tab"></span>SPC, TAB</h4>
-<p>Tokens <code>$A6</code>, <code>$A3</code> · Book pp. B-244, B-260</p>
+<p>Tokens <code>$A6</code>, <code>$A3</code> · Book pp. B-245, B-261</p>
 <p>Used inside PRINT: SPC moves the cursor right by a number of columns,
 and TAB moves it to a given column if it is not already past it.</p>
 <p>Format: <code>SPC(columns)</code> / <code>TAB(column)</code></p>
@@ -1871,7 +1871,7 @@ RCURSOR reads its position into two variables.</p>
 <pre data-download="code/ch03/cursor-rcursor.bas code/ch03/cursor-rcursor.prg"><code>10 CURSOR ON, 20, 10 : PRINT &quot;[HERE]&quot;;
 20 RCURSOR X, Y : PRINT &quot; COL:&quot;; X; &quot; ROW:&quot;; Y</code></pre>
 <h4 id="window-rwindow"><span id="kw-window"></span><span id="kw-rwindow"></span>WINDOW, RWINDOW</h4>
-<p>Tokens <code>$FE $1A</code>, <code>$CE $09</code> · Book pp. B-283,
+<p>Tokens <code>$FE $1A</code>, <code>$CE $09</code> · Book pp. B-284,
 B-230</p>
 <p>WINDOW confines text output to a rectangle of the screen, optionally
 clearing it. RWINDOW reads a property of the current window or screen,
@@ -1929,7 +1929,7 @@ eight bytes, one per row.</p>
 <p>Format: <code>CHARDEF index, bit-matrix</code></p>
 <pre><code>CHARDEF 1, $FF, $81, $81, $81, $81, $81, $81, $FF : REM &#39;A&#39; BECOMES A BOX</code></pre>
 <h4 id="t-c"><span id="kw-t-screen"></span><span id="kw-c-screen"></span>T@&amp;, C@&amp;</h4>
-<p>Reserved arrays, no token · Book pp. B-259, B-39 · Since ROM 920354
+<p>Reserved arrays, no token · Book pp. B-260, B-39 · Since ROM 920354
 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>)</p>
 <p>Read or set the screen code and colour of the character at a column
 and row of the text screen, as described under <a
@@ -1972,7 +1972,7 @@ from.</p>
 <p>Format: <code>INSTR(haystack, needle [, start])</code></p>
 <pre><code>I = INSTR(&quot;ABCDEF&quot;, &quot;CD&quot;) : REM I = 3</code></pre>
 <h4 id="str-val"><span id="kw-str-s"></span><span id="kw-val"></span><code>STR$</code>, VAL</h4>
-<p>Tokens <code>$C4</code>, <code>$C5</code> · Book pp. B-254, B-276</p>
+<p>Tokens <code>$C4</code>, <code>$C5</code> · Book pp. B-255, B-277</p>
 <p><code>STR$</code> converts a number to a string as PRINT would show
 it; VAL converts a string of digits back to a number.</p>
 <p>Format: <code>STR$(number)</code> / <code>VAL(string)</code></p>
@@ -1992,7 +1992,7 @@ digits; DEC converts a hexadecimal string to a number.</p>
 <pre data-download="code/ch03/hex-dec.bas code/ch03/hex-dec.prg"><code>10 PRINT HEX$(1000) : REM 03E8
 20 PRINT DEC(&quot;D000&quot;) : REM 53248</code></pre>
 <h4 id="strbin-decbin"><span id="kw-strbin-s"></span><span id="kw-decbin"></span><code>STRBIN$</code>, DECBIN</h4>
-<p>Tokens <code>$CE $12</code>, <code>$CE $11</code> · Book pp. B-255,
+<p>Tokens <code>$CE $12</code>, <code>$CE $11</code> · Book pp. B-256,
 B-67 · Since ROM 920396 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>)</p>
 <p><code>STRBIN$</code> converts a number to a string of binary digits;
 DECBIN converts such a string back to a number.</p>
@@ -2012,7 +2012,7 @@ zero or positive number, and INT rounds down to a whole number, so
 <pre><code>PRINT ABS(-123); SGN(-7); INT(1.9); INT(-3.1) : REM 123 -1 1 -4</code></pre>
 <h4 id="sqr-exp-log-log10-log2"><span id="kw-sqr"></span><span id="kw-exp"></span><span id="kw-log"></span><span id="kw-log10"></span><span id="kw-log2"></span>SQR, EXP, LOG, LOG10, LOG2</h4>
 <p>Tokens <code>$BA</code>, <code>$BD</code>, <code>$BC</code>,
-<code>$CE $08</code>, <code>$CE $16</code> · Book pp. B-250, B-105,
+<code>$CE $08</code>, <code>$CE $16</code> · Book pp. B-251, B-105,
 B-159, B-160, B-161</p>
 <p>Square root, e raised to a power, and logarithms to base e, 10 and
 2. LOG2 arrived in ROM 920414 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
@@ -2021,7 +2021,7 @@ B-159, B-160, B-161</p>
 <pre><code>PRINT SQR(2); EXP(1); LOG10(1000); LOG2(256)</code></pre>
 <h4 id="sin-cos-tan-atn"><span id="kw-sin"></span><span id="kw-cos"></span><span id="kw-tan"></span><span id="kw-atn"></span><span id="kw-sind"></span><span id="kw-cosd"></span><span id="kw-tand"></span>SIN, COS, TAN, ATN, SIND, COSD, TAND</h4>
 <p>Tokens <code>$BF</code>, <code>$BE</code>, <code>$C0</code>,
-<code>$C1</code> · Book pp. B-241, B-60, B-261, B-22</p>
+<code>$C1</code> · Book pp. B-241, B-60, B-262, B-22</p>
 <p>Trigonometric functions in radians. SIND, COSD and TAND take degrees
 instead; ATN returns an angle between -π/2 and π/2. SIND, COSD and TAND
 have no tokens of their own: each is stored as the SIN, COS or TAN token
@@ -2071,7 +2071,7 @@ face, take three bits and try again when they are 6 or 7:</p>
 30 PRINT R + 1; : NEXT</code></pre>
 <h4 id="and-or-xor-not"><span id="kw-and"></span><span id="kw-or"></span><span id="kw-xor"></span><span id="kw-not"></span>AND, OR, XOR, NOT</h4>
 <p>Tokens <code>$AF</code>, <code>$B0</code>, <code>$E9</code>,
-<code>$A8</code> · Book pp. B-19, B-183, B-286, B-179</p>
+<code>$A8</code> · Book pp. B-19, B-183, B-287, B-179</p>
 <p>Bitwise operations on 16-bit values, which also combine conditions
 because true is -1 and false is 0. <a href="#operators">Operators</a>,
 earlier in this chapter, covers them in more detail. From ROM 920413
@@ -2092,8 +2092,8 @@ BANK; larger ones are flat 28-bit addresses.</p>
 <pre data-download="code/ch03/peek-poke.bas code/ch03/peek-poke.prg"><code>10 BANK 128
 20 POKE $D020, 0 : PRINT PEEK($D020) AND 15</code></pre>
 <h4 id="wpeek-wpoke"><span id="kw-wpeek"></span><span id="kw-wpoke"></span>WPEEK, WPOKE</h4>
-<p>Tokens <code>$CE $10</code>, <code>$FE $1D</code> · Book pp. B-284,
-B-285</p>
+<p>Tokens <code>$CE $10</code>, <code>$FE $1D</code> · Book pp. B-285,
+B-286</p>
 <p>Read or write 16-bit values, low byte first, which suits addresses
 and pointers.</p>
 <p>Format: <code>WPEEK(address)</code> /
@@ -2142,7 +2142,7 @@ pairs. It is obsolete; use EDMA.</p>
 <code>DMA command [, length, source, source bank, target, target bank [, sub]]</code></p>
 <pre><code>DMA 3, 80*25, 32, 0, 2048, 0 : REM FILL SCREEN WITH SPACES</code></pre>
 <h4 id="sys">SYS</h4>
-<p>Token <code>$9E</code> · Book p. B-256</p>
+<p>Token <code>$9E</code> · Book p. B-257</p>
 <p>Calls a machine-language routine, which returns with RTS. Values for
 A, X, Y, Z and the status register can follow. SYS TO, from ROM 920414
 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>), names its
@@ -2161,7 +2161,7 @@ href="#rreg">RREG</a>, the next entry, copies into a variable.</p>
 <p>Format: <code>RREG [{areg, xreg, yreg, zreg, sreg}]</code></p>
 <pre><code>30 RREG AC, X, Y, Z, S : PRINT AC</code></pre>
 <h4 id="usr">USR</h4>
-<p>Token <code>$B7</code> · Book p. B-275</p>
+<p>Token <code>$B7</code> · Book p. B-276</p>
 <p>Calls a machine-language function whose address is in the vector at
 <code>$02F8</code>. The argument and result pass through BASIC's
 floating-point accumulator.</p>
@@ -2346,7 +2346,7 @@ likewise ERASE</p>
 ERASE &quot;OLD*&quot; : REM EVERY FILE BEGINNING WITH OLD</code></pre>
 <h4 id="lock-unlock"><span id="kw-lock"></span><span id="kw-unlock"></span>LOCK, UNLOCK</h4>
 <p>Tokens <code>$FE $50</code>, <code>$FE $4F</code> · Book pp. B-158,
-B-271 · Since ROM 920301 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>)</p>
+B-272 · Since ROM 920301 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>)</p>
 <p>Protect a file from being changed or deleted, or remove the
 protection.</p>
 <p>Format:
@@ -2411,7 +2411,7 @@ unmounts.</p>
 <code>MOUNT [U unit]</code> / <code>MOUNT OFF [U unit]</code></p>
 <pre><code>MOUNT &quot;GAMES.D81&quot;</code></pre>
 <h4 id="type">TYPE</h4>
-<p>Token <code>$FE $27</code> · Book p. B-270</p>
+<p>Token <code>$FE $27</code> · Book p. B-271</p>
 <p>Prints a PETSCII text file from disk to the screen; P (from ROM
 920396) pauses after each screenful. From ROM 920417, TYPE also reads
 files on the SD card, with U12 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
@@ -2428,7 +2428,7 @@ doubles the speed of the BASIC mouse pointer (<a href="https://github.com/MEGA65
 <code>SET FAST MOUSE &lt;ON / OFF&gt;</code></p>
 <pre><code>SET DEF 11 : DIR</code></pre>
 <h4 id="ds-ds-st"><span id="kw-ds"></span><span id="kw-ds-s"></span><span id="kw-st"></span>DS, <code>DS$</code>, ST</h4>
-<p>Reserved variables, no token · Book pp. B-84, B-85, B-251</p>
+<p>Reserved variables, no token · Book pp. B-84, B-85, B-252</p>
 <p>DS and <code>DS$</code> give the status of the last disk operation as
 a number and as text; ST gives the status of the last I/O operation, and
 is non-zero at the end of a file. DS and <code>DS$</code> keep their
@@ -2774,7 +2774,7 @@ without clearing; PASTE draws the buffer at a new position.</p>
 40 CUT 140, 80, 40, 40 : PASTE 200, 10
 50 GETKEY A$ : SCREEN CLOSE</code></pre>
 <h4 id="viewport">VIEWPORT</h4>
-<p>Token <code>$FE $31</code> · Book p. B-278</p>
+<p>Token <code>$FE $31</code> · Book p. B-279</p>
 <p>VIEWPORT DEF sets a clipping rectangle for drawing; VIEWPORT CLR
 fills it with the pen colour.</p>
 <p>Format: <code>VIEWPORT DEF x, y, width, height</code> /
@@ -2861,7 +2861,7 @@ a 256-colour screen with 8 bitplanes (<a href="https://github.com/MEGA65/mega65-
 intact.</p>
 <h3 id="sprites">Sprites</h3>
 <h4 id="sprite">SPRITE</h4>
-<p>Token <code>$FE $07</code> · Book p. B-247</p>
+<p>Token <code>$FE $07</code> · Book p. B-248</p>
 <p>Turns a sprite on or off and sets its colour, priority, expansion and
 mode. SPRITE CLR resets all sprites, and SPRITE LOAD and SPRITE SAVE
 load and save sprite data. SPRITE SYS, from ROM 920415, sets things
@@ -2926,7 +2926,7 @@ to the second at the given speed (MEGA65 ROM source, movspr).</p>
 <pre data-download="code/ch03/movspr.bas code/ch03/movspr.prg"><code>10 SPRITE 1, 1 : MOVSPR 1, 120, 0
 20 MOVSPR 1, 0#5 : REM MOVE AT ANGLE 0, SPEED 5</code></pre>
 <h4 id="sprcolor-rspcolor"><span id="kw-sprcolor"></span><span id="kw-rspcolor"></span>SPRCOLOR, RSPCOLOR</h4>
-<p>Tokens <code>$FE $08</code>, <code>$CE $07</code> · Book pp. B-246,
+<p>Tokens <code>$FE $08</code>, <code>$CE $07</code> · Book pp. B-247,
 B-224</p>
 <p>SPRCOLOR sets the two colours shared by all multicolour sprites;
 RSPCOLOR reads one back.</p>
@@ -2937,7 +2937,7 @@ RSPCOLOR reads one back.</p>
 <p><code>RSPCOLOR(1)</code> returns the first shared multicolour and
 <code>RSPCOLOR(2)</code> the second (MEGA65 ROM source, rspcolor).</p>
 <h4 id="sprsav">SPRSAV</h4>
-<p>Token <code>$FE $16</code> · Book p. B-249</p>
+<p>Token <code>$FE $16</code> · Book p. B-250</p>
 <p>Copies sprite data between sprites, or between a sprite and a string
 variable.</p>
 <p>Format: <code>SPRSAV source, destination</code></p>
@@ -3097,7 +3097,7 @@ B-221</p>
 <pre data-download="code/ch03/play-rplay.bas code/ch03/play-rplay.prg"><code>10 PLAY &quot;O4ICDEFGABO5CR&quot;, &quot;O2QCGEGCO1GCR&quot;
 20 IF RPLAY(1) OR RPLAY(2) THEN 20 : REM WAIT FOR THE END</code></pre>
 <h4 id="tempo">TEMPO</h4>
-<p>Token <code>$FE $05</code> · Book p. B-262</p>
+<p>Token <code>$FE $05</code> · Book p. B-263</p>
 <p>Sets the speed of PLAY; a whole note lasts 24 divided by the tempo,
 in seconds. The speed is 1 to 255, and the default is 12. A quarter
 note lasts 6 divided by the speed, so the speed times 10 is the number
@@ -3118,7 +3118,7 @@ high-pass switches and resonance.</p>
 <p>Format: <code>FILTER sid [{, freq, lp, bp, hp, res}]</code></p>
 <pre><code>FILTER 1, 1024, 1, 0, 0, 10 : REM LOW PASS ON THE RIGHT MUSIC SID</code></pre>
 <h4 id="vol">VOL</h4>
-<p>Token <code>$DB</code> · Book p. B-279</p>
+<p>Token <code>$DB</code> · Book p. B-280</p>
 <p>Sets the volume, 0 to 15, of the right and left pairs of SIDs.</p>
 <p>Format: <code>VOL right, left</code></p>
 <pre><code>VOL 8, 8</code></pre>
@@ -3160,7 +3160,7 @@ off. From ROM 920414, port 3 means a mouse in either port
 <h3 id="system">System</h3>
 <h4 id="speed-fast-rspeed"><span id="kw-speed"></span><span id="kw-fast"></span><span id="kw-rspeed"></span>SPEED, FAST, RSPEED</h4>
 <p>Tokens <code>$FE $26</code>, <code>$FE $25</code>,
-<code>$CE $0E</code> · Book pp. B-245, B-106, B-225</p>
+<code>$CE $0E</code> · Book pp. B-246, B-106, B-225</p>
 <p>SPEED, or its synonym FAST, sets the CPU to 1, 3.5 or 40.5 MHz;
 RSPEED reports the speed as 1, 3 or 40. Neither works after
 <code>POKE 0,65</code> has forced full speed.</p>
@@ -3195,7 +3195,7 @@ returns at once and the statement does nothing (MEGA65 ROM source,
 genlock).</p>
 <p>Format: <code>TURBO</code></p>
 <h4 id="ti-ti-dt"><span id="kw-ti"></span><span id="kw-ti-s"></span><span id="kw-dt-s"></span>TI, <code>TI$</code>, <code>DT$</code></h4>
-<p>Reserved variables, no token · Book pp. B-264, B-265, B-87</p>
+<p>Reserved variables, no token · Book pp. B-265, B-266, B-87</p>
 <p>TI is a timer with microsecond resolution, restarted with CLR TI;
 <code>TI$</code> and <code>DT$</code> give the time and date from the
 real-time clock.</p>
