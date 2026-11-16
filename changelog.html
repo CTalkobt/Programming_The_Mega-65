@@ -19,6 +19,9 @@ repository</a>.</p>
 <li>Chapter 11: the Book's model ID list now goes past R3; the text names the IDs it still leaves out.</li>
 <li>Chapter 13: the Book now says notes are still gated off while portamento is on, as the ROM does.</li>
 <li>Chapter 15: the Book now says TYPE gives FILE TYPE MISMATCH on USR files.</li>
+<li>Chapter 6: SYS with an address above <code>$FFFF</code> takes the bank from bits 16-19 and calls the low 16 bits; it is not a flat address.</li>
+<li>Chapter 8: hyppo_get_mapping writes to the caller's lower 32KB as currently mapped, not always bank 0; writing <code>$D702</code> sets the low three bits of <code>$D704</code> rather than clearing it; the DMA screen scroll belongs to the ROM's screen editor.</li>
+<li>Chapter 11: setname takes names of up to 63 characters; error <code>$83</code> means a load passed 65,535 sectors (32MB), not 16MB.</li>
 </ul>
 <h2 id="2026-11-15">November 15, 2026</h2>
 <ul>

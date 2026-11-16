@@ -389,8 +389,12 @@ offset, so <code>$FC000</code> becomes <code>$FE000</code>, then
 <p>The 45GS02 has no instruction to read the current MAP settings back,
 but the Hypervisor does. Trap <code>$74</code>, hyppo_get_mapping,
 writes the MAP state, both halves including their megabyte bytes, as six
-bytes to a page-aligned address in the bottom 32KB of bank 0, with the
-page number in Y (MEGA65 Book, p. 14-42):</p>
+bytes to a page-aligned address in the bottom 32KB of the caller's
+memory map, with the page number, <code>$00</code> to <code>$7E</code>, in
+Y. Entering the Hypervisor remaps only the upper 32KB, so the bytes land
+in bank 0 unless the program has used MAP on the lower half (MEGA65
+Book, p. 14-42; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+Hyppo <code>main.asm</code>, <code>gs4510.vhdl</code>):</p>
 <pre><code>        ldy #$62        ; save the map at $6200-$6205
         lda #$74        ; hyppo_get_mapping
         sta $d640
@@ -468,9 +472,11 @@ href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 <code>gs4510.vhdl</code>). The step options described below do the jobs
 modulo was meant for. Two details of
 the trigger registers matter. Writing the bank register
-<code>$D702</code> also clears the megabyte register <code>$D704</code>,
-so write <code>$D702</code> first and <code>$D704</code> after it. And
-BASIC 65 itself uses DMA to scroll the screen, so a program should
+<code>$D702</code> also overwrites the megabyte register
+<code>$D704</code>: bits 4-6 of the bank become its low three bits and
+the rest are cleared, so write <code>$D702</code> first and
+<code>$D704</code> after it. And the ROM's screen editor uses DMA to
+scroll the screen, so a program should
 rewrite all the list address registers before each job rather than
 assume they still hold its values (MEGA65 Book, pp. P-4, P-19, P-22).
 Two other triggers exist: <code>$D706</code> takes the list address in

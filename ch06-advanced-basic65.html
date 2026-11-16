@@ -433,9 +433,11 @@ naturally with POINTER, which returns flat addresses.</p>
 <h3 id="sys">SYS</h3>
 <p>SYS calls a machine-language routine, which must end with RTS. A
 16-bit address is interpreted through BANK; an address above
-<code>$FFFF</code> is taken as a flat address and BANK is ignored.
-Either way, SYS sets up a fixed mapping for the call, and only part of
-it comes from the chosen bank (MEGA65 Book, p. B-257):</p>
+<code>$FFFF</code> names the bank in its bits 16-19 instead, and BANK
+is ignored (MEGA65 ROM source, SYS). Either way, the routine is called
+at the address's low 16 bits through a fixed mapping for the call, and
+only part of that mapping comes from the chosen bank (MEGA65 Book,
+p. B-257):</p>
 <table>
 <thead>
 <tr class="header">

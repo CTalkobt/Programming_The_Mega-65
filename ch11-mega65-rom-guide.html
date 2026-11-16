@@ -1634,12 +1634,13 @@ if the directory is full</td>
 </table>
 <p>Several services have extra requirements. setname needs the name to
 start on a page boundary between <code>$0000</code> and
-<code>$7E00</code>, be shorter than 63 characters and end with a zero
+<code>$7E00</code>, be at most 63 characters long and end with a zero
 byte; it is ASCII, and Hyppo does not convert from PETSCII. Services
 that pass data use the transfer area, which setname also sets to the
 name's page. The file services work on the FAT32 file system of the SD
 cards, not on floppy disks or disk images (MEGA65 Book, pp. N-4,
-N-42).</p>
+N-42; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+Hyppo <code>dos.asm</code>).</p>
 <h3 id="versions">Versions</h3>
 <p>Hyppo is updated with the MEGA65 core, independently of the ROM. In
 August 2026, for example, a pull request was opened against mega65-core
@@ -1676,7 +1677,10 @@ the list may not be exhaustive.</p>
 </tr>
 <tr class="even">
 <td><code>$83</code></td>
-<td>File larger than 16MB</td>
+<td>File too long: a load stopped after 65,535 sectors (32MB); the
+Book says 16MB, but Hyppo only wraps the load address within 16MB
+(<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+Hyppo <code>dos.asm</code>)</td>
 </tr>
 <tr class="odd">
 <td><code>$84</code></td>
