@@ -28,6 +28,7 @@ The pandoc source (Markdown) is **not** in this repo, so edit the HTML directly.
 - **Citations:** facts taken from the official MEGA65 manual are cited inline as `(MEGA65 Book, p. X-NN)`. This refers to the August 2025 edition of the MEGA65 Book. When a newer source supersedes it, the text cites that source instead.
 - **Figures:** diagrams are inline `<svg>` inside `<figure>` with a `<figcaption>` numbered "Figure N.M". They use `currentColor` for strokes and text and no background, so they work in the light and dark themes.
 - **Code:** BASIC and assembly listings go in `<pre><code>`. Register addresses, keywords and opcodes go in inline `<code>`. Reference material (registers, opcodes, keywords, ROM entry points) mostly lives in tables (`<table>` with `<thead>`/`<tbody>`).
+- **Warnings:** a pitfall the reader must not miss goes in `<p class="warning"><strong>Warning:</strong> …</p>`, which `style.css` draws as a highlighted box in the light, dark and print styles.
 - **Changelog:** when you change the book's content, add a line to `changelog.html` under the heading for that day's date, in the form `<h2 id="YYYY-MM-DD">Month D, YYYY</h2>`. Create the heading if it doesn't exist, and put the newest date at the top. Name the chapter at the start of the line, as in "Chapter 11: …". Leave out changes readers won't notice, such as edits to `CLAUDE.md`.
 - **Version-dependent features:** the text says which ROM, core or Hypervisor version introduced a feature. Chapter 11 explains how a program can detect the version it is running on.
 

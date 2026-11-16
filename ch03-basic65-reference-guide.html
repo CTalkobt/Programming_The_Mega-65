@@ -1463,7 +1463,7 @@ stopping the program. TRAP with no line turns the handler off.</p>
 <p>The line is normally written as a constant line number, as in the
 MEGA65 Book. BASIC evaluates it when TRAP runs and keeps the result,
 and an error then branches to that line (MEGA65 ROM source, trap).</p>
-<p><strong>Warning:</strong> the line can also be an expression, such as
+<p class="warning"><strong>Warning:</strong> the line can also be an expression, such as
 a variable, but RENUMBER updates TRAP's line number only when it is a
 plain number. After renumbering, an expression still gives the old
 line, so an error goes to the wrong line or fails with
@@ -2960,7 +2960,7 @@ real light pen (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
 MEGA65 Book. BASIC evaluates it when COLLISION runs and keeps the
 result, and the handler is called at that line when the event happens
 (MEGA65 ROM source, optwrd).</p>
-<p><strong>Warning:</strong> the line can also be an expression, such as
+<p class="warning"><strong>Warning:</strong> the line can also be an expression, such as
 a variable, but RENUMBER does not change it. RENUMBER has updated
 COLLISION's line number since ROM 920385 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>),
 but only when it is a plain number, so after renumbering an expression
