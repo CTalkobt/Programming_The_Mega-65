@@ -1550,7 +1550,19 @@ deleting files also works in a program.</p>
 without loading it. P pauses after each screenful.</p>
 <p>Format: <code>LIST [P] [line range]</code> or
 <code>LIST [P] filename [,U unit]</code></p>
-<pre><code>LIST 500- : REM LIST FROM LINE 500 TO THE END</code></pre>
+<pre><code>LIST 500-        : REM LIST FROM LINE 500 TO THE END
+LIST P           : REM WHOLE PROGRAM, A SCREENFUL AT A TIME
+LIST P 740-      : REM FROM LINE 740 ON, A SCREENFUL AT A TIME
+LIST P 100-200   : REM LINES 100 TO 200, PAUSING
+LIST P &quot;GAME&quot;    : REM A PROGRAM FILE ON DISK, PAUSING</code></pre>
+<p>The P comes straight after LIST, before the line range or file name,
+and without a comma: <code>LIST 740-, P</code> is a syntax error. DIR
+is different, and takes P as one of its comma-separated options. With P,
+LIST clears the screen first and shows <code>[MORE]</code> at the bottom
+of each screenful; any key shows the next one, and Q or RUN STOP ends
+the listing. P only pauses output to the screen; after CMD it is ignored
+(MEGA65 ROM source, <code>list</code> and
+<code>paginate_pause</code>).</p>
 <h4 id="find">FIND</h4>
 <p>Token <code>$FE $2B</code> · Book p. B-110</p>
 <p>Lists every line of the program that contains a string. Direct mode
@@ -2416,7 +2428,14 @@ unmounts.</p>
 920396) pauses after each screenful. From ROM 920417, TYPE also reads
 files on the SD card, with U12 (<a href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65 ROM change log</a>).</p>
 <p>Format: <code>TYPE [P] filename [,D drive] [,U unit]</code></p>
-<pre><code>TYPE &quot;README&quot;</code></pre>
+<pre><code>TYPE &quot;README&quot;            : REM WHOLE FILE WITHOUT STOPPING
+TYPE P &quot;README&quot;          : REM A SCREENFUL AT A TIME
+TYPE P &quot;NOTES.TXT&quot;, U12  : REM A FILE ON THE SD CARD, PAUSING</code></pre>
+<p>As with LIST, the P comes straight after TYPE, before the file name,
+and without a comma: <code>TYPE &quot;README&quot;, P</code> is a
+syntax error. At <code>[MORE]</code>, any key shows the next screenful
+and Q or RUN STOP stops (MEGA65 ROM source, <code>type</code> and
+<code>paginate_pause</code>).</p>
 <h4 id="set">SET</h4>
 <p>Token <code>$FE $2D</code> · Book p. B-238</p>
 <p>SET DEF changes the default disk unit, SET DISK (from ROM 920380)
