@@ -1198,13 +1198,37 @@ the bottom 64 bytes of memory; a top address of <code>$0040</code>
 works as well, and goes round the table twice in each loop.</p>
 <h3 id="end-of-sample-and-interrupts">End of sample and interrupts</h3>
 <p>When a non-looping sample ends, the hardware sets the channel's stop
-flag, bit 3. The Book's text states that audio DMA cannot presently
-generate interrupts, although its register table lists interrupt flag
-and enable bits at <code>$D713</code> and offset registers at
-<code>$D714-$D717</code> (MEGA65 Book, pp. P-19, P-20). Development
-cores do raise these interrupts (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, October 2026), but until they are documented
-and in a release, a program should poll the stop flag, for example once
-a frame.</p>
+flag, bit 3. A program can poll that flag, for example once a frame,
+or ask for an interrupt instead.</p>
+<p>The Book's text states that audio DMA cannot presently generate
+interrupts, although its register table lists interrupt flag and enable
+bits at <code>$D713</code> and offset registers at
+<code>$D714-$D717</code> (MEGA65 Book, pp. P-19, P-20). The text is out
+of date: the interrupts were added in July 2024 and are in release 0.97
+and later cores (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>, commit <code>8920bf9</code>). The source shows
+how they work:</p>
+<ul>
+<li><code>$D713</code> holds an enable bit and a flag for each channel,
+in reverse order: bits 3 to 0 enable channels 0 to 3, and bits 7 to 4
+are their flags. <code>$D714</code> to <code>$D717</code> hold the
+offsets for channels 0 to 3.</li>
+<li>The interrupt comes when the channel's current address reaches the
+top address less the offset in 256-byte pages, rounded down to a page:
+(top address high byte &minus; offset) &times; 256. An offset of 0
+gives an interrupt in the sample's last page.</li>
+<li>It happens once: the core sets the channel's flag and clears its
+enable bit. To have another, set the enable bit again.</li>
+<li>The interrupt goes straight to the CPU, not through the CIAs or the
+VIC-IV, so a handler must read <code>$D713</code> to find it, and clear
+the flag by writing 0 to it. An interrupt that arrives while interrupts
+are disabled with <code>SEI</code> is lost; only the flag remains.</li>
+</ul>
+<p class="warning"><strong>Warning:</strong> these details come from
+the core source and have not been tested on hardware for this book. Test
+an interrupt-driven player on the machine, and keep polling the stop
+flag as a fallback.</p>
 <h3 id="longer-sounds">Longer sounds</h3>
 <p>A 64KB region holds about eight seconds of 8-bit sound at 8 kHz.
 Longer sounds use the loop bit as a ring buffer: the channel loops over
