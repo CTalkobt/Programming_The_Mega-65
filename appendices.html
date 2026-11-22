@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch17-major-peripherals.html">&larr; Previous</a></span><a href="index.html">Contents</a><span></span></nav>
 <h1 id="programming-the-mega65--appendices">Programming the MEGA65 —
 Appendices</h1>
-<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 22, 2026 · @Craig Taylor</p>
 <ul>
 <li><a href="#appendix-a-screen-codes-and-colours">Appendix A: Screen Codes and Colours</a></li>
 <li><a href="#appendix-b-petscii-codes">Appendix B: PETSCII Codes</a></li>
@@ -3758,7 +3758,7 @@ their own.</p>
 </tr>
 <tr class="odd">
 <td><strong>Status register</strong></td>
-<td>The CPU register (P) that holds the <em>flags</em>: N, V, E, B, D, I, Z and C. <code>PHP</code> and <code>PLP</code> save and restore it. See Chapter 7.</td>
+<td>The CPU register (P) that holds the <em>flags</em>: N, V, E, B, D, I, Z and C. <code>PHP</code> and <code>PLP</code> save and restore it, except for E: PHP always pushes bit 5 as 1, and PLP never changes E. See Chapter 7.</td>
 </tr>
 </tbody>
 </table>

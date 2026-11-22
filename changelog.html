@@ -12,6 +12,12 @@
 <p>The full history is in the <a
 href="https://github.com/CTalkobt/Programming_The_Mega-65/commits/main">Git
 repository</a>.</p>
+<h2 id="2026-11-22">November 22, 2026</h2>
+<ul>
+<li>Chapter 7: corrected the note on the E flag. PHP always pushes bit 5 as 1, so it can't show E; only the P that BRK, IRQ and NMI push holds the real E. 8-bit and 16-bit stacks gains a warning about this and a routine that tests which stack is in use.</li>
+<li>Chapter 10: notes on PHP, PLP and RTI, BRK and CLE explain that PHP's copy of P doesn't show E, that the copy BRK, IRQ and NMI push does, and that PHP and PLP don't save and restore E.</li>
+<li>Appendices: the glossary entry for the processor status register notes the exception for E.</li>
+</ul>
 <h2 id="2026-11-21">November 21, 2026</h2>
 <ul>
 <li>Chapter 13: a new section, The filter cutoff, gives the frequencies the MEGA65's cutoff values produce and warns that the 8580 setting keeps the 6581 cutoff curve, so cutoffs chosen for an 8580 sound much lower.</li>

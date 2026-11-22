@@ -31,7 +31,7 @@
 <h1
 id="programming-the-mega65--chapter-10-vocabulary-of-the-45gs02">Programming
 the MEGA65 — Chapter 10: Vocabulary of the 45GS02</h1>
-<p>Oct 4, 2026 · Updated Nov 13, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 22, 2026 · @Craig Taylor</p>
 <h2 id="introduction">Introduction</h2>
 <p>This chapter is a reference to every instruction the 45GS02 executes,
 in alphabetical order. Each entry gives the operation, the flags it
@@ -387,7 +387,10 @@ just as the memory modes do (MEGA65 Book, BIT instruction entry;
 <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
 <p><strong>BRK</strong> sets I. The CPU has no stored B flag: bit 4 is
 set only in the copy of P that BRK pushes, so a handler tells BRK from
-IRQ by testing that copy on the stack (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
+IRQ by testing that copy on the stack (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).
+Bit 5 of that copy is the real E flag, for BRK, IRQ and NMI alike, so
+a handler can also read the stack mode from it; PHP's copy doesn't show
+E (see the note on PHP).</p>
 <p><strong>BRK</strong> is followed by a padding byte that the CPU skips
 on return, as on the 6502. The return address pushed is that of BRK plus
 two.</p>
@@ -527,7 +530,8 @@ MEGA65 Book writes BSR.</p>
 <h3 id="notes-1">Notes</h3>
 <p><strong>CLE</strong> should be used only where the program's stack
 can safely grow beyond page 1. The KERNAL and BASIC expect the 8-bit
-stack, so cooperative routines should leave E set.</p>
+stack, so cooperative routines should leave E set. A program can't
+check E with PHP; see the notes on PHP and on PLP and RTI.</p>
 <p><strong>Compare instructions</strong> set C when the register is
 greater than or equal to the operand, treating both as unsigned, and set
 Z when they are equal. N reflects bit 7 of the difference.</p>
@@ -766,9 +770,17 @@ leaves a return address, and it means a word pushed with PHW is not a
 ready-made little-endian pointer for stack-relative addressing (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026;
 <a href="https://github.com/lgblgblgb/xemu">Xemu</a>, <code>cpu65.c</code>). PHW abs pushes the 16-bit contents of the address, not the
 address itself.</p>
+<p><strong>PHP</strong> always pushes bits 5 and 4 as 1, so the
+pushed byte doesn't show E: it reads as set even with the 16-bit stack
+in use. Only the copies of P that BRK, IRQ and NMI push hold the real E.
+Chapter 7, <a href="ch07-45gs02-machine-language.html#8-bit-and-16-bit-stacks">8-bit
+and 16-bit stacks</a>, shows a test for E that works outside an
+interrupt handler (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, October 2026).</p>
 <p><strong>PLP and RTI</strong> restore N, V, D, I, Z and C from the
 stack, but never E: only CLE and SEE change the stack mode (MEGA65 Book,
-PLP and RTI instruction entries; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).</p>
+PLP and RTI instruction entries; <a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>gs4510.vhdl</code>, September 2026).
+So PHP followed by PLP restores every flag but E, which stays as it is;
+a routine that runs CLE must run SEE itself before it returns.</p>
 <h2 id="rmb-to-stz">RMB to STZ</h2>
 <table>
 <thead>
