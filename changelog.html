@@ -17,6 +17,7 @@ repository</a>.</p>
 <li>Chapter 7: corrected the note on the E flag. PHP always pushes bit 5 as 1, so it can't show E; only the P that BRK, IRQ and NMI push holds the real E. 8-bit and 16-bit stacks gains a warning about this and a routine that tests which stack is in use.</li>
 <li>Chapter 10: notes on PHP, PLP and RTI, BRK and CLE explain that PHP's copy of P doesn't show E, that the copy BRK, IRQ and NMI push does, and that PHP and PLP don't save and restore E.</li>
 <li>Appendices: the glossary entry for the processor status register notes the exception for E.</li>
+<li>Chapter 13: Left and right warns that clearing SIDEXENA does not restore the default SID panning, gives the default <code>$1D</code>/<code>$1E</code> values to write back, and describes the copy of the SIDs at <code>$D500</code> in C64 I/O mode, with the left and right pairs swapped for dual-SID music.</li>
 </ul>
 <h2 id="2026-11-21">November 21, 2026</h2>
 <ul>
