@@ -29,7 +29,7 @@
 <nav class="chapnav"><span><a href="ch12-graphics.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch14-sd-card-and-mass-storage.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-13-sound">Programming the MEGA65
 — Chapter 13: Sound</h1>
-<p>Oct 4, 2026 · Updated Nov 21, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 22, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch13/ch13.d81">ch13.d81</a> holds this chapter's 5 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The C64 had one SID. The MEGA65 has four, giving twelve voices, plus
@@ -521,10 +521,27 @@ mixer. Setting SIDEXENA, bit 4 of
 (<code>$D41D</code> and <code>$D41E</code> for SID 1). By default SIDs
 1 and 2 (<code>$D400</code>, <code>$D420</code>) are set fully right and
 SIDs 3 and 4 (<code>$D440</code>, <code>$D460</code>) fully left. With
-SIDEXENA clear, the two registers are hidden and each SID keeps that
-default panning
+SIDEXENA clear, the two registers are hidden and can't be written, but
+the SIDs go on using whatever panning they hold
 (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>sid_6581.vhdl</code>, <code>multisid.vhdl</code>,
 <code>c65uart.vhdl</code>; release 0.97).</p>
+<p class="warning"><strong>Warning:</strong> clearing SIDEXENA does not
+put the default panning back; only a reset does. A program that changes
+<code>$1D</code> or <code>$1E</code> should write the defaults back
+(<code>$00</code> left and <code>$FF</code> right for SIDs 1 and 2,
+<code>$FF</code> left and <code>$00</code> right for SIDs 3 and 4)
+before it clears SIDEXENA or exits. Otherwise the next program, or a C64
+tune, plays with its panning (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>sid_6581.vhdl</code>).</p>
+<p>In the C64 I/O personality, <code>$D500-$D57F</code> holds a second
+copy of the four SIDs with the pairs swapped: <code>$D500</code> is SID
+3, <code>$D520</code> SID 4, <code>$D540</code> SID 1 and
+<code>$D560</code> SID 2, repeated at <code>$D580-$D5FF</code>. It is
+there for C64 dual-SID music. A tune that plays its second SID at
+<code>$D500</code> drives SID 3 in the left pair, while its first SID at
+<code>$D400</code> stays SID 1 on the right, so the two parts come out
+on different sides. The copy is only at <code>$FFD05xx</code>; in the
+C65 and MEGA65 I/O personalities <code>$D500</code> doesn't reach the
+SIDs (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>iomapper.vhdl</code>; release 0.97).</p>
 <h3 id="chip-models">Chip models</h3>
 <p>Commodore built two versions of the SID. The original 6581 and the
 later 8580 differ in their filters and in how combined waveforms
