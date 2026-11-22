@@ -31,7 +31,7 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-7-45gs02-machine-language">Programming
 the MEGA65 — Chapter 7: 45GS02 Machine Language</h1>
-<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 22, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch07/ch07.d81">ch07.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Machine language is the processor's own language: the bytes the
@@ -293,9 +293,13 @@ subtraction</td>
 </table>
 <p>The E flag is new. It occupies the bit that is unused on the 6502 and
 is set at reset, so the stack starts out 6502-compatible. CLE clears it
-to enable the 16-bit stack pointer; SEE sets it again. Code that pushes
-P and inspects it, as some 6502 tricks do, should not assume bit 5 is
-always set.</p>
+to enable the 16-bit stack pointer; SEE sets it again. Nothing else
+changes it: PLP and RTI leave E alone whatever the byte they pull holds.
+Nor can a program read E with PHP, because PHP always pushes bit 5 (and
+bit 4, B) as 1. Only the copy of P that BRK, an IRQ or an NMI pushes
+holds the real E. <a href="#8-bit-and-16-bit-stacks">8-bit and 16-bit
+stacks</a> below shows how a program can test E (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>, October 2026).</p>
 <p>Note also that the Z flag and the Z register are unrelated. The flag
 records whether a result was zero; the register is a general index.
 Assemblers and this book keep them apart by context: BEQ and BNE test
@@ -707,6 +711,44 @@ and TSY reads it back (MEGA65 Book, pp. L-78, L-114, L-116).</p>
 <p>Most programs that call the KERNAL or return to BASIC should leave E
 set. A larger stack is useful for a self-contained program, such as a
 game that takes over the machine, or for deeply recursive code.</p>
+<p class="warning"><strong>Warning:</strong> PHP does not show the E
+flag. It always pushes bit 5 as 1, so <code>PHP</code>,
+<code>PLA</code>, <code>AND #$20</code> gives a nonzero result even when
+E is clear. PLP and RTI never change E, so pulling a P byte with bit 5
+clear doesn't switch the stack mode either. Only the copies of P that
+BRK, an IRQ and an NMI push hold the real E in bit 5, so an interrupt
+handler can read it from the stack (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>, October 2026).</p>
+<p>Outside an interrupt handler, a program can find out which stack is
+in use by watching the stack pointer. With E set, a push at
+<code>SPL = $00</code> wraps SPL to <code>$FF</code> and leaves SPH
+alone; with E clear, SPH goes down by one. The push writes to byte
+<code>$00</code> of the current stack page, which lies below SP and is
+free:</p>
+<pre><code>        php             ; save the I flag
+        sei             ; no IRQ while SP is moved
+        tsx             ; save the stack pointer:
+        stx spl_save    ; the low byte from TSX
+        tsy             ; and the high byte
+        sty sph_save    ; from TSY
+        ldx #$00
+        txs             ; SPL = $00 (TXS sets only SPL)
+        pha             ; E set: SPL wraps; E clear: SPH - 1
+        tsy
+        sty sph_after   ; SPH after the push
+        ldy sph_save
+        tys             ; put SP back
+        ldx spl_save
+        txs
+        plp             ; I flag as it was
+        lda sph_after
+        cmp sph_save
+        beq stack8      ; SPH unchanged: E is set, 8-bit stack
+                        ; otherwise E is clear, 16-bit stack</code></pre>
+<p>SEI doesn't hold off an NMI. With E set, an NMI that arrives while
+SPL is <code>$00</code> wraps its pushes to the top of the stack page,
+on top of the live stack. If the program has an NMI handler, keep it
+from running during the test.</p>
 <h3 id="subroutines">Subroutines</h3>
 <p>JSR pushes the return address and jumps; RTS pulls it and returns.
 The 45GS02 adds three useful relatives:</p>
