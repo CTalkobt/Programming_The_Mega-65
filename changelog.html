@@ -16,7 +16,7 @@ repository</a>.</p>
 <ul>
 <li>Chapter 13: a new section, The filter cutoff, gives the frequencies the MEGA65's cutoff values produce and warns that the 8580 setting keeps the 6581 cutoff curve, so cutoffs chosen for an 8580 sound much lower.</li>
 <li>Chapter 13: the interrupt tune explains why the gate goes off two frames early: in 8580 mode a note struck again after one frame of gate-off at full volume can stay silent, as on a real SID; the MEGA65's 6581 mode does not do this.</li>
-<li>Chapter 13: audio DMA interrupts are in release 0.97 and later cores, not only development cores; End of sample and interrupts now explains <code>$D713-$D717</code>, when the interrupt comes, and that it happens once and is lost under <code>SEI</code>.</li>
+<li>Chapter 13: audio DMA interrupts are in release 0.97 and later cores, not only development cores; End of sample and interrupts now explains <code>$D713-$D717</code>, when the interrupt comes, that it is an IRQ through <code>$FFFE</code>, and that it happens once and is lost under <code>SEI</code>.</li>
 </ul>
 <h2 id="2026-11-16">November 16, 2026</h2>
 <ul>

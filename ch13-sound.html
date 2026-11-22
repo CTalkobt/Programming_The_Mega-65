@@ -1220,10 +1220,16 @@ top address less the offset in 256-byte pages, rounded down to a page:
 gives an interrupt in the sample's last page.</li>
 <li>It happens once: the core sets the channel's flag and clears its
 enable bit. To have another, set the enable bit again.</li>
-<li>The interrupt goes straight to the CPU, not through the CIAs or the
-VIC-IV, so a handler must read <code>$D713</code> to find it, and clear
-the flag by writing 0 to it. An interrupt that arrives while interrupts
-are disabled with <code>SEI</code> is lost; only the flag remains.</li>
+<li>It is an IRQ, not an NMI: the CPU takes it through the IRQ vector
+at <code>$FFFE</code>, so in the KERNAL's normal configuration it
+reaches the same handler, and the vector at <code>$0314</code>, as the
+raster and CIA interrupts. It is raised inside the CPU, not through the
+CIAs or the VIC-IV, so their interrupt registers do not show it; a
+handler must read <code>$D713</code> to find it, and clear the flag by
+writing 0 to it.</li>
+<li>Unlike the CIA and VIC-IV interrupts, it does not wait for the I
+flag to clear. One that arrives while interrupts are disabled with
+<code>SEI</code> is lost; only the flag remains.</li>
 </ul>
 <p class="warning"><strong>Warning:</strong> these details come from
 the core source and have not been tested on hardware for this book. Test
