@@ -29,7 +29,7 @@
 <nav class="chapnav"><span><a href="ch12-graphics.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch14-sd-card-and-mass-storage.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-13-sound">Programming the MEGA65
 — Chapter 13: Sound</h1>
-<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 21, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch13/ch13.d81">ch13.d81</a> holds this chapter's 5 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The C64 had one SID. The MEGA65 has four, giving twelve voices, plus
@@ -448,7 +448,9 @@ are:</p>
 SID and 2 for the left. The cutoff is 0 to 2047, the three mode switches
 are 0 or 1, and resonance is 0 to 15. Combining modes produces
 band-reject and notch effects. A voice uses the filter only while its
-PLAY string has <code>X1</code> in effect (MEGA65 Book, p. B-109).</p>
+PLAY string has <code>X1</code> in effect (MEGA65 Book, p. B-109). The
+cutoff is not a frequency: equal steps in it give very unequal changes,
+as <a href="#the-filter-cutoff">The filter cutoff</a> shows.</p>
 <p>VOL sets the volume, 0 to 15, of the right pair of SIDs, 1 and 2, and
 the left pair, 3 and 4. "Right" and "left" describe the default mix; the
 user's mixer settings decide where each pair is actually heard (MEGA65
@@ -538,7 +540,50 @@ per SID in the low four bits of <code>$D63C</code>, in an unexpected
 order: bit 0 is SID 3 (<code>$D440</code>), bit 1 is SID 1
 (<code>$D400</code>), bit 2 is SID 4 (<code>$D460</code>) and bit 3 is
 SID 2 (<code>$D420</code>) (<a href="https://github.com/MEGA65/mega65-core">mega65-core</a>, <code>multisid.vhdl</code>, <code>c65uart.vhdl</code>). A program that changes SIDMODE should restore it before
-exiting, since it overrides the user's setting.</p>
+exiting, since it overrides the user's setting. The 8580 setting does
+not change the filter's cutoff curve, as the next section explains.</p>
+<h3 id="the-filter-cutoff">The filter cutoff</h3>
+<p>The cutoff register holds an 11-bit value, 0 to 2047, and the MEGA65
+turns it into a filter frequency through a table. The table follows the
+curve of a 6581: nearly flat up to about <code>$200</code>, rising
+steeply after that, and dropping back between <code>$3FF</code> and
+<code>$400</code> before it climbs again. These are the frequencies it
+gives in PAL mode; in NTSC mode they are a few percent higher, because
+the SID clock is faster (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>sid_coeffs.vhdl</code>, <code>sid_filters.vhdl</code>).</p>
+<table>
+<thead>
+<tr class="header">
+<th>Cutoff</th>
+<th>Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd"><td><code>$000</code> (0)</td><td>217 Hz</td></tr>
+<tr class="even"><td><code>$100</code> (256)</td><td>246 Hz</td></tr>
+<tr class="odd"><td><code>$200</code> (512)</td><td>414 Hz</td></tr>
+<tr class="even"><td><code>$280</code> (640)</td><td>768 Hz</td></tr>
+<tr class="odd"><td><code>$300</code> (768)</td><td>1,575 Hz</td></tr>
+<tr class="even"><td><code>$380</code> (896)</td><td>3,150 Hz</td></tr>
+<tr class="odd"><td><code>$3FF</code> (1023)</td><td>5,906 Hz</td></tr>
+<tr class="even"><td><code>$400</code> (1024)</td><td>4,528 Hz</td></tr>
+<tr class="odd"><td><code>$500</code> (1280)</td><td>9,352 Hz</td></tr>
+<tr class="even"><td><code>$600</code> (1536)</td><td>14,273 Hz</td></tr>
+<tr class="odd"><td><code>$700</code> (1792)</td><td>16,833 Hz</td></tr>
+<tr class="even"><td><code>$7FF</code> (2047)</td><td>17,719 Hz</td></tr>
+</tbody>
+</table>
+<p class="warning"><strong>Warning:</strong> the 8580 setting in SIDMODE
+does not change this curve. All four SIDs share one table in both
+modes, and the 8580 setting changes only the filter's resonance (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>multisid.vhdl</code>, <code>sid_filters.vhdl</code>; release 0.97
+and development cores). A real 8580's cutoff rises nearly in proportion
+to the register, to about 12 kHz at 2047 (reSID 0.16,
+<code>filter.cc</code>), so a low cutoff chosen for an 8580 sits two to
+three octaves lower on the MEGA65 and can muffle the notes it filters.
+Choose cutoffs by ear on the MEGA65, or from the table above.</p>
 <h3 id="timing-music">Timing music</h3>
 <p>C64 music players are usually called once per frame from a raster
 interrupt, which ties their tempo to the video standard: 50 frames a
@@ -655,7 +700,8 @@ nybble</td>
 </tr>
 <tr class="even">
 <td><code>$16</code></td>
-<td>Filter cutoff, bits 10-3</td>
+<td>Filter cutoff, bits 10-3 (see <a href="#the-filter-cutoff">The
+filter cutoff</a>)</td>
 </tr>
 <tr class="odd">
 <td><code>$17</code></td>
@@ -876,6 +922,24 @@ fifth faster in NTSC mode, as <a href="#timing-music">Timing
 music</a> explained, and its PAL note
 values sound sharp there; a careful player chooses its table and its
 frame count from bit 7 of <code>$D06F</code>.</p>
+<p>The gate goes off two frames early, not one, because of the
+envelope's timing in 8580 mode. When the gate goes off, the release can
+wait up to 32,767 SID clock cycles, about 33 ms, before its first step,
+since the envelope's rate counter may have to run all the way round
+before it matches the new rate. That is longer than one frame. Until
+that first step the envelope stays where it was. With a sustain level
+of 15 that is <code>$FF</code>, and if the gate comes on again then, the
+attack's first step wraps the envelope round to <code>$00</code>, where
+it stays until the gate next goes from 0 to 1 (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>sid_envelope.v</code>). A real SID of either model behaves the
+same way (reSID 0.16, <code>envelope.h</code>). The MEGA65's 6581 mode
+does not: it uses a different envelope, which starts every attack from
+zero and does not freeze (<code>sid_voice.vhdl</code>).</p>
+<p class="warning"><strong>Warning:</strong> in 8580 mode, a note
+struck again after only one frame of gate-off can be silent if its
+envelope was at full volume. Turn the gate off at least two frames, 40
+ms in PAL, before the next note.</p>
 <p>The SID registers, apart from the four read-only ones, cannot be read
 back at <code>$D400</code>. The MEGA65 does keep a readable copy of
 what was written to all four SIDs at <code>$FF65000-$FF6507F</code>,
