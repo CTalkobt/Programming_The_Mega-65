@@ -31,7 +31,7 @@ Architecture</title>
 <h1
 id="programming-the-mega65--chapter-5-mega65-architecture">Programming
 the MEGA65 — Chapter 5: MEGA65 Architecture</h1>
-<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 23, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch05/ch05.d81">ch05.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65 is an 8-bit machine with a 28-bit address space, and
@@ -996,6 +996,64 @@ inputs between statements: in Xemu with ROM 920413, writing 1000 and 300
 to the inputs with WPOKE and reading MULTOUT in the next statement gave
 0. BASIC's own <code>*</code> and <code>/</code> already get the
 benefit.</p>
+<h3 id="the-accelerator-and-interrupts">The accelerator and
+interrupts</h3>
+<p>There is only one set of input registers, and nothing stops two
+pieces of code from using it at once. If an interrupt handler uses the
+multiplier or divider between the main program's writes to MULTINA and
+MULTINB and its reads of the results, the main program reads the
+handler's answer instead of its own. Nothing goes wrong until the
+interrupt happens to land in that window, so the fault comes and goes.
+Raster interrupts, music players and network code such as an IP stack
+are the usual handlers that do arithmetic. BASIC 65 is one of the
+users: it works out array sizes and element offsets with the multiplier,
+with interrupts enabled (MEGA65 ROM source, <code>umultd</code> in
+<code>b65.src</code>), so a handler that runs while BASIC is running
+must save and restore the inputs as shown below.</p>
+<p>The simplest protection is to keep interrupts out of the window.
+Disable them from the first input write to the last result read:</p>
+<pre><code>        sei             ; no interrupt may use the unit now
+        lda #&lt;1000
+        sta $d770
+        ...             ; the rest of the inputs, as above
+        lda $d778       ; read every result byte you need
+        sta product
+        lda $d779
+        sta product+1
+        cli</code></pre>
+<p>The window is a few dozen cycles, well under a microsecond at 40.5
+MHz, so this delays an interrupt very little. A handler that uses the
+accelerator can protect the code it interrupted instead, by saving the
+eight input bytes, which can be read back, and restoring them before
+<code>RTI</code>. The product is worked out again whenever an input
+changes, and every write to an input starts the divider again (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>), so restoring the inputs restores the results.
+The divider needs a few cycles to finish, so wait for it before
+returning:</p>
+<pre><code>irq     ldx #7
+save    lda $d770,x     ; save MULTINA and MULTINB
+        sta mathsave,x
+        dex
+        bpl save
+        ...             ; the handler's own arithmetic
+        ldx #7
+rest    lda mathsave,x  ; put the interrupted inputs back
+        sta $d770,x
+        dex
+        bpl rest
+wait    bit $d70f       ; let the divider finish again
+        bmi wait
+        ...             ; the rest of the handler, then RTI
+mathsave .fill 8</code></pre>
+<p class="warning"><strong>Warning:</strong> if any
+interrupt handler in the system uses the math accelerator, every use of
+it outside that handler must either run with interrupts disabled or rely
+on the handler saving and restoring the inputs. Code that does neither
+gets wrong results now and then, and they are hard to trace.</p>
+<p>DMA jobs share their setup registers in the same way: see <a
+href="ch08-ml-methods-specific-to-the-mega65.html#dma-and-the-cpu">Chapter
+8</a>.</p>
 <h2 id="summary">Summary</h2>
 <p>The MEGA65 is easiest to understand as layers, built up from the C64
 through the C65 to the MEGA65, and all still active:</p>

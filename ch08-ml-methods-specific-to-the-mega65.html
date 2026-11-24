@@ -31,7 +31,7 @@ the MEGA65</title>
 <h1
 id="programming-the-mega65--chapter-8-ml-methods-specific-to-the-mega65">Programming
 the MEGA65 — Chapter 8: ML Methods Specific to the MEGA65</h1>
-<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 23, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch08/ch08.d81">ch08.d81</a> holds this chapter's 4 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 7 described the 45GS02 in isolation. Real programs run on a
@@ -593,6 +593,27 @@ DMA controller is part of the CPU, a job cannot be interrupted, and a
 long one delays interrupts too (MEGA65 Book, p. P-4). A raster interrupt
 that must fire on time should not compete with a very large transfer;
 split big jobs into pieces timed to fit between interrupts.</p>
+<p>The job itself cannot be interrupted, but setting it up can. The
+list address is written one byte at a time to <code>$D701</code>,
+<code>$D702</code> and <code>$D704</code> before the trigger write to
+<code>$D700</code> or <code>$D705</code>, and there is only one set of
+these registers. If an interrupt handler that starts its own DMA job
+runs between those writes, it replaces the address bytes, and the main
+program's trigger then runs a job from the handler's list, or from
+whatever the registers hold after the handler's job has read its list.
+The registers count forward through the list as the job reads it (<a
+href="https://github.com/MEGA65/mega65-core">mega65-core</a>,
+<code>gs4510.vhdl</code>), so a handler cannot simply save and restore
+them as it can the math accelerator's inputs (<a
+href="ch05-mega65-architecture.html#the-accelerator-and-interrupts">Chapter
+5</a>).</p>
+<p class="warning"><strong>Warning:</strong> if any
+interrupt handler starts DMA jobs, set up and trigger every job outside
+it with interrupts disabled: <code>SEI</code> before the first write to
+<code>$D701</code>-<code>$D704</code>, and <code>CLI</code> after the
+trigger. The job runs to the end before the CPU reaches the
+<code>CLI</code>, so this costs no more interrupt delay than the job
+does already.</p>
 <p class="warning"><strong>Warning:</strong> the command
 byte has a bit documented as "yield to interrupts", bit 3, but the
 Book's own text says jobs cannot be interrupted, so do not rely on

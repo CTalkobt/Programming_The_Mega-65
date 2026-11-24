@@ -31,7 +31,7 @@ Language</title>
 <h1
 id="programming-the-mega65--chapter-7-45gs02-machine-language">Programming
 the MEGA65 — Chapter 7: 45GS02 Machine Language</h1>
-<p>Oct 4, 2026 · Updated Nov 22, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 23, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch07/ch07.d81">ch07.d81</a> holds this chapter's complete program. It can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Machine language is the processor's own language: the bytes the
@@ -848,6 +848,305 @@ save a cycle, which is why much C64 software failed on the C65. The
 read-modify-write instruction keeps the faster timing (MEGA65 Book, p.
 K-4). New code can use either the idiom or an explicit
 <code>LDA #$01 : STA $D019</code>.</p>
+<h2 id="common-idioms">Common Idioms</h2>
+<p>A few short patterns turn up in almost every machine-language
+program: comparing numbers, counting loops, searching tables and text,
+dispatching through a table, and sharing a piece of hardware with an
+interrupt handler. Most are as old as the 6502; where the 45GS02 offers
+a better way, the examples use it. The listings use 64tass syntax, and
+names such as <code>m</code>, <code>count</code> and <code>hay</code>
+stand for the program's own variables.</p>
+<h3 id="comparing-unsigned-numbers">Comparing unsigned numbers</h3>
+<p>CMP, CPX, CPY and CPZ subtract the operand from the register without
+storing the result. They set C when the register is greater than or
+equal to the operand, treating both as unsigned, and Z when the two are
+equal. N is bit 7 of the difference, which says nothing reliable about
+which value is larger. Each of the six tests is one or two branches
+after the compare:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Test, after <code>CMP m</code></th>
+<th>Branch to the target when it is true</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A = m</td>
+<td><code>BEQ</code></td>
+</tr>
+<tr class="even">
+<td>A ≠ m</td>
+<td><code>BNE</code></td>
+</tr>
+<tr class="odd">
+<td>A &lt; m</td>
+<td><code>BCC</code></td>
+</tr>
+<tr class="even">
+<td>A ≥ m</td>
+<td><code>BCS</code></td>
+</tr>
+<tr class="odd">
+<td>A &gt; m</td>
+<td><code>BEQ</code> past the test, then <code>BCS</code></td>
+</tr>
+<tr class="even">
+<td>A ≤ m</td>
+<td><code>BCC</code>, then <code>BEQ</code>, both to the target</td>
+</tr>
+</tbody>
+</table>
+<p>The two-branch cases look like this:</p>
+<pre><code>        cmp m
+        beq notgt       ; equal: not greater
+        bcs greater     ; A &gt; m
+notgt   ...
+
+        cmp m
+        bcc lesseq      ; A &lt; m
+        beq lesseq      ; A = m
+        ...             ; A &gt; m</code></pre>
+<p>Against a constant, one branch is enough: A &gt; n is the same test
+as A ≥ n+1, so <code>CMP #n+1</code> and <code>BCS</code> do it, as long
+as n is less than 255. Swapping the operands works too: A ≤ m is m ≥ A,
+so load m and compare it with A's value.</p>
+<h3 id="comparing-signed-numbers">Comparing signed numbers</h3>
+<p>CMP does not touch V, so it cannot compare signed numbers: as
+unsigned values, -1 (<code>$FF</code>) is greater than 1. Use SBC
+instead, which does set V, and combine N with V. When the subtraction
+overflows, N has the wrong sense and must be flipped:</p>
+<pre><code>        sec
+        sbc m           ; A - m sets N and V
+        bvc noflip
+        eor #$80        ; overflow: N has the wrong sense
+noflip  bmi less        ; A &lt; m, signed
+        ...             ; A ≥ m, signed</code></pre>
+<p>This destroys A, and the D flag must be clear, as it is unless the
+program sets it, because SBC works in decimal in decimal mode. Another
+way is to flip bit 7 of both values with <code>EOR #$80</code>, which
+maps -128 to 127 onto 0 to 255 in the same order, and then compare them
+unsigned.</p>
+<h3 id="comparing-16-and-32-bit-values">Comparing 16- and 32-bit
+values</h3>
+<p>For unsigned words, compare the high bytes first. Only if they are
+equal do the low bytes decide:</p>
+<pre><code>        lda a16+1
+        cmp b16+1
+        bne done        ; high bytes differ: they decide
+        lda a16
+        cmp b16
+done    bcc less        ; C and Z as a 16-bit CMP would set them</code></pre>
+<p>For signed words, subtract the whole value, low byte first, and test
+N and V from the high byte as in the 8-bit case. The low-byte CMP only
+supplies the borrow:</p>
+<pre><code>        lda a16
+        cmp b16         ; sets C as SEC : SBC would
+        lda a16+1
+        sbc b16+1
+        bvc noflip
+        eor #$80
+noflip  bmi less        ; a16 &lt; b16, signed</code></pre>
+<p>For 32-bit values the Q register does it in two instructions, with C
+and Z covering all 32 bits. 64tass writes CMPQ as CPQ. LDQ replaces A,
+X, Y and Z:</p>
+<pre><code>        ldq a32
+        cpq b32         ; CMPQ: compare all 32 bits
+        bcc less        ; a32 &lt; b32, unsigned</code></pre>
+<h3 id="counting-loops">Counting loops</h3>
+<p>Counting down to zero saves an instruction, because DEX, DEY, DEZ and
+DEC set Z when they reach zero. A loop that counts up needs a CPX to
+find its end. For more than 256 passes, DEW counts a base-page word down
+and sets Z from all 16 bits (Chapter 10):</p>
+<pre><code>        lda #&lt;2000
+        sta count       ; count is a base-page word
+        lda #&gt;2000
+        sta count+1
+loop    ...             ; the work, done 2000 times
+        dew count
+        bne loop</code></pre>
+<p>A count that starts at zero runs 65,536 times, so test for zero
+before the loop if it can happen.</p>
+<h3 id="end-markers-and-sentinels">End markers and sentinels</h3>
+<p>A routine that walks along a list needs to know where it ends. There
+are three common ways to mark the end:</p>
+<ul>
+<li><strong>A zero byte.</strong> Text ends with <code>$00</code>,
+which never appears inside it. The <code>print</code> routine above
+works this way, and 64tass's <code>.null</code> directive adds the
+zero.</li>
+<li><strong>A marker value.</strong> A table of values that can be zero
+ends with one that cannot appear in it, often <code>$FF</code>.</li>
+<li><strong>Bit 7 on the last character.</strong> Commodore's BASICs
+store their keyword lists with bit 7 set on the last character of each
+word, so no separate byte is needed. BASIC 65 still does (MEGA65 ROM
+source, <code>keyword_list</code> in <code>b65.src</code>).</li>
+</ul>
+<p>A <em>sentinel</em> is the same idea, used to speed up a search.
+Before searching a table for a value, store the value just past the end
+of the table. The loop is then sure to find it, so it needs no test for
+the end, and only one check afterwards says whether it found the real
+entry or the sentinel:</p>
+<pre><code>find    sta table+tablen ; the sentinel: the value itself
+        ldx #$ff
+loop    inx
+        cmp table,x
+        bne loop        ; no end test: the sentinel stops it
+        cpx #tablen
+        beq notfound    ; it found the sentinel
+        ...             ; X is the index of the entry</code></pre>
+<p>The table must be in RAM, have one spare byte after it, and hold at
+most 255 entries. The loop has three instructions instead of five.</p>
+<h3 id="comparing-strings">Comparing strings</h3>
+<p>This compares two zero-terminated strings through the base-page
+pointers <code>s1</code> and <code>s2</code> and leaves the flags as CMP
+would: Z set if they are equal, otherwise C set if <code>s1</code> comes
+later in PETSCII order. A string that is a prefix of the other comes
+first, because its zero is less than any character:</p>
+<pre><code>strcmp  ldy #0
+loop    lda (s1),y
+        cmp (s2),y
+        bne done        ; they differ: C says which is greater
+        cmp #0
+        beq done        ; both ended together: equal
+        iny
+        bne loop
+done    rts</code></pre>
+<p>Y limits it to 255 characters; two strings that agree for 256 compare
+as equal.</p>
+<h3 id="searching-text">Searching text</h3>
+<p>To find a word in a block of text, compare it at each position in
+turn. <code>hay</code> is a base-page pointer to zero-terminated text,
+and <code>needle</code> is the zero-terminated word to find. On a match
+the routine returns with C set and <code>hay</code> pointing at it.
+INW, which advances a base-page pointer in one instruction, moves on to
+the next position:</p>
+<pre><code>search  ldy #0
+cmp1    lda needle,y
+        beq found       ; end of needle: every character matched
+        cmp (hay),y
+        bne next        ; mismatch, or the text ended
+        iny
+        bne cmp1
+next    ldy #0
+        lda (hay),y
+        beq notfound    ; end of the text
+        inw hay         ; try one character further on
+        bra search
+found   sec
+        rts
+notfound clc
+        rts
+
+needle  .null &quot;READY&quot;</code></pre>
+<p>For text outside the 64KB window, such as a file loaded into attic
+RAM, the same loop works with a 32-bit pointer and <code>[hay],Z</code>
+in place of <code>(hay),Y</code>, which Chapter 8 describes. To search
+memory by hand, the monitor's H (hunt) command, described in the next
+section, does the same job.</p>
+<h3 id="jump-tables">Jump tables</h3>
+<p>A chain of CMP and BEQ instructions to choose among many actions gets
+long and slow. A table of addresses does it in a fixed time. Check the
+number first, since an out-of-range one jumps to whatever follows the
+table:</p>
+<pre><code>        cmp #3          ; command number in A: 0, 1 or 2
+        bcs bad
+        asl             ; two bytes per entry
+        tax
+        jsr (cmdtab,x)  ; call the routine it names
+bad     ...
+
+cmdtab  .word cmd0, cmd1, cmd2</code></pre>
+<h3 id="sharing-a-resource-with-interrupts">Sharing a resource with
+interrupts</h3>
+<p>Some resources are needed by both the main program and an interrupt
+handler, and only one of them can use the resource at a time: the math
+accelerator's input registers, the DMA list address, a buffer that both
+fill, or a variable longer than one byte. An instruction is never
+interrupted halfway, but a sequence of them can be, and a handler that
+runs in the middle of the main program's sequence corrupts it. Chapter 5
+shows the problem for <a
+href="ch05-mega65-architecture.html#the-accelerator-and-interrupts">the
+math accelerator</a>, and Chapter 8 for <a
+href="ch08-ml-methods-specific-to-the-mega65.html#dma-and-the-cpu">DMA</a>.
+There are three standard remedies.</p>
+<p><strong>A critical section.</strong> Disable interrupts around the
+sequence. Save the I flag with PHP and restore it with PLP, rather than
+ending with CLI, so that a routine called with interrupts already off,
+from a handler or another critical section, does not turn them on too
+early:</p>
+<pre><code>        php             ; remember whether interrupts were on
+        sei
+        ...             ; the sequence that must not be interrupted
+        plp             ; interrupts as they were</code></pre>
+<p>PLP restores every flag, so return results in registers or memory,
+not in C or Z. SEI does not stop an NMI. Keep critical sections short,
+since a raster interrupt held off for too long happens late. MAP gives
+the same protection until EOM, as described above.</p>
+<p><strong>Saving and restoring.</strong> The handler saves the
+resource's state before it uses the resource and puts it back before
+RTI. This works only for something whose state can be read back, such
+as the math accelerator's inputs (Chapter 5). The DMA list address
+cannot be put back.</p>
+<p><strong>A busy flag.</strong> The main program marks the resource as
+in use, and the handler checks the mark. These two routines mark the
+math accelerator. They count rather than set a single bit, so nested
+calls work:</p>
+<pre><code>mathuse .byte 0         ; non-zero while the main program uses it
+
+mbegin  inc mathuse     ; call before the first input write
+        rts
+mend    dec mathuse     ; call after the last result read
+        rts</code></pre>
+<p>INC and DEC change the flag in one instruction, so a handler sees it
+either before or after, never halfway. The handler then saves and
+restores the accelerator only when the main program is using it, and
+otherwise uses it freely:</p>
+<pre><code>irq     lda mathuse
+        beq free        ; not in use: nothing to save
+        ldx #7
+save    lda $d770,x     ; save MULTINA and MULTINB
+        sta mathsave,x
+        dex
+        bpl save
+free    ...             ; the handler's own arithmetic
+        lda mathuse
+        beq idone
+        ldx #7
+rest    lda mathsave,x  ; put the main program's inputs back
+        sta $d770,x
+        dex
+        bpl rest
+wait    bit $d70f       ; let the divider finish again
+        bmi wait
+idone   ...             ; the rest of the handler, then RTI
+
+mathsave .fill 8</code></pre>
+<p>Instead of saving, a handler that finds the resource busy can skip
+its work and set a flag of its own to do it on the next interrupt.
+That's the only choice for a resource whose state can't be restored, such
+as the DMA setup registers. What a handler must never do is wait for
+the flag to clear: the main program cannot run to clear it until the
+handler returns, so the machine hangs.</p>
+<p class="warning"><strong>Warning:</strong> a busy flag
+protects only code that uses it. BASIC 65 uses the math accelerator
+with interrupts enabled, for example to work out array sizes and element
+offsets (MEGA65 ROM source, <code>umultd</code> in <code>b65.src</code>),
+and knows nothing of <code>mathuse</code>. A handler that can run while
+BASIC or the ROM is running must save and restore the accelerator every
+time. The flag is for programs that have taken over the machine, where
+all the code follows the same rule.</p>
+<p>When more than one handler takes the same flag, for example an IRQ
+handler and an NMI handler that can interrupt it, the test and the set
+must be a single instruction, or the second handler can take the flag
+between the first one's test and its set. TSB does both: it sets the
+bits that are set in A and sets Z if they were all clear before.</p>
+<pre><code>        lda #$01
+        tsb lock        ; take bit 0; Z set if it was free
+        bne busy        ; someone else holds it: give up or defer
+        ...             ; use the resource
+        lda #$01
+        trb lock        ; release it</code></pre>
 <h2 id="a-first-program">A First Program</h2>
 <p>The MEGA65 has a machine-language monitor built in, so a first
 program needs no other software. Type MONITOR at the BASIC prompt to
@@ -1200,6 +1499,12 @@ for loads, stores, arithmetic, logic and shifts, using the
 and RTN make stack parameters practical; PHW leaves its word high byte
 first. Interrupt handlers
 must also preserve Z and B.</li>
+<li><strong>Idioms.</strong> CMP sets C for unsigned greater-or-equal
+and Z for equal; signed compares use SBC with N and V. Sentinels and
+end markers keep search loops short, and a critical section, saving and
+restoring, or a busy flag lets the main program and an interrupt handler
+share a resource. A handler must never wait for a flag the main program
+holds.</li>
 <li><strong>Tools.</strong> The built-in MONITOR assembles, disassembles
 and examines memory anywhere in the 28-bit space. Larger programs are
 written on a PC with a cross-assembler or compiler, such as the cc45

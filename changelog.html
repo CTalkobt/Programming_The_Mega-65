@@ -12,6 +12,12 @@
 <p>The full history is in the <a
 href="https://github.com/CTalkobt/Programming_The_Mega-65/commits/main">Git
 repository</a>.</p>
+<h2 id="2026-11-23">November 23, 2026</h2>
+<ul>
+<li>Chapter 7: new section, Common Idioms: unsigned and signed comparisons for =, ≠, &lt;, &gt;, ≤ and ≥, 16- and 32-bit compares, counting loops, end markers and sentinels, string comparison, text search, jump tables, and sharing a resource with an interrupt handler through critical sections, saving and restoring, and busy flags.</li>
+<li>Chapter 5: new section, The accelerator and interrupts: an interrupt handler that uses the multiplier or divider corrupts the results of the code it interrupts, including BASIC 65's own array arithmetic; disable interrupts around each use, or save and restore the inputs in the handler.</li>
+<li>Chapter 8: DMA and the CPU warns that a handler starting its own DMA job can replace the list address between the setup writes and the trigger, so set up and trigger jobs with interrupts disabled.</li>
+</ul>
 <h2 id="2026-11-22">November 22, 2026</h2>
 <ul>
 <li>Chapter 7: corrected the note on the E flag. PHP always pushes bit 5 as 1, so it can't show E; only the P that BRK, IRQ and NMI push holds the real E. 8-bit and 16-bit stacks gains a warning about this and a routine that tests which stack is in use.</li>
