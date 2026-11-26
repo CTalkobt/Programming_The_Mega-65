@@ -29,7 +29,7 @@
 <nav class="chapnav"><span><a href="ch10-vocabulary-of-the-45gs02.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch12-graphics.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-11-mega65-rom-guide">Programming
 the MEGA65 — Chapter 11: MEGA65 ROM Guide</h1>
-<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 26, 2026 · @Craig Taylor</p>
 <p class="downloads">Disk image: <a href="code/ch11/ch11.d81">ch11.d81</a> holds this chapter's 3 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>The MEGA65's ROM holds the KERNAL, the screen editor, BASIC 65, the
@@ -1170,8 +1170,12 @@ KERNAL. The one programs most often need is the USR vector, two bytes at
 <code>$02F8</code>, low byte first, read in the system bank:
 <code>BANK 128 : WPOKE $02F8, $1600</code> points USR at a routine at
 <code>$1600</code> (MEGA65 Book, p. B-286). Chapter 9 describes writing
-USR routines. Other BASIC vectors and work areas are internal and should
-not be assumed from the C64 or C128.</p>
+USR routines. The rest of BASIC 65's vectors, from <code>$02FA</code> to
+<code>$0313</code>, follow the C128's layout; the Book does not document
+them, and Chapter 6 lists them and uses the statement vector for a wedge
+(see <a href="ch06-advanced-basic65.html#basic-65s-vectors">BASIC 65's
+vectors</a>). BASIC's work areas are internal and should not be assumed
+from the C64 or C128.</p>
 <h2 id="hypervisor-services">Hypervisor Services</h2>
 <p>The Hypervisor's services, documented by the MEGA65 Book for Hyppo
 version 1.2, are reached through trap registers at

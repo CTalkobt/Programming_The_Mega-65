@@ -29,8 +29,8 @@
 <nav class="chapnav"><span><a href="ch05-mega65-architecture.html">&larr; Previous</a></span><a href="index.html">Contents</a><span><a href="ch07-45gs02-machine-language.html">Next &rarr;</a></span></nav>
 <h1 id="programming-the-mega65--chapter-6-advanced-basic-65">Programming
 the MEGA65 — Chapter 6: Advanced BASIC 65</h1>
-<p>Oct 4, 2026 · Updated Nov 16, 2026 · @Craig Taylor</p>
-<p class="downloads">Disk image: <a href="code/ch06/ch06.d81">ch06.d81</a> holds this chapter's 17 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
+<p>Oct 4, 2026 · Updated Nov 26, 2026 · @Craig Taylor</p>
+<p class="downloads">Disk image: <a href="code/ch06/ch06.d81">ch06.d81</a> holds this chapter's 19 complete programs. Each can also be downloaded from the links above its listing, and every listing has a Copy button.</p>
 <h2 id="introduction">Introduction</h2>
 <p>Chapter 4 treated BASIC 65 as a language: how to structure programs,
 debug them and make them run well. This chapter treats it as a program,
@@ -689,11 +689,11 @@ then reports the overflow and the value of I that caused it, and ends
 normally.</p>
 <h2 id="extending-basic-65">Extending BASIC 65</h2>
 <p>C64 programmers extended BASIC by redirecting the vectors in page 3,
-so that new keywords could be recognised and executed. That technique
-does not carry over cleanly. BASIC 65 has no officially documented
-extension interface, and its internal routines and work areas have moved
-between ROM versions. An extension that patches BASIC's internals may
-stop working after a ROM update.</p>
+so that new keywords could be recognised and executed. BASIC 65 has
+vectors like these, described at the end of this section, but the
+MEGA65 Book does not document them, and BASIC's internal routines and
+work areas have moved between ROM versions. An extension that calls or
+patches BASIC's internals may stop working after a ROM update.</p>
 <p>The robust alternative is to leave BASIC alone and give it fast
 helpers. Three features from earlier in this chapter make that easy:
 BANK and SYS to call code anywhere, SYS parameters and RREG to pass
@@ -776,6 +776,266 @@ AUTOBOOT.C65, the MEGA65's equivalent of an auto-start file (MEGA65
 Book, p. B-31):</p>
 <pre><code>BOOT &quot;GAME&quot;                           : REM LOAD AND RUN MACHINE CODE
 BOOT                                  : REM RUN AUTOBOOT.C65</code></pre>
+<h3 id="basic-65s-vectors">BASIC 65's vectors</h3>
+<p>BASIC 65 descends from the C128's BASIC 7.0 by way of the C65, and
+it kept that BASIC's table of vectors: two-byte addresses in bank 0
+that BASIC jumps through at key points in its work. The MEGA65 Book
+documents only the USR vector, but the whole table has had the same
+addresses in every MEGA65 ROM since the first, in January 2021 (MEGA65
+ROM source, b65.src):</p>
+<table>
+<thead>
+<tr class="header">
+<th>Address</th>
+<th>Name</th>
+<th>Jumped through for</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>$02F7</code></td>
+<td>USRPOK</td>
+<td>A JMP instruction, followed by the USR vector at
+<code>$02F8</code></td>
+</tr>
+<tr class="even">
+<td><code>$02FA</code></td>
+<td>IAUTOSCROLL</td>
+<td>Scrolling a program listing when the cursor moves past the top or
+bottom of the screen</td>
+</tr>
+<tr class="odd">
+<td><code>$02FC</code></td>
+<td>ESC_FN_VEC</td>
+<td>A function token with the <code>$CE</code> prefix that BASIC does
+not know</td>
+</tr>
+<tr class="even">
+<td><code>$02FE</code></td>
+<td>—</td>
+<td>Not used</td>
+</tr>
+<tr class="odd">
+<td><code>$0300</code></td>
+<td>IERROR</td>
+<td>Reporting an error, with its number in X (<code>$80</code> means
+no error, and prints READY.)</td>
+</tr>
+<tr class="even">
+<td><code>$0302</code></td>
+<td>IMAIN</td>
+<td>The direct-mode loop that reads and runs typed lines</td>
+</tr>
+<tr class="odd">
+<td><code>$0304</code></td>
+<td>ICRNCH</td>
+<td>Tokenising a line</td>
+</tr>
+<tr class="even">
+<td><code>$0306</code></td>
+<td>IQPLOP</td>
+<td>Not used</td>
+</tr>
+<tr class="odd">
+<td><code>$0308</code></td>
+<td>IGONE</td>
+<td>Executing a statement</td>
+</tr>
+<tr class="even">
+<td><code>$030A</code></td>
+<td>IEVAL</td>
+<td>Evaluating one item of an expression</td>
+</tr>
+<tr class="odd">
+<td><code>$030C</code></td>
+<td>IESCLK</td>
+<td>Tokenising: offers each word to an extension, which can claim it as
+an <code>$FE</code> token</td>
+</tr>
+<tr class="even">
+<td><code>$030E</code></td>
+<td>IESCPR</td>
+<td>Not used</td>
+</tr>
+<tr class="odd">
+<td><code>$0310</code></td>
+<td>IESCEX</td>
+<td>Executing an <code>$FE</code> token that BASIC does not know</td>
+</tr>
+<tr class="even">
+<td><code>$0312</code></td>
+<td>ITIME</td>
+<td>Not used</td>
+</tr>
+</tbody>
+</table>
+<p>The KERNAL's own vectors follow at <code>$0314</code>, as Chapter 11
+describes. BASIC fills in its table when it starts, so a hard reset
+restores the defaults; RUN/STOP-RESTORE leaves the table as it is, and
+an extension stays installed through it (MEGA65 ROM source,
+b65.src).</p>
+<p>Three rules apply to any routine that a BASIC vector points to:</p>
+<ul>
+<li><strong>Put it in <code>$0000-$1FFF</code>.</strong> BASIC jumps
+through its vectors with its own memory map in place, in which the only
+RAM of bank 0 it can see is the bottom 8KB (MEGA65 ROM source,
+system.src). In practice that means <code>$1600-$17FF</code>, as
+Chapter 9 explains. A larger extension can keep a short entry routine
+there and the rest of its code in another bank.</li>
+<li><strong>Chain to the old vector.</strong> Save the vector before
+changing it, and pass on everything the routine does not handle by
+jumping through the saved copy, so that two extensions can be installed
+together.</li>
+<li><strong>Call no BASIC routine by address.</strong> BASIC's routines
+move between ROM versions, and none of them is in a jump table. Read
+the program text yourself through BASIC's text pointer, report errors
+through IERROR, and use the KERNAL jump table for everything
+else.</li>
+</ul>
+<h3 id="example-a-wedge">Example: a wedge</h3>
+<p>C64 programmers called an extension like this a wedge, after the
+best-known one, the DOS wedge, with which a statement beginning with
+<code>@</code> sent a command to the disk drive. BASIC 65 already has
+disk commands, so this example adds a smaller one: <code>!</code> followed by a hex digit
+sets the border colour, so <code>!E</code> makes it light blue. The
+same method serves any command that can read its own argument.</p>
+<pre data-download="code/ch06/bang.asm code/ch06/bang.prg"><code>        * = $1600
+igone   = $0308         ; BASIC 65&#39;s statement vector
+ierror  = $0300         ; BASIC 65&#39;s error vector
+txtptr  = $3b           ; BASIC&#39;s text pointer, 32 bits
+
+install lda igone       ; already installed?
+        cmp #&lt;wedge
+        bne new
+        lda igone+1
+        cmp #&gt;wedge
+        beq exit        ; yes: keep the vector we saved before
+new     lda igone       ; keep the old vector
+        sta oldgone
+        lda igone+1
+        sta oldgone+1
+        lda #&lt;wedge     ; and point it at the wedge
+        sta igone
+        lda #&gt;wedge
+        sta igone+1
+exit    rts
+
+wedge   ldz #0
+        jsr nextch      ; the statement&#39;s first character
+        cmp #&#39;!&#39;        ; is it one of ours?
+        bne old         ; no: let BASIC run it
+        jsr nextch      ; the hex digit after the !
+        jsr hexval
+        bcs syntax
+        sta $d020       ; set the border colour
+        jsr nextch      ; the statement must end here
+        cmp #0
+        beq done
+        cmp #&#39;:&#39;
+        bne syntax
+done    dez             ; move txtptr to the byte before the end,
+        tza             ; so that BASIC&#39;s CHRGET finds the end
+        clc             ; of the statement and goes on to the next
+        adc txtptr
+        sta txtptr
+        bcc old
+        inc txtptr+1
+old     jmp (oldgone)
+
+syntax  ldx #11         ; SYNTAX ERROR
+        jmp (ierror)
+
+nextch  inz             ; the next character after txtptr+Z,
+        lda [txtptr],z  ; skipping spaces
+        cmp #&#39; &#39;
+        beq nextch
+        rts
+
+hexval  sec             ; turn a hex digit in A into 0-15,
+        sbc #&#39;0&#39;        ; with the carry clear if it was one
+        cmp #10
+        bcc ok
+        sbc #7          ; skip the 7 characters between 9 and A
+        cmp #10
+        bcc bad
+        cmp #16
+        bcs bad
+ok      clc
+        rts
+bad     sec
+        rts
+
+oldgone .word 0</code></pre>
+<p>When BASIC is about to run a statement, it jumps through IGONE with
+its text pointer, the four bytes at <code>$3B</code>, on the byte just
+before the statement: the colon that ended the last one, or the end of
+the line number. The pointer is a 32-bit address because the program
+text is in bank 0 above <code>$2000</code>, outside BASIC's own map, so
+the wedge reads the text with <code>[txtptr],Z</code>. It looks ahead
+with Z instead of moving the pointer, and a statement that does not
+begin with <code>!</code> goes on to BASIC exactly as it
+arrived.</p>
+<p>A statement that does begin with <code>!</code> is handled, and the
+wedge then needs BASIC to carry on with the next statement. The routine
+that does that has no fixed address, so the wedge moves the text
+pointer to the last byte of its statement and jumps through the old
+vector all the same. BASIC fetches the next character, finds the colon
+or the end of the line, which its CHRGET routine treats alike, and runs
+an empty statement before going on. A bad digit, or anything after it
+but a colon, jumps through IERROR with error 11, so BASIC reports
+<code>?SYNTAX ERROR IN</code> the line, and TRAP catches it as it
+catches BASIC's own errors.</p>
+<p>The install routine checks whether IGONE already points at the
+wedge. Without that check, running the program a second time would save
+the wedge's own address as the old vector, and the next statement would
+send the wedge round in a loop for ever.</p>
+<p>This program installs the wedge and uses it:</p>
+<pre data-download="code/ch06/bang-demo.bas code/ch06/bang-demo.prg"><code>10 BLOAD &quot;BANG&quot;, B0, P5632           : REM LOAD TO $1600
+20 SYS $1600                          : REM INSTALL THE WEDGE
+30 FOR I=1 TO 3
+40 !2 : SLEEP 0.5 : !6 : SLEEP 0.5
+50 NEXT
+60 IF (PEEK($D020) AND 15) = 6 THEN :!E
+70 PRINT &quot;BORDER&quot;; PEEK($D020) AND 15</code></pre>
+<p>The border flashes between red and blue, ends light blue, and line
+70 prints 14. LIST shows each <code>!</code> statement as it was typed,
+since BASIC's tokeniser leaves <code>!</code> and a single hex digit
+alone.</p>
+<p>Line 60 has a colon after THEN for a reason. BASIC 65 runs the first
+statement after THEN or ELSE, and the first statement of a line typed
+in direct mode, without going through IGONE, so <code>IF X THEN
+!E</code>, or <code>!E</code> typed at the READY prompt, gives
+<code>?SYNTAX ERROR</code> (MEGA65 ROM source, b65.src). A colon in
+front makes the wedge's statement the second one: <code>THEN :!E</code>
+in a program, or <code>:!E</code> at the prompt. These results were
+checked in Xemu with ROM 920413. The shortcut comes from Commodore's
+original source, and has been reported to the ROM developers (<a
+href="https://github.com/MEGA65/mega65-rom-public/issues/289">mega65-rom-public
+issue 289</a>); if a later ROM fixes it, the colon will still work.</p>
+<p>The wedge reads its argument as text. BASIC's expression evaluator
+could accept any expression instead, but it has no fixed address, so a
+wedge that called it would be tied to one ROM version. The tokeniser
+has also been over the line before the wedge sees it, so a word after
+<code>!</code> that spells a keyword arrives as a token rather than as
+letters.</p>
+<h3 id="why-not-a-new-keyword">Why not a new keyword?</h3>
+<p>IESCLK and IESCEX were meant for adding keywords. The tokeniser
+offers each word to IESCLK, which can claim it by returning a second
+token byte, and BASIC stores the word as <code>$FE</code> followed by
+that byte. When the program runs, BASIC passes any <code>$FE</code>
+token that it does not know to IESCEX. A new keyword can therefore be
+typed and run.</p>
+<p>It cannot be listed. LIST never calls IESCPR, and prints nothing for
+an <code>$FE</code> token that is not one of BASIC 65's own, so the new
+keyword disappears from the listing, and from the line if the line is
+edited and entered again (MEGA65 ROM source, b65.src). The range of
+tokens is not settled either: new ROMs still add <code>$FE</code>
+tokens, as ROM 920364 did with VSYNC (<a
+href="https://github.com/MEGA65/mega65-rom-public/blob/main/CHANGELOG.md">MEGA65
+ROM change log</a>), so a
+value an extension takes today may belong to BASIC tomorrow. A wedge
+avoids both problems, because its statements stay as ordinary
+text.</p>
 <h2 id="summary">Summary</h2>
 <ul>
 <li><strong>Memory.</strong> Program text lives in bank 0 from
@@ -798,7 +1058,9 @@ machine. <code>BANK 128</code> returns to the system view.</li>
 errors; DS and DS$ report disk errors.</li>
 <li><strong>Extensions.</strong> Small machine-language helpers called
 through SYS and POINTER are more durable than patches to BASIC's
-internals.</li>
+internals. For new commands, a wedge on BASIC 65's statement vector at
+<code>$0308</code> works across ROM versions if it reads the text
+itself and calls no BASIC routine by address.</li>
 </ul>
 <p>Chapter 7 begins the machine-language part of the book with the
 45GS02 itself.</p>

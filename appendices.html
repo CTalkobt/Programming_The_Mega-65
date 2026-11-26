@@ -28,7 +28,7 @@
 <nav class="chapnav"><span><a href="ch17-major-peripherals.html">&larr; Previous</a></span><a href="index.html">Contents</a><span></span></nav>
 <h1 id="programming-the-mega65--appendices">Programming the MEGA65 —
 Appendices</h1>
-<p>Oct 4, 2026 · Updated Nov 22, 2026 · @Craig Taylor</p>
+<p>Oct 4, 2026 · Updated Nov 26, 2026 · @Craig Taylor</p>
 <ul>
 <li><a href="#appendix-a-screen-codes-and-colours">Appendix A: Screen Codes and Colours</a></li>
 <li><a href="#appendix-b-petscii-codes">Appendix B: PETSCII Codes</a></li>
@@ -2732,7 +2732,7 @@ versions (Chapter 11).</p>
 </tr>
 <tr class="odd">
 <td><code>$0200-$02FF</code></td>
-<td>BASIC's and the monitor's line input buffer, from <code>$0200</code>, then system variables; private apart from the USR vector</td>
+<td>BASIC's and the monitor's line input buffer, from <code>$0200</code>, then system variables; private apart from the USR vector and BASIC 65's vectors</td>
 <td><a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
@@ -2741,9 +2741,9 @@ versions (Chapter 11).</p>
 <td><a href="ch09-mixing-basic-with-machine-language.html">9</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="odd">
-<td><code>$0300-$0313</code></td>
-<td>System, private</td>
-<td><a href="ch11-mega65-rom-guide.html">11</a></td>
+<td><code>$02FA-$0313</code></td>
+<td>BASIC 65's vectors (error, main loop, tokeniser, statement, expression, escape tokens)</td>
+<td><a href="ch06-advanced-basic65.html">6</a>, <a href="ch11-mega65-rom-guide.html">11</a></td>
 </tr>
 <tr class="even">
 <td><code>$0314-$0333</code></td>

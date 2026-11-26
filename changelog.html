@@ -12,6 +12,12 @@
 <p>The full history is in the <a
 href="https://github.com/CTalkobt/Programming_The_Mega-65/commits/main">Git
 repository</a>.</p>
+<h2 id="2026-11-26">November 26, 2026</h2>
+<ul>
+<li>Chapter 6: Extending BASIC 65 gains three sections. BASIC 65's vectors lists the C128-style vector table at <code>$02F7-$0313</code>, which the MEGA65 Book does not document, and the rules for using it. Example: a wedge adds a <code>!</code> command through the statement vector, with a downloadable routine and demo, and explains why it needs a colon after THEN or ELSE and at the start of a direct-mode line, a ROM limitation now reported as <a href="https://github.com/MEGA65/mega65-rom-public/issues/289">mega65-rom-public issue 289</a>. Why not a new keyword? explains that LIST drops tokens added through the escape-token vectors.</li>
+<li>Chapter 11: BASIC vectors and USR points to the new table in Chapter 6.</li>
+<li>Appendices: the memory map names <code>$02FA-$0313</code> as BASIC 65's vectors.</li>
+</ul>
 <h2 id="2026-11-23">November 23, 2026</h2>
 <ul>
 <li>Chapter 7: new section, Common Idioms: unsigned and signed comparisons for =, ≠, &lt;, &gt;, ≤ and ≥, 16- and 32-bit compares, counting loops, end markers and sentinels, string comparison, text search, jump tables, and sharing a resource with an interrupt handler through critical sections, saving and restoring, and busy flags.</li>

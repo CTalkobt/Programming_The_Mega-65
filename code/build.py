@@ -32,6 +32,8 @@ SCRIPT = '  <script src="code.js" defer></script>\n'
 OVERRIDES = {
     # BASIC that calls a routine no listing loads, and a header with no code
     ("ch06-advanced-basic65.html", "sys", 0): {"skip": True},
+    ("ch06-advanced-basic65.html", "example-a-wedge", 0): {"name": "bang"},
+    ("ch06-advanced-basic65.html", "example-a-wedge", 1): {"name": "bang demo"},
     ("ch07-45gs02-machine-language.html", "a-first-program", 2): {"name": "border"},
     ("ch08-ml-methods-specific-to-the-mega65.html", "saving-and-restoring-the-map", 1): {"name": "atticpeek"},
     ("ch08-ml-methods-specific-to-the-mega65.html", "a-split-screen-example", 0): {"name": "split"},
@@ -66,7 +68,7 @@ OVERRIDES = {
     ("ch12-graphics.html", "scaling-an-object-with-dma", 0): {"name": "rrb scale", "merge": ("objects-from-basic", 0)},
 }
 
-NUMBERED = re.compile(r"^\s*(\d+)\s+[A-Z?]")  # a statement, not printed output
+NUMBERED = re.compile(r"^\s*(\d+)\s+[A-Z?!]")  # a statement, not printed output
 JUMPS = re.compile(r"\b(?:GOTO|GO TO|GOSUB|THEN|ELSE|TRAP|RESUME|RESTORE)\s*(\d+(?:\s*,\s*\d+)*)")
 
 
